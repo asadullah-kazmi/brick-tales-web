@@ -36,10 +36,10 @@ export default function AdminContentPage() {
     <>
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Content
           </h1>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="mt-1 text-sm text-neutral-400">
             Manage uploaded content. Toggle publish to show or hide in the
             catalog (mock).
           </p>
@@ -50,8 +50,8 @@ export default function AdminContentPage() {
       </header>
 
       {videos.length === 0 ? (
-        <div className="rounded-xl border border-neutral-200 bg-neutral-50 py-12 text-center dark:border-neutral-800 dark:bg-neutral-900/50">
-          <p className="text-neutral-600 dark:text-neutral-400">
+        <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12 text-center">
+          <p className="text-neutral-400">
             No content yet. Upload video metadata to get started.
           </p>
           <Link href="/admin/content/upload" className="mt-4 inline-block">
@@ -61,27 +61,27 @@ export default function AdminContentPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="overflow-hidden rounded-xl border border-neutral-700/50 bg-neutral-900/50">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-800/50">
-                  <th className="px-4 py-3 font-medium text-neutral-700 dark:text-neutral-300">
+                <tr className="border-b border-neutral-700/50 bg-neutral-800/50">
+                  <th className="px-4 py-3 font-medium text-neutral-300">
                     Title
                   </th>
-                  <th className="px-4 py-3 font-medium text-neutral-700 dark:text-neutral-300">
+                  <th className="px-4 py-3 font-medium text-neutral-300">
                     Duration
                   </th>
-                  <th className="px-4 py-3 font-medium text-neutral-700 dark:text-neutral-300">
+                  <th className="px-4 py-3 font-medium text-neutral-300">
                     Category
                   </th>
-                  <th className="px-4 py-3 font-medium text-neutral-700 dark:text-neutral-300">
+                  <th className="px-4 py-3 font-medium text-neutral-300">
                     Created
                   </th>
-                  <th className="px-4 py-3 font-medium text-neutral-700 dark:text-neutral-300">
+                  <th className="px-4 py-3 font-medium text-neutral-300">
                     Status
                   </th>
-                  <th className="px-4 py-3 font-medium text-neutral-700 dark:text-neutral-300">
+                  <th className="px-4 py-3 font-medium text-neutral-300">
                     Actions
                   </th>
                 </tr>
@@ -90,18 +90,18 @@ export default function AdminContentPage() {
                 {videos.map((video) => (
                   <tr
                     key={video.id}
-                    className="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                    className="border-b border-neutral-700/50 last:border-0"
                   >
-                    <td className="px-4 py-3 font-medium text-neutral-900 dark:text-white">
+                    <td className="px-4 py-3 font-medium text-white">
                       {video.title}
                     </td>
-                    <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                    <td className="px-4 py-3 text-neutral-400">
                       {formatDuration(video.duration)}
                     </td>
-                    <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                    <td className="px-4 py-3 text-neutral-400">
                       {video.category ?? "—"}
                     </td>
-                    <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                    <td className="px-4 py-3 text-neutral-400">
                       {formatCreatedAt(video.createdAt)}
                     </td>
                     <td className="px-4 py-3">
@@ -109,8 +109,8 @@ export default function AdminContentPage() {
                         className={cn(
                           "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
                           video.published
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
-                            : "bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300",
+                            ? "bg-green-900/40 text-green-200"
+                            : "bg-neutral-700 text-neutral-300",
                         )}
                       >
                         {video.published ? "Published" : "Unpublished"}

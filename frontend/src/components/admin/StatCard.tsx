@@ -21,21 +21,21 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900",
-        "border-l-4 border-l-slate-400 dark:border-l-slate-500",
+        "relative overflow-hidden rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-6 shadow-sm transition-shadow hover:shadow-md",
+        "border-l-4 border-l-accent",
         className,
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+          <p className="text-sm font-medium text-neutral-400">
             {label}
           </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-neutral-900 dark:text-white sm:text-3xl">
+          <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-white sm:text-3xl">
             {value}
           </p>
           {trend && (
-            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-400">
               <span aria-hidden>↑</span>
               {trend} vs last period
             </p>
@@ -43,7 +43,7 @@ export function StatCard({
         </div>
         {icon && (
           <span
-            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xl text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:text-2xl"
+            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-accent/20 text-xl text-accent sm:text-2xl"
             aria-hidden
           >
             {icon}

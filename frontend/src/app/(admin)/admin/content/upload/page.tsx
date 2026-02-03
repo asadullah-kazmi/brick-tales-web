@@ -66,7 +66,7 @@ export default function AdminUploadPage() {
   if (success) {
     return (
       <>
-        <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">
+        <h1 className="text-2xl font-semibold text-white">
           Upload metadata
         </h1>
         <Card className="mt-6 max-w-lg">
@@ -99,10 +99,10 @@ export default function AdminUploadPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">
+      <h1 className="text-2xl font-semibold text-white">
         Upload metadata
       </h1>
-      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="mt-1 text-sm text-neutral-400">
         Add video metadata only. File upload is not implemented yet.
       </p>
       <Card className="mt-6 max-w-lg">

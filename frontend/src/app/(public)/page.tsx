@@ -74,13 +74,13 @@ export default function Home() {
       <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
         <Link
           href="/browse"
-          className="rounded-lg bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+          className="rounded-lg bg-accent px-6 py-3 text-sm font-medium text-accent-foreground shadow-accent-glow transition-colors hover:bg-accent/90 dark:shadow-accent-glow"
         >
           Browse content
         </Link>
         <Link
           href="/subscription"
-          className="rounded-lg border-2 border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-800"
+          className="rounded-lg border-2 border-accent px-6 py-3 text-sm font-medium text-neutral-900 transition-colors hover:bg-accent/10 dark:text-accent dark:hover:bg-accent/10"
         >
           View plans
         </Link>
@@ -138,7 +138,7 @@ export default function Home() {
         <div className="mt-8 flex justify-center">
           <Link
             href="/subscription"
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-neutral-900 px-6 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 dark:focus-visible:ring-neutral-100 dark:focus-visible:ring-offset-neutral-900"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-6 text-sm font-semibold text-accent-foreground shadow-accent-glow transition-colors hover:bg-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-off-black"
             aria-label="Compare subscription plans"
           >
             Compare plans

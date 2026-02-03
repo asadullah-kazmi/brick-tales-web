@@ -2,15 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* BRICK TALES brand: off-black background, yellow accent, white/light gray text */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --off-black: #0c0c0c;
+  --accent: #ffe700;
+  --accent-foreground: #0c0c0c;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0c0c0c; /* off-black instead of navy */
+    --foreground: #fafafa;
+    --off-black: #0c0c0c;
+    --accent: #ffe700;
+    --accent-foreground: #0c0c0c;
   }
 }
 

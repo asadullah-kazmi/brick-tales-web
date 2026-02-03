@@ -6,7 +6,16 @@ import { cn } from "@/lib/utils";
 
 function TvIcon({ className }: { className?: string }) {
   return (
-    <svg className={cn("h-10 w-10 sm:h-12 sm:w-12", className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      className={cn("h-10 w-10 sm:h-12 sm:w-12", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
       <polyline points="17 2 12 7 7 2" />
     </svg>
@@ -15,7 +24,16 @@ function TvIcon({ className }: { className?: string }) {
 
 function PhoneIcon({ className }: { className?: string }) {
   return (
-    <svg className={cn("h-10 w-10 sm:h-12 sm:w-12", className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      className={cn("h-10 w-10 sm:h-12 sm:w-12", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
       <line x1="12" y1="18" x2="12.01" y2="18" />
     </svg>
@@ -24,7 +42,16 @@ function PhoneIcon({ className }: { className?: string }) {
 
 function TabletIcon({ className }: { className?: string }) {
   return (
-    <svg className={cn("h-10 w-10 sm:h-12 sm:w-12", className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      className={cn("h-10 w-10 sm:h-12 sm:w-12", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
       <line x1="12" y1="18" x2="12.01" y2="18" />
     </svg>
@@ -125,7 +152,7 @@ export default function SubscriptionPage() {
 
         {/* Watch Anywhere — device icons + multi-device per tier */}
         <section
-          className="mt-10 rounded-2xl border border-neutral-200 bg-neutral-50 px-6 py-8 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8 sm:py-10"
+          className="mt-10 rounded-2xl border border-neutral-200 bg-neutral-50 px-6 py-8 dark:border-neutral-700 dark:bg-neutral-900/30 sm:px-8 sm:py-10"
           aria-labelledby="watch-anywhere-heading"
         >
           <h2
@@ -135,9 +162,13 @@ export default function SubscriptionPage() {
             Watch Anywhere
           </h2>
           <p className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-400">
-            Stream on TV, phone, and tablet. Multi-device support depends on your plan.
+            Stream on TV, phone, and tablet. Multi-device support depends on
+            your plan.
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-8 sm:gap-12" aria-hidden>
+          <div
+            className="mt-6 flex flex-wrap items-center justify-center gap-8 sm:gap-12"
+            aria-hidden
+          >
             <span className="flex flex-col items-center gap-2 text-neutral-600 dark:text-neutral-400">
               <TvIcon className="text-neutral-700 dark:text-neutral-300" />
               <span className="text-xs font-medium">TV</span>
@@ -156,9 +187,24 @@ export default function SubscriptionPage() {
               Multi-device support per tier
             </p>
             <ul className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-neutral-600 dark:text-neutral-400 sm:gap-x-8">
-              <li><strong className="text-neutral-900 dark:text-white">Fan:</strong> 1 device at a time</li>
-              <li><strong className="text-neutral-900 dark:text-white">Mega Fan:</strong> Up to 4 devices</li>
-              <li><strong className="text-neutral-900 dark:text-white">Ultimate:</strong> Up to 6 devices</li>
+              <li>
+                <strong className="text-neutral-900 dark:text-white">
+                  Fan:
+                </strong>{" "}
+                1 device at a time
+              </li>
+              <li>
+                <strong className="text-neutral-900 dark:text-white">
+                  Mega Fan:
+                </strong>{" "}
+                Up to 4 devices
+              </li>
+              <li>
+                <strong className="text-neutral-900 dark:text-white">
+                  Ultimate:
+                </strong>{" "}
+                Up to 6 devices
+              </li>
             </ul>
           </div>
         </section>
@@ -171,10 +217,10 @@ export default function SubscriptionPage() {
             <article
               key={plan.id}
               className={cn(
-                "flex flex-col rounded-2xl border bg-white shadow-sm dark:bg-neutral-900 dark:border-neutral-800",
+                "flex flex-col rounded-2xl border bg-white shadow-sm dark:bg-neutral-900/50 dark:border-neutral-700",
                 plan.featured
-                  ? "border-2 border-neutral-900 dark:border-neutral-100 ring-2 ring-neutral-900/10 dark:ring-neutral-100/10 lg:scale-105 lg:shadow-lg"
-                  : "border-neutral-200 dark:border-neutral-800",
+                  ? "border-2 border-accent ring-2 ring-accent/20 lg:scale-105 lg:shadow-lg dark:shadow-accent-glow"
+                  : "border-neutral-200 dark:border-neutral-700",
               )}
               aria-labelledby={`plan-${plan.id}-title`}
             >
@@ -229,10 +275,10 @@ export default function SubscriptionPage() {
                   <Link
                     href={`/signup?plan=${plan.id}&trial=1`}
                     className={cn(
-                      "inline-flex h-12 items-center justify-center rounded-lg px-6 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 dark:focus-visible:ring-neutral-100 dark:focus-visible:ring-offset-neutral-900",
+                      "inline-flex h-12 items-center justify-center rounded-lg px-6 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:focus-visible:ring-offset-off-black",
                       plan.featured
-                        ? "bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-                        : "border-2 border-neutral-300 bg-transparent text-neutral-700 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800",
+                        ? "bg-accent text-accent-foreground shadow-accent-glow hover:bg-accent/90"
+                        : "border-2 border-accent bg-transparent text-neutral-900 hover:bg-accent/10 dark:text-accent dark:hover:bg-accent/10",
                     )}
                     aria-label={`Start ${plan.trialDays}-day free trial for ${plan.name}`}
                   >
@@ -240,7 +286,7 @@ export default function SubscriptionPage() {
                   </Link>
                   <Link
                     href={`/signup?plan=${plan.id}`}
-                    className="inline-flex h-12 items-center justify-center rounded-lg bg-neutral-100 px-6 text-base font-medium text-neutral-900 hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:focus-visible:ring-neutral-100 dark:focus-visible:ring-offset-neutral-900"
+                    className="inline-flex h-12 items-center justify-center rounded-lg bg-neutral-100 px-6 text-base font-medium text-neutral-900 hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:focus-visible:ring-accent dark:focus-visible:ring-offset-off-black"
                     aria-label={`Subscribe to ${plan.name} now`}
                   >
                     Subscribe Now

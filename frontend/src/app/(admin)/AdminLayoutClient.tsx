@@ -102,16 +102,16 @@ export default function AdminLayoutClient({
   return (
     <AdminProtectedRoute>
       <AdminContentProvider>
-        <div className="flex min-h-screen bg-neutral-100 dark:bg-neutral-950">
+        <div className="flex min-h-screen bg-off-black">
           {/* Sidebar */}
           <aside
-            className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+            className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-neutral-700/50 bg-off-black/95"
             aria-label="Admin navigation"
           >
-            <div className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-200 px-5 dark:border-neutral-800">
+            <div className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-700/50 px-5">
               <Link
                 href="/"
-                className="flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 dark:focus:ring-offset-neutral-900 rounded"
+                className="flex items-center gap-3 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-off-black"
               >
                 <Image
                   src="/logo.png"
@@ -120,7 +120,7 @@ export default function AdminLayoutClient({
                   height={32}
                   className="h-8 w-8 rounded object-contain"
                 />
-                <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">
+                <span className="text-sm font-semibold tracking-tight text-white">
                   {SITE_BRAND} Admin
                 </span>
               </Link>
@@ -139,8 +139,8 @@ export default function AdminLayoutClient({
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       "border-l-2",
                       isActive
-                        ? "border-neutral-900 bg-neutral-100 text-neutral-900 dark:border-white dark:bg-neutral-800 dark:text-white"
-                        : "border-transparent text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800/50 dark:hover:text-white",
+                        ? "border-accent bg-accent/10 text-white"
+                        : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
                     )}
                     aria-current={isActive ? "page" : undefined}
                   >
@@ -150,10 +150,10 @@ export default function AdminLayoutClient({
                 );
               })}
             </nav>
-            <div className="border-t border-neutral-200 p-3 dark:border-neutral-800">
+            <div className="border-t border-neutral-700/50 p-3">
               <Link
                 href="/"
-                className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-accent"
               >
                 ← Back to site
               </Link>
@@ -162,8 +162,8 @@ export default function AdminLayoutClient({
 
           {/* Top bar + main content */}
           <div className="flex min-h-screen flex-1 flex-col pl-64">
-            <header className="sticky top-0 z-30 shrink-0 border-b border-neutral-200 bg-white/80 px-8 py-4 backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/80">
-              <p className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            <header className="sticky top-0 z-30 shrink-0 border-b border-neutral-700/50 bg-off-black/95 px-8 py-4 backdrop-blur-sm">
+              <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
                 Admin
               </p>
             </header>

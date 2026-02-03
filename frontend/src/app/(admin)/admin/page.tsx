@@ -10,7 +10,7 @@ const StatCard = dynamic(
   () => import("@/components/admin").then((mod) => mod.StatCard),
   {
     loading: () => (
-      <div className="h-24 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+      <div className="h-24 animate-pulse rounded-xl bg-neutral-800" />
     ),
   },
 );
@@ -19,7 +19,7 @@ const SimpleBarChart = dynamic(
   () => import("@/components/admin").then((mod) => mod.SimpleBarChart),
   {
     loading: () => (
-      <div className="h-48 max-w-md animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
+      <div className="h-48 max-w-md animate-pulse rounded bg-neutral-800" />
     ),
   },
 );
@@ -57,10 +57,10 @@ export default function AdminPage() {
   return (
     <>
       <header className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
           Dashboard
         </h1>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+        <p className="mt-1 text-sm text-neutral-400">
           Mock analytics. Replace with real data when backend is available.
         </p>
       </header>
@@ -106,19 +106,19 @@ export default function AdminPage() {
       {/* Videos by category */}
       <Suspense
         fallback={
-          <div className="mt-10 h-72 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+          <div className="mt-10 h-72 animate-pulse rounded-xl bg-neutral-800" />
         }
       >
         <section
-          className="mt-10 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-8"
+          className="mt-10 rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-6 shadow-sm sm:p-8"
           aria-label="Videos by category"
         >
           <div className="mb-6 flex items-baseline justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-white">
                 Videos by category
               </h2>
-              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="mt-1 text-sm text-neutral-400">
                 Mock distribution
               </p>
             </div>
