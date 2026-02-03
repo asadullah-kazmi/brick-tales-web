@@ -20,7 +20,9 @@ export function Header() {
     setLoginOriginState(user ? getLoginOrigin() : null);
   }, [user]);
 
-  const showAdminLink = isAdmin && loginOrigin === "admin";
+  /** When admin signed in via /admin/login, Dashboard goes to admin panel; otherwise customer dashboard. */
+  const dashboardHref =
+    isAdmin && loginOrigin === "admin" ? "/admin" : "/dashboard";
 
   return (
     <header className="border-b border-neutral-700/50 bg-off-black/95 backdrop-blur-sm sticky top-0 z-50">
@@ -61,19 +63,11 @@ export function Header() {
                 {user.name}
               </span>
               <Link
-                href="/dashboard"
+                href={dashboardHref}
                 className="hover:text-neutral-900 dark:hover:text-accent transition-colors"
               >
                 Dashboard
               </Link>
-              {showAdminLink && (
-                <Link
-                  href="/admin"
-                  className="hover:text-neutral-900 dark:hover:text-accent transition-colors font-medium"
-                >
-                  Admin
-                </Link>
-              )}
               <Button
                 variant="ghost"
                 size="sm"
