@@ -1,7 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import {
-  SITE_NAME,
+  SITE_BRAND,
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
   absoluteUrl,
@@ -12,13 +13,13 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   keywords: SITE_KEYWORDS,
   openGraph: {
-    title: `${SITE_NAME} — Watch & Discover Video Content`,
+    title: `${SITE_BRAND} — Watch & Discover Video Content`,
     description: SITE_DESCRIPTION,
     url: absoluteUrl("/"),
     type: "website",
   },
   twitter: {
-    title: `${SITE_NAME} — Watch & Discover Video Content`,
+    title: `${SITE_BRAND} — Watch & Discover Video Content`,
     description: SITE_DESCRIPTION,
   },
   alternates: {
@@ -30,7 +31,7 @@ function WebSiteJsonLd() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: SITE_NAME,
+    name: SITE_BRAND,
     description: SITE_DESCRIPTION,
     url: absoluteUrl("/"),
     potentialAction: {
@@ -54,8 +55,18 @@ export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">
       <WebSiteJsonLd />
+      <div className="relative mb-8">
+        <Image
+          src="/logo.png"
+          alt={SITE_BRAND}
+          width={280}
+          height={96}
+          className="h-20 w-auto object-contain sm:h-24"
+          priority
+        />
+      </div>
       <h1 className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-5xl">
-        Welcome to Stream
+        Welcome to {SITE_BRAND}
       </h1>
       <p className="mt-4 max-w-xl text-center text-neutral-600 dark:text-neutral-400">
         Your video streaming platform. Browse content and start watching.

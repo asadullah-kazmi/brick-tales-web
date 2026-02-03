@@ -11,7 +11,7 @@ export function getAppUrl(): string {
     process.env.NEXT_PUBLIC_APP_URL ??
     (typeof window !== "undefined"
       ? window.location.origin
-      : "https://stream.example.com")
+      : "https://bricktales.tv")
   );
 }
 

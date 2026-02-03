@@ -8,11 +8,11 @@
 
 import type { Metadata } from "next";
 import { Header, Footer } from "@/components/layout";
-import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/seo";
+import { SITE_BRAND, SITE_DESCRIPTION } from "@/lib/seo";
 
 export const metadata: Metadata = {
   openGraph: {
-    siteName: SITE_NAME,
+    siteName: SITE_BRAND,
     description: SITE_DESCRIPTION,
   },
   twitter: {

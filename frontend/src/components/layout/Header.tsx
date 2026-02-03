@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts";
 import { Button } from "@/components/ui";
+
+const LOGO_HEIGHT = 36;
+const LOGO_WIDTH = 140;
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -12,9 +16,17 @@ export function Header() {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="text-lg font-semibold text-neutral-900 dark:text-white"
+          className="flex items-center gap-2 text-neutral-900 dark:text-white"
+          aria-label="BRICK TALES.TV home"
         >
-          Stream
+          <Image
+            src="/logo.png"
+            alt="BRICK TALES.TV"
+            width={LOGO_WIDTH}
+            height={LOGO_HEIGHT}
+            className="h-9 w-auto object-contain"
+            priority
+          />
         </Link>
         <nav className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400 sm:gap-6">
           <Link

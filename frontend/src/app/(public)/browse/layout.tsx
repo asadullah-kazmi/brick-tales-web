@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { SITE_NAME, SITE_DESCRIPTION, absoluteUrl } from "@/lib/seo";
+import { SITE_BRAND, SITE_DESCRIPTION, absoluteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Browse Videos",
   description: `Browse and discover video content. ${SITE_DESCRIPTION}`,
   openGraph: {
-    title: `Browse Videos | ${SITE_NAME}`,
+    title: `Browse Videos | ${SITE_BRAND}`,
     description: `Browse and discover video content. ${SITE_DESCRIPTION}`,
     url: absoluteUrl("/browse"),
     type: "website",
   },
   twitter: {
-    title: `Browse Videos | ${SITE_NAME}`,
+    title: `Browse Videos | ${SITE_BRAND}`,
     description: `Browse and discover video content. ${SITE_DESCRIPTION}`,
   },
   alternates: {
@@ -32,7 +32,7 @@ function CollectionPageJsonLd() {
     url: absoluteUrl("/browse"),
     isPartOf: {
       "@type": "WebSite",
-      name: SITE_NAME,
+      name: SITE_BRAND,
       url: absoluteUrl("/"),
     },
   };

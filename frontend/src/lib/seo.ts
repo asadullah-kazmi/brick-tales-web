@@ -3,9 +3,11 @@
  * Used by Next.js metadata API and JSON-LD.
  */
 
-export const SITE_NAME = "Stream";
+export const SITE_NAME = "BRICK TALES";
+/** Full branding with .TV suffix (e.g. footer, hero). */
+export const SITE_BRAND = "BRICK TALES.TV";
 export const SITE_DESCRIPTION =
-  "Watch and discover video content. Browse tutorials, technical talks, and long-form sessions on streaming and video platforms.";
+  "Watch and discover video content on BRICK TALES.TV. Browse tutorials, technical talks, and long-form sessions.";
 export const SITE_KEYWORDS = [
   "video streaming",
   "streaming platform",
