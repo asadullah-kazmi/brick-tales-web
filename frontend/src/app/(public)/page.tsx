@@ -1,8 +1,59 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import {
+  SITE_NAME,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  absoluteUrl,
+} from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Watch & Discover Video Content",
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  openGraph: {
+    title: `${SITE_NAME} — Watch & Discover Video Content`,
+    description: SITE_DESCRIPTION,
+    url: absoluteUrl("/"),
+    type: "website",
+  },
+  twitter: {
+    title: `${SITE_NAME} — Watch & Discover Video Content`,
+    description: SITE_DESCRIPTION,
+  },
+  alternates: {
+    canonical: absoluteUrl("/"),
+  },
+};
+
+function WebSiteJsonLd() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: absoluteUrl("/"),
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${absoluteUrl("/browse")}?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
 
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">
+      <WebSiteJsonLd />
       <h1 className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-5xl">
         Welcome to Stream
       </h1>

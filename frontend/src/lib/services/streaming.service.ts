@@ -1,8 +1,5 @@
 import type { PlaybackInfoResponseDto, PlaybackRequestDto } from "@/types/api";
-import {
-  DEFAULT_HLS_TEST_STREAM,
-  HLS_TEST_STREAMS,
-} from "@/lib/hls-streams";
+import { DEFAULT_HLS_TEST_STREAM, HLS_TEST_STREAMS } from "@/lib/hls-streams";
 
 /**
  * Streaming service. Use this instead of reading hls-streams directly.
@@ -17,8 +14,7 @@ export const streamingService = {
     body?: PlaybackRequestDto,
   ): Promise<PlaybackInfoResponseDto> {
     void body; // reserved for real API (e.g. quality preference)
-    const url =
-      HLS_TEST_STREAMS[videoId] ?? DEFAULT_HLS_TEST_STREAM;
+    const url = HLS_TEST_STREAMS[videoId] ?? DEFAULT_HLS_TEST_STREAM;
     return {
       videoId,
       type: "hls",

@@ -20,8 +20,7 @@ import type { Video } from "@/types";
 import type { AdminVideo } from "@/types";
 
 function videoToDto(v: Video | AdminVideo, published = true): VideoDto {
-  const created =
-    "createdAt" in v ? v.createdAt : new Date().toISOString();
+  const created = "createdAt" in v ? v.createdAt : new Date().toISOString();
   return {
     id: v.id,
     title: v.title,
@@ -39,7 +38,7 @@ function videoToDto(v: Video | AdminVideo, published = true): VideoDto {
 function paginate<T>(
   items: T[],
   page = 1,
-  limit = 20
+  limit = 20,
 ): { items: T[]; total: number; totalPages: number } {
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -56,9 +55,7 @@ export const contentService = {
   /**
    * List videos (catalog). Mock: merges mockVideos with admin content; real API: GET /content/videos.
    */
-  async getVideos(
-    params?: PaginationQueryDto
-  ): Promise<VideoListResponseDto> {
+  async getVideos(params?: PaginationQueryDto): Promise<VideoListResponseDto> {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 24;
     const adminVideos = getAdminVideos();
@@ -66,8 +63,8 @@ export const contentService = {
       ...mockVideos.map((v) =>
         videoToDto(
           { ...v, id: v.id, createdAt: new Date().toISOString() },
-          true
-        )
+          true,
+        ),
       ),
       ...adminVideos.map((v) => videoToDto(v)),
     ];
@@ -91,10 +88,7 @@ export const contentService = {
   getVideosForBrowse(): VideoDto[] {
     const adminVideos = getAdminVideos().filter((v) => v.published);
     const fromCatalog = mockVideos.map((v) =>
-      videoToDto(
-        { ...v, id: v.id, createdAt: new Date().toISOString() },
-        true
-      )
+      videoToDto({ ...v, id: v.id, createdAt: new Date().toISOString() }, true),
     );
     const fromAdmin = adminVideos.map((v) => videoToDto(v));
     return [...fromCatalog, ...fromAdmin];
@@ -104,7 +98,7 @@ export const contentService = {
   getCategories(): string[] {
     const videos = this.getVideosForBrowse();
     const set = new Set(
-      videos.map((v) => v.category).filter((c): c is string => !!c)
+      videos.map((v) => v.category).filter((c): c is string => !!c),
     );
     return ["All", ...Array.from(set).sort()];
   },
@@ -123,7 +117,7 @@ export const contentService = {
       return {
         video: videoToDto(
           { ...fromCatalog, createdAt: new Date().toISOString() },
-          true
+          true,
         ),
       };
     }
@@ -134,7 +128,7 @@ export const contentService = {
    * Create video (metadata). Mock: createAdminVideo; real API: POST /content/videos.
    */
   async createVideo(
-    body: CreateVideoRequestDto
+    body: CreateVideoRequestDto,
   ): Promise<CreateVideoResponseDto> {
     const video = createAdminVideo(body);
     return { video: videoToDto(video) };
@@ -145,7 +139,7 @@ export const contentService = {
    */
   async updateVideo(
     id: string,
-    body: UpdateVideoRequestDto
+    body: UpdateVideoRequestDto,
   ): Promise<UpdateVideoResponseDto | null> {
     const updated = updateAdminVideoStorage(id, body);
     if (!updated) return null;
@@ -157,7 +151,7 @@ export const contentService = {
    */
   async publishVideo(
     id: string,
-    body: PublishVideoRequestDto
+    body: PublishVideoRequestDto,
   ): Promise<PublishVideoResponseDto | null> {
     const updated = updateAdminVideoStorage(id, {
       published: body.published,

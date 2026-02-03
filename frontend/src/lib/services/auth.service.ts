@@ -37,9 +37,7 @@ function persistSession(user: User): void {
  * Switch to real API by implementing fetch in this file when USE_MOCK_API is false.
  */
 export const authService = {
-  async login(
-    body: LoginRequestDto
-  ): Promise<LoginResponseDto> {
+  async login(body: LoginRequestDto): Promise<LoginResponseDto> {
     const result = await mockLogin(body.email, body.password);
     if (!result.success) {
       throw new Error(result.error);
@@ -52,9 +50,7 @@ export const authService = {
     };
   },
 
-  async register(
-    body: RegisterRequestDto
-  ): Promise<RegisterResponseDto> {
+  async register(body: RegisterRequestDto): Promise<RegisterResponseDto> {
     const result = await mockSignup(body.name, body.email, body.password);
     if (!result.success) {
       throw new Error(result.error ?? "Registration failed");
@@ -68,7 +64,7 @@ export const authService = {
   },
 
   async forgotPassword(
-    body: ForgotPasswordRequestDto
+    body: ForgotPasswordRequestDto,
   ): Promise<ForgotPasswordResponseDto> {
     const result = await mockForgotPassword(body.email);
     if (!result.success) {

@@ -1,0 +1,31 @@
+/**
+ * SEO config and helpers for the streaming platform.
+ * Used by Next.js metadata API and JSON-LD.
+ */
+
+export const SITE_NAME = "Stream";
+export const SITE_DESCRIPTION =
+  "Watch and discover video content. Browse tutorials, technical talks, and long-form sessions on streaming and video platforms.";
+export const SITE_KEYWORDS = [
+  "video streaming",
+  "streaming platform",
+  "watch online",
+  "video tutorials",
+  "live streaming",
+  "video on demand",
+];
+
+/** Base URL for canonical links and Open Graph. Set NEXT_PUBLIC_APP_URL in production. */
+export function getBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return process.env.NEXT_PUBLIC_APP_URL ?? "https://stream.example.com";
+}
+
+/** Absolute URL for a path (canonical, og:url). */
+export function absoluteUrl(path: string): string {
+  const base = getBaseUrl();
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${normalized}`;
+}

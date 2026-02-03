@@ -1,6 +1,27 @@
 import type { Video } from "@/types";
 
 /**
+ * Convert duration string (MM:SS or HH:MM:SS) to ISO 8601 (e.g. PT12M34S).
+ * Used for schema.org VideoObject.
+ */
+export function durationToIso8601(duration: string): string {
+  const parts = duration.trim().split(":").map(Number);
+  if (parts.length === 3) {
+    const [h, m, s] = parts;
+    const segs: string[] = [];
+    if (h > 0) segs.push(`${h}H`);
+    if (m > 0) segs.push(`${m}M`);
+    segs.push(`${s}S`);
+    return `PT${segs.join("")}`;
+  }
+  if (parts.length === 2) {
+    const [m, s] = parts;
+    return `PT${m}M${s}S`;
+  }
+  return "PT0S";
+}
+
+/**
  * Format duration string (e.g. "1:22:10") for display.
  * Supports HH:MM:SS and MM:SS.
  */

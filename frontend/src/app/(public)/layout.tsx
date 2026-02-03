@@ -6,7 +6,19 @@
  * URL segments: (public) does not appear in the URL (e.g. /, /browse, /watch/123).
  */
 
+import type { Metadata } from "next";
 import { Header, Footer } from "@/components/layout";
+import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  openGraph: {
+    siteName: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+};
 
 export default function PublicLayout({
   children,

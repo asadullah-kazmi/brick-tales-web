@@ -36,11 +36,11 @@ export default function BrowsePage() {
 
   const allVideos = useMemo(
     () => contentService.getVideosForBrowse().map(dtoToVideo),
-    []
+    [],
   );
   const categories = useMemo(
     () => contentService.getCategories().filter((c) => c !== ALL_VALUE),
-    []
+    [],
   );
 
   const filteredVideos = useMemo(() => {
