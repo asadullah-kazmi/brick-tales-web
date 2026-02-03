@@ -35,6 +35,12 @@ export function Header() {
           >
             Browse
           </Link>
+          <Link
+            href="/subscription"
+            className="hover:text-neutral-900 dark:hover:text-white transition-colors"
+          >
+            Plans
+          </Link>
           {isAuthenticated && user ? (
             <>
               <span
