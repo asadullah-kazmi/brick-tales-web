@@ -84,10 +84,27 @@ export function setMockSession(user: User): void {
   }
 }
 
+const LOGIN_ORIGIN_KEY = "loginOrigin";
+
+/** Set where the user signed in: "admin" = /admin/login, "customer" = /login. Used by Header to show/hide Admin tab. */
+export function setLoginOrigin(origin: "admin" | "customer"): void {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem(LOGIN_ORIGIN_KEY, origin);
+  }
+}
+
+/** Get login origin; null if not set (e.g. restored session from another tab). */
+export function getLoginOrigin(): "admin" | "customer" | null {
+  if (typeof window === "undefined") return null;
+  const v = window.sessionStorage.getItem(LOGIN_ORIGIN_KEY);
+  return v === "admin" || v === "customer" ? v : null;
+}
+
 export function clearMockSession(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem("mockAuthUser");
     window.localStorage.removeItem("mockSubscription");
+    window.sessionStorage.removeItem(LOGIN_ORIGIN_KEY);
   }
 }
 

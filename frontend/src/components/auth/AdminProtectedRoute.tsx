@@ -16,17 +16,17 @@ import {
 
 type AdminProtectedRouteProps = {
   children: ReactNode;
-  /** Where to redirect if not authenticated. Default: /login */
+  /** Where to redirect if not authenticated. Default: /admin/login */
   loginRedirectTo?: string;
 };
 
 /**
  * Wraps admin content. Requires authenticated user with mocked role "admin".
- * Redirects to login if not authenticated; shows "Access denied" if not admin.
+ * Redirects to admin login if not authenticated; shows "Access denied" if not admin.
  */
 export function AdminProtectedRoute({
   children,
-  loginRedirectTo = "/login",
+  loginRedirectTo = "/admin/login",
 }: AdminProtectedRouteProps) {
   const { user, isLoading, isAdmin } = useAuth();
   const router = useRouter();
@@ -67,11 +67,20 @@ export function AdminProtectedRoute({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-neutral-500 dark:text-neutral-500">
-              For demo: sign in with <strong>admin@example.com</strong> and
-              password <strong>password123</strong> to access the admin area.
+              Use the admin sign-in at{" "}
+              <Link
+                href="/admin/login"
+                className="font-medium text-accent underline hover:no-underline"
+              >
+                /admin/login
+              </Link>{" "}
+              with an admin account (e.g. admin@example.com).
             </p>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-wrap gap-2">
+            <Link href="/admin/login">
+              <Button type="button">Go to admin sign-in</Button>
+            </Link>
             <Link href="/">
               <Button type="button" variant="secondary">
                 Back to home

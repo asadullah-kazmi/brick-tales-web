@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts";
+import { getLoginOrigin } from "@/lib/mock-auth";
 import { Button } from "@/components/ui";
 
 const LOGO_HEIGHT = 36;
@@ -10,6 +12,13 @@ const LOGO_WIDTH = 140;
 
 export function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const [loginOrigin, setLoginOriginState] = useState<"admin" | "customer" | null>(null);
+
+  useEffect(() => {
+    setLoginOriginState(user ? getLoginOrigin() : null);
+  }, [user]);
+
+  const showAdminLink = isAdmin && loginOrigin === "admin";
 
   return (
     <header className="border-b border-neutral-700/50 bg-off-black/95 backdrop-blur-sm sticky top-0 z-50">
@@ -55,7 +64,7 @@ export function Header() {
               >
                 Dashboard
               </Link>
-              {isAdmin && (
+              {showAdminLink && (
                 <Link
                   href="/admin"
                   className="hover:text-neutral-900 dark:hover:text-accent transition-colors font-medium"

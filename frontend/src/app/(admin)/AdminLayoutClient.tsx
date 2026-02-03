@@ -98,9 +98,19 @@ export default function AdminLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isAdminLoginPage = pathname === "/admin/login";
+
+  // Admin login page: minimal layout, no protection
+  if (isAdminLoginPage) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-off-black px-4">
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <AdminProtectedRoute>
+    <AdminProtectedRoute loginRedirectTo="/admin/login">
       <AdminContentProvider>
         <div className="flex min-h-screen bg-off-black">
           {/* Sidebar */}
