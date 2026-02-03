@@ -2,9 +2,13 @@
  * Shared TypeScript types for the streaming platform.
  */
 
+export type UserRole = "user" | "admin";
+
 export type User = {
   email: string;
   name: string;
+  /** Mocked role. Admin users can access /admin. */
+  role?: UserRole;
 };
 
 export type Video = {

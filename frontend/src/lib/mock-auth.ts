@@ -9,27 +9,38 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+import type { User, UserRole } from "@/types";
+
 export type MockLoginResult =
-  | { success: true; user: { email: string; name: string } }
+  | { success: true; user: User }
   | { success: false; error: string };
+
+/** Mock: admin@example.com gets role "admin", all others "user". */
+function mockRoleForEmail(email: string): UserRole {
+  return email.trim().toLowerCase() === "admin@example.com" ? "admin" : "user";
+}
 
 export async function mockLogin(
   email: string,
   password: string,
 ): Promise<MockLoginResult> {
   await delay(MOCK_DELAY_MS);
-  // Accept any email; require password "password123" for demo success
   if (password === "password123") {
+    const trimmedEmail = email.trim();
     return {
       success: true,
-      user: { email: email.trim(), name: email.split("@")[0] ?? "User" },
+      user: {
+        email: trimmedEmail,
+        name: email.split("@")[0] ?? "User",
+        role: mockRoleForEmail(trimmedEmail),
+      },
     };
   }
   return { success: false, error: "Invalid email or password." };
 }
 
 export type MockSignupResult =
-  | { success: true; user: { email: string; name: string } }
+  | { success: true; user: User }
   | { success: false; error: string };
 
 export async function mockSignup(
@@ -38,10 +49,14 @@ export async function mockSignup(
   password: string,
 ): Promise<MockSignupResult> {
   await delay(MOCK_DELAY_MS);
-  // Always succeed for demo; in real app would check duplicate email etc.
+  const trimmedEmail = email.trim();
   return {
     success: true,
-    user: { email: email.trim(), name: name.trim() },
+    user: {
+      email: trimmedEmail,
+      name: name.trim(),
+      role: mockRoleForEmail(trimmedEmail),
+    },
   };
 }
 
@@ -60,8 +75,8 @@ export async function mockForgotPassword(
   };
 }
 
-/** Store mock session in localStorage for demo (e.g. to show "logged in" state elsewhere). */
-export function setMockSession(user: { email: string; name: string }): void {
+/** Store mock session in localStorage for demo (includes optional role). */
+export function setMockSession(user: User): void {
   if (typeof window !== "undefined") {
     window.localStorage.setItem("mockAuthUser", JSON.stringify(user));
   }

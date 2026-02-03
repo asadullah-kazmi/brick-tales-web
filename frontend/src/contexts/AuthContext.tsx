@@ -29,6 +29,8 @@ type AuthContextValue = AuthState & {
   login: (user: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  /** True when user has mocked role "admin" (e.g. admin@example.com). */
+  isAdmin: boolean;
   /** Mock: set subscription status (e.g. after user "subscribes"). */
   setSubscribed: (subscribed: boolean) => void;
 };
@@ -49,7 +51,11 @@ function readUserFromStorage(): User | null {
       typeof (data as User).email === "string" &&
       typeof (data as User).name === "string"
     ) {
-      return data as User;
+      const user = data as User;
+      if ("role" in user && user.role !== "user" && user.role !== "admin") {
+        return { ...user, role: "user" as const };
+      }
+      return user;
     }
   } catch {
     // ignore
@@ -92,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     isAuthenticated: !!user,
+    isAdmin: user?.role === "admin",
     setSubscribed,
   };
 

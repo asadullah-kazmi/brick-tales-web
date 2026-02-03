@@ -1,0 +1,87 @@
+"use client";
+
+import { useEffect, type ReactNode } from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/contexts";
+import { Loader } from "@/components/ui";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Button,
+} from "@/components/ui";
+
+type AdminProtectedRouteProps = {
+  children: ReactNode;
+  /** Where to redirect if not authenticated. Default: /login */
+  loginRedirectTo?: string;
+};
+
+/**
+ * Wraps admin content. Requires authenticated user with mocked role "admin".
+ * Redirects to login if not authenticated; shows "Access denied" if not admin.
+ */
+export function AdminProtectedRoute({
+  children,
+  loginRedirectTo = "/login",
+}: AdminProtectedRouteProps) {
+  const { user, isLoading, isAdmin } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      const url = pathname
+        ? `${loginRedirectTo}?returnUrl=${encodeURIComponent(pathname)}`
+        : loginRedirectTo;
+      router.replace(url);
+    }
+  }, [user, isLoading, router, loginRedirectTo, pathname]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader size="lg" label="Checking access" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Access denied</CardTitle>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              This area is restricted to administrators. Your account does not
+              have admin access.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-neutral-500 dark:text-neutral-500">
+              For demo: sign in with <strong>admin@example.com</strong> and
+              password <strong>password123</strong> to access the admin area.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Link href="/">
+              <Button type="button" variant="secondary">
+                Back to home
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
