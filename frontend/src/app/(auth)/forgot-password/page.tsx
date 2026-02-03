@@ -12,7 +12,7 @@ import {
   Input,
 } from "@/components/ui";
 import { validateEmail } from "@/lib/validation";
-import { mockForgotPassword } from "@/lib/mock-auth";
+import { authService } from "@/lib/services";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -32,15 +32,11 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
     try {
-      const result = await mockForgotPassword(email);
-      if (result.success) {
-        setMessage(result.message);
-        setSuccess(true);
-      } else {
-        setError(result.error);
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
+      const response = await authService.forgotPassword({ email });
+      setMessage(response.message);
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

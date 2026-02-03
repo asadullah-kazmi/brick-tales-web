@@ -23,10 +23,13 @@ export default function AdminContentPage() {
   const { videos, updateVideo } = useAdminContent();
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  function handleTogglePublish(id: string, current: boolean) {
+  async function handleTogglePublish(id: string, current: boolean) {
     setTogglingId(id);
-    updateVideo(id, { published: !current });
-    setTogglingId(null);
+    try {
+      await updateVideo(id, { published: !current });
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   return (

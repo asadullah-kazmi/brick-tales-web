@@ -9,11 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { AdminVideo } from "@/types";
-import {
-  getAdminVideos,
-  createAdminVideo,
-  updateAdminVideo as updateAdminVideoStorage,
-} from "@/lib/mock-admin-content";
+import { contentService } from "@/lib/services";
 
 type AdminContentContextValue = {
   videos: AdminVideo[];
@@ -22,7 +18,7 @@ type AdminContentContextValue = {
     duration: string;
     description?: string;
     category?: string;
-  }) => AdminVideo;
+  }) => Promise<void>;
   updateVideo: (
     id: string,
     updates: Partial<
@@ -31,7 +27,7 @@ type AdminContentContextValue = {
         "published" | "title" | "duration" | "description" | "category"
       >
     >,
-  ) => AdminVideo | null;
+  ) => Promise<void>;
   refresh: () => void;
 };
 
@@ -43,7 +39,7 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
   const [videos, setVideos] = useState<AdminVideo[]>([]);
 
   const refresh = useCallback(() => {
-    setVideos(getAdminVideos());
+    setVideos(contentService.getAdminVideoList());
   }, []);
 
   useEffect(() => {
@@ -51,21 +47,20 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const addVideo = useCallback(
-    (metadata: {
+    async (metadata: {
       title: string;
       duration: string;
       description?: string;
       category?: string;
     }) => {
-      const video = createAdminVideo(metadata);
-      setVideos(getAdminVideos());
-      return video;
+      await contentService.createVideo(metadata);
+      refresh();
     },
-    [],
+    [refresh],
   );
 
   const updateVideo = useCallback(
-    (
+    async (
       id: string,
       updates: Partial<
         Pick<
@@ -74,11 +69,10 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
         >
       >,
     ) => {
-      const updated = updateAdminVideoStorage(id, updates);
-      setVideos(getAdminVideos());
-      return updated;
+      await contentService.updateVideo(id, updates);
+      refresh();
     },
-    [],
+    [refresh],
   );
 
   const value: AdminContentContextValue = {

@@ -49,6 +49,7 @@ export async function mockSignup(
   password: string,
 ): Promise<MockSignupResult> {
   await delay(MOCK_DELAY_MS);
+  void password; // reserved for real validation
   const trimmedEmail = email.trim();
   return {
     success: true,
@@ -68,6 +69,7 @@ export async function mockForgotPassword(
   email: string,
 ): Promise<MockForgotPasswordResult> {
   await delay(MOCK_DELAY_MS);
+  void email; // reserved for real lookup
   return {
     success: true,
     message:

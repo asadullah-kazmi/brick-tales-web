@@ -23,7 +23,7 @@ export function SimpleBarChart({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {data.map((item, index) => (
+      {data.map((item) => (
         <div key={item.label} className="flex flex-col gap-1">
           <div className="flex justify-between text-sm">
             <span className="font-medium text-neutral-700 dark:text-neutral-300">

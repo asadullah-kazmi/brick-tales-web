@@ -1,14 +1,40 @@
 "use client";
 
-import {
-  getMockDashboardStats,
-  getMockVideosByCategory,
-} from "@/lib/mock-analytics";
+import { useEffect, useState } from "react";
+import { analyticsService } from "@/lib/services";
+import type { MockDashboardStats } from "@/lib/mock-analytics";
 import { StatCard, SimpleBarChart } from "@/components/admin";
+import { Loader } from "@/components/ui";
 
 export default function AdminPage() {
-  const stats = getMockDashboardStats();
-  const videosByCategory = getMockVideosByCategory();
+  const [stats, setStats] = useState<MockDashboardStats | null>(null);
+  const [videosByCategory, setVideosByCategory] = useState<
+    { label: string; value: number }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [dashboardStats, categoryData] = await Promise.all([
+          analyticsService.getDashboardStats(),
+          analyticsService.getVideosByCategory(),
+        ]);
+        setStats(dashboardStats);
+        setVideosByCategory(categoryData);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading || !stats) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader size="lg" label="Loading dashboard…" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -56,12 +82,7 @@ export default function AdminPage() {
           Mock distribution
         </p>
         <div className="mt-4 max-w-md">
-          <SimpleBarChart
-            data={videosByCategory.map((d) => ({
-              label: d.category,
-              value: d.count,
-            }))}
-          />
+          <SimpleBarChart data={videosByCategory} />
         </div>
       </section>
     </>

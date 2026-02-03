@@ -1,5 +1,6 @@
 /**
  * Shared TypeScript types for the streaming platform.
+ * Domain types (User, Video, AdminVideo) + API contracts (see ./api).
  */
 
 export type UserRole = "user" | "admin";
@@ -34,3 +35,6 @@ export type AdminVideo = {
   /** ISO date string when the record was created. */
   createdAt: string;
 };
+
+/** API contract interfaces (auth, subscriptions, content, streaming). Backend-ready for NestJS. */
+export * from "./api";

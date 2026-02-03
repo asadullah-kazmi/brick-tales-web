@@ -46,11 +46,11 @@ export default function AdminUploadPage() {
     return true;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!runValidation()) return;
 
-    addVideo({
+    await addVideo({
       title: title.trim(),
       duration: duration.trim(),
       description: description.trim() || undefined,

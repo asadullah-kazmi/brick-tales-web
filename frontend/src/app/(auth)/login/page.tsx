@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -11,12 +11,13 @@ import {
   CardTitle,
   Button,
   Input,
+  Loader,
 } from "@/components/ui";
 import { validateEmail } from "@/lib/validation";
-import { mockLogin } from "@/lib/mock-auth";
+import { authService } from "@/lib/services";
 import { useAuth } from "@/contexts";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -47,15 +48,15 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      const result = await mockLogin(email, password);
-      if (result.success) {
-        login(result.user);
-        setSuccess(true);
-      } else {
-        setSubmitError(result.error);
-      }
-    } catch {
-      setSubmitError("Something went wrong. Please try again.");
+      const response = await authService.login({ email, password });
+      login({
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role,
+      });
+      setSuccess(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -157,5 +158,21 @@ export default function LoginPage() {
         </CardFooter>
       </form>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader size="md" label="Loading…" />
+          </CardContent>
+        </Card>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

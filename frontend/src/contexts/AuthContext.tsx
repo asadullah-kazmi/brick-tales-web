@@ -9,14 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import type { User } from "@/types";
-import {
-  clearMockSession,
-  setMockSession,
-  getMockSubscription,
-  setMockSubscription,
-} from "@/lib/mock-auth";
-
-const STORAGE_KEY = "mockAuthUser";
+import { authService, getStoredSubscription } from "@/lib/services";
+import { subscriptionService } from "@/lib/services";
 
 type AuthState = {
   user: User | null;
@@ -37,30 +31,13 @@ type AuthContextValue = AuthState & {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function readUserFromStorage(): User | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as unknown;
-    if (
-      data &&
-      typeof data === "object" &&
-      "email" in data &&
-      "name" in data &&
-      typeof (data as User).email === "string" &&
-      typeof (data as User).name === "string"
-    ) {
-      const user = data as User;
-      if ("role" in user && user.role !== "user" && user.role !== "admin") {
-        return { ...user, role: "user" as const };
-      }
-      return user;
-    }
-  } catch {
-    // ignore
-  }
-  return null;
+/** Map UserDto from service to User for context (session already persisted by service). */
+function dtoToUser(dto: { email: string; name: string; role: string }): User {
+  return {
+    email: dto.email,
+    name: dto.name,
+    role: dto.role === "admin" ? "admin" : "user",
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -69,25 +46,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubscribed, setIsSubscribedState] = useState(false);
 
   useEffect(() => {
-    const stored = readUserFromStorage();
-    setUser(stored);
-    setIsSubscribedState(getMockSubscription());
+    const session = authService.getSession();
+    setUser(session ? dtoToUser(session) : null);
+    setIsSubscribedState(getStoredSubscription());
     setIsLoading(false);
   }, []);
 
   const login = useCallback((newUser: User) => {
-    setMockSession(newUser);
     setUser(newUser);
   }, []);
 
   const logout = useCallback(() => {
-    clearMockSession();
+    authService.logout();
     setUser(null);
     setIsSubscribedState(false);
   }, []);
 
   const setSubscribed = useCallback((subscribed: boolean) => {
-    setMockSubscription(subscribed);
+    subscriptionService.setSubscribed(subscribed);
     setIsSubscribedState(subscribed);
   }, []);
 

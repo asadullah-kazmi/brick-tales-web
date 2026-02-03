@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { HLSVideoPlayer } from "@/components/player";
 import { SubscriptionPrompt } from "@/components/content";
 import { useAuth } from "@/contexts";
-import { DEFAULT_HLS_TEST_STREAM, HLS_TEST_STREAMS } from "@/lib/hls-streams";
-import { mockVideos } from "@/lib/mock-videos";
+import { contentService, streamingService } from "@/lib/services";
+import type { VideoDto } from "@/types/api";
 import { formatDuration, formatDate, isLongForm } from "@/lib/video-utils";
 import { Loader } from "@/components/ui";
 
@@ -13,24 +13,77 @@ type WatchPageProps = {
   params: { id: string };
 };
 
+function dtoToDisplayVideo(dto: VideoDto): {
+  id: string;
+  title: string;
+  duration: string;
+  thumbnailUrl: string | null;
+  description?: string;
+  category?: string;
+  publishedAt?: string;
+} {
+  return {
+    id: dto.id,
+    title: dto.title,
+    duration: dto.duration,
+    thumbnailUrl: dto.thumbnailUrl ?? null,
+    description: dto.description,
+    category: dto.category,
+    publishedAt: dto.publishedAt ?? dto.createdAt,
+  };
+}
+
 export default function WatchPage({ params }: WatchPageProps) {
   const { id } = params;
   const { isSubscribed, isLoading: authLoading } = useAuth();
+  const [video, setVideo] = useState<VideoDto | null>(null);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { video, streamUrl } = useMemo(() => {
-    const video = mockVideos.find((v) => v.id === id) ?? null;
-    const streamKey = video && HLS_TEST_STREAMS[id] ? id : "big-buck-bunny";
-    const streamUrl = HLS_TEST_STREAMS[streamKey] ?? DEFAULT_HLS_TEST_STREAM;
-    return { video, streamUrl };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [detailRes, playbackRes] = await Promise.all([
+          contentService.getVideoById(id),
+          streamingService.getPlaybackInfo(id),
+        ]);
+        if (cancelled) return;
+        setVideo(detailRes?.video ?? null);
+        setStreamUrl(playbackRes.url);
+      } catch {
+        if (!cancelled) {
+          setVideo(null);
+          setStreamUrl(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
-  const title = video?.title ?? `Video ${id}`;
-  const longForm = video ? isLongForm(video) : false;
+  const displayVideo = video ? dtoToDisplayVideo(video) : null;
+  const title = displayVideo?.title ?? `Video ${id}`;
+  const longForm = displayVideo ? isLongForm(displayVideo) : false;
 
-  if (authLoading) {
+  if (authLoading || loading) {
     return (
       <main className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
         <Loader size="lg" label="Loading…" />
+      </main>
+    );
+  }
+
+  if (!streamUrl) {
+    return (
+      <main className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
+        <p className="text-neutral-600 dark:text-neutral-400">
+          Video or playback info not found.
+        </p>
       </main>
     );
   }
@@ -67,17 +120,19 @@ export default function WatchPage({ params }: WatchPageProps) {
 
         {/* Metadata row: duration, category, date, long-form badge */}
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-          {video?.duration && (
-            <span title={`Duration: ${video.duration}`}>
-              {formatDuration(video.duration)}
+          {displayVideo?.duration && (
+            <span title={`Duration: ${displayVideo.duration}`}>
+              {formatDuration(displayVideo.duration)}
             </span>
           )}
-          {video?.category && (
+          {displayVideo?.category && (
             <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-              {video.category}
+              {displayVideo.category}
             </span>
           )}
-          {video?.publishedAt && <span>{formatDate(video.publishedAt)}</span>}
+          {displayVideo?.publishedAt && (
+            <span>{formatDate(displayVideo.publishedAt)}</span>
+          )}
           {longForm && (
             <span
               className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
@@ -97,9 +152,9 @@ export default function WatchPage({ params }: WatchPageProps) {
             Description
           </h2>
           <div className="max-w-none">
-            {video?.description ? (
+            {displayVideo?.description ? (
               <p className="whitespace-pre-wrap text-neutral-600 leading-relaxed dark:text-neutral-400">
-                {video.description}
+                {displayVideo.description}
               </p>
             ) : (
               <p className="text-neutral-500 dark:text-neutral-400">

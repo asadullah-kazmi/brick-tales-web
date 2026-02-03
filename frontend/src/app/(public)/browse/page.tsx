@@ -1,20 +1,51 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { mockVideos, mockCategories } from "@/lib/mock-videos";
+import { contentService } from "@/lib/services";
+import type { Video } from "@/types";
 import { VideoCard } from "@/components/content";
 import { Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 const ALL_VALUE = "All";
 
+function dtoToVideo(dto: {
+  id: string;
+  title: string;
+  duration: string;
+  thumbnailUrl: string | null;
+  description?: string;
+  category?: string;
+  publishedAt?: string;
+  createdAt: string;
+}): Video {
+  return {
+    id: dto.id,
+    title: dto.title,
+    duration: dto.duration,
+    thumbnailUrl: dto.thumbnailUrl ?? null,
+    description: dto.description,
+    category: dto.category,
+    publishedAt: dto.publishedAt ?? dto.createdAt,
+  };
+}
+
 export default function BrowsePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(ALL_VALUE);
 
+  const allVideos = useMemo(
+    () => contentService.getVideosForBrowse().map(dtoToVideo),
+    []
+  );
+  const categories = useMemo(
+    () => contentService.getCategories().filter((c) => c !== ALL_VALUE),
+    []
+  );
+
   const filteredVideos = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return mockVideos.filter((video) => {
+    return allVideos.filter((video) => {
       const matchesCategory =
         selectedCategory === ALL_VALUE || video.category === selectedCategory;
       const matchesSearch =
@@ -23,7 +54,7 @@ export default function BrowsePage() {
         (video.description?.toLowerCase().includes(query) ?? false);
       return matchesCategory && matchesSearch;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, allVideos]);
 
   return (
     <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
@@ -52,7 +83,7 @@ export default function BrowsePage() {
             Category
           </span>
           <div className="flex flex-wrap gap-2">
-            {mockCategories.map((category) => (
+            {categories.map((category) => (
               <button
                 key={category}
                 type="button"

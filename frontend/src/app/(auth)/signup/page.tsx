@@ -17,10 +17,11 @@ import {
   validateRequired,
   validatePasswordMatch,
 } from "@/lib/validation";
-import { mockSignup } from "@/lib/mock-auth";
+import { authService } from "@/lib/services";
 import { useAuth } from "@/contexts";
 
 export default function SignupPage() {
+  const { login } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,15 +57,15 @@ export default function SignupPage() {
 
     setIsLoading(true);
     try {
-      const result = await mockSignup(name, email, password);
-      if (result.success) {
-        login(result.user);
-        setSuccess(true);
-      } else {
-        setSubmitError(result.error);
-      }
-    } catch {
-      setSubmitError("Something went wrong. Please try again.");
+      const response = await authService.register({ name, email, password });
+      login({
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role,
+      });
+      setSuccess(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

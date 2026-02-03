@@ -1,0 +1,61 @@
+/**
+ * API contract types for authentication.
+ * Backend-ready for NestJS (e.g. AuthModule, DTOs, guards).
+ */
+
+/** User as returned by the API (includes id when persisted). */
+export interface UserDto {
+  id: string;
+  email: string;
+  name: string;
+  role: "user" | "admin";
+  /** ISO date string. */
+  createdAt?: string;
+}
+
+/** Request body for POST /auth/login */
+export interface LoginRequestDto {
+  email: string;
+  password: string;
+}
+
+/** Response for POST /auth/login */
+export interface LoginResponseDto {
+  user: UserDto;
+  accessToken: string;
+  /** Optional; used for refresh flow. */
+  refreshToken?: string;
+  /** Token expiry in seconds. */
+  expiresIn?: number;
+}
+
+/** Request body for POST /auth/register */
+export interface RegisterRequestDto {
+  name: string;
+  email: string;
+  password: string;
+}
+
+/** Response for POST /auth/register (same shape as login). */
+export type RegisterResponseDto = LoginResponseDto;
+
+/** Request body for POST /auth/forgot-password */
+export interface ForgotPasswordRequestDto {
+  email: string;
+}
+
+/** Response for POST /auth/forgot-password */
+export interface ForgotPasswordResponseDto {
+  message: string;
+}
+
+/** Request body for POST /auth/refresh (if using refresh tokens). */
+export interface RefreshTokenRequestDto {
+  refreshToken: string;
+}
+
+/** Response for POST /auth/refresh */
+export type RefreshTokenResponseDto = Pick<
+  LoginResponseDto,
+  "accessToken" | "refreshToken" | "expiresIn"
+>;
