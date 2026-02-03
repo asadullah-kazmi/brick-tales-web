@@ -2,23 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* BRICK TALES brand: off-black background, yellow accent, white/light gray text */
+/* BRICK TALES brand: dark-only theme — off-black background, yellow accent, white/light gray text */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0c0c0c;
+  --foreground: #fafafa;
   --off-black: #0c0c0c;
   --accent: #ffe700;
   --accent-foreground: #0c0c0c;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0c0c; /* off-black instead of navy */
-    --foreground: #fafafa;
-    --off-black: #0c0c0c;
-    --accent: #ffe700;
-    --accent-foreground: #0c0c0c;
-  }
+  color-scheme: dark;
 }
 
 body {
