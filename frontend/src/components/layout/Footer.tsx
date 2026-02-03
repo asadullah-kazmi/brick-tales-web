@@ -18,14 +18,38 @@ export function Footer() {
               © {new Date().getFullYear()} BRICK TALES.TV. All rights reserved.
             </p>
           </div>
-          <div className="flex gap-6">
+          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2" aria-label="Footer links">
             <Link
               href="/browse"
               className="hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
               Browse
             </Link>
-          </div>
+            <Link
+              href="/terms-of-use"
+              className="hover:text-neutral-900 dark:hover:text-white transition-colors"
+            >
+              Terms of Use
+            </Link>
+            <Link
+              href="/privacy-policy"
+              className="hover:text-neutral-900 dark:hover:text-white transition-colors"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/cookie-consent"
+              className="hover:text-neutral-900 dark:hover:text-white transition-colors"
+            >
+              Cookie Consent Tool
+            </Link>
+            <Link
+              href="/do-not-sell"
+              className="hover:text-neutral-900 dark:hover:text-white transition-colors"
+            >
+              Do Not Sell or Share My Personal Information
+            </Link>
+          </nav>
         </div>
       </div>
     </footer>
