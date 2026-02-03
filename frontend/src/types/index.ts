@@ -14,4 +14,6 @@ export type Video = {
   thumbnailUrl: string | null;
   description?: string;
   category?: string;
+  /** ISO date string for display (e.g. "2024-01-15"). */
+  publishedAt?: string;
 };

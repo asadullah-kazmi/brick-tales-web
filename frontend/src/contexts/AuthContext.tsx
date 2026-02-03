@@ -9,19 +9,28 @@ import {
   type ReactNode,
 } from "react";
 import type { User } from "@/types";
-import { clearMockSession, setMockSession } from "@/lib/mock-auth";
+import {
+  clearMockSession,
+  setMockSession,
+  getMockSubscription,
+  setMockSubscription,
+} from "@/lib/mock-auth";
 
 const STORAGE_KEY = "mockAuthUser";
 
 type AuthState = {
   user: User | null;
   isLoading: boolean;
+  /** Mocked subscription status. When false, subscription prompt is shown instead of video. */
+  isSubscribed: boolean;
 };
 
 type AuthContextValue = AuthState & {
   login: (user: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  /** Mock: set subscription status (e.g. after user "subscribes"). */
+  setSubscribed: (subscribed: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -51,10 +60,12 @@ function readUserFromStorage(): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubscribed, setIsSubscribedState] = useState(false);
 
   useEffect(() => {
     const stored = readUserFromStorage();
     setUser(stored);
+    setIsSubscribedState(getMockSubscription());
     setIsLoading(false);
   }, []);
 
@@ -66,14 +77,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearMockSession();
     setUser(null);
+    setIsSubscribedState(false);
+  }, []);
+
+  const setSubscribed = useCallback((subscribed: boolean) => {
+    setMockSubscription(subscribed);
+    setIsSubscribedState(subscribed);
   }, []);
 
   const value: AuthContextValue = {
     user,
     isLoading,
+    isSubscribed,
     login,
     logout,
     isAuthenticated: !!user,
+    setSubscribed,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

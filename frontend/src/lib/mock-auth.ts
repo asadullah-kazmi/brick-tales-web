@@ -70,5 +70,29 @@ export function setMockSession(user: { email: string; name: string }): void {
 export function clearMockSession(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem("mockAuthUser");
+    window.localStorage.removeItem("mockSubscription");
+  }
+}
+
+const SUBSCRIPTION_KEY = "mockSubscription";
+
+/** Read mocked subscription status from localStorage. */
+export function getMockSubscription(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(SUBSCRIPTION_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Set mocked subscription status (e.g. after "Subscribe" action). */
+export function setMockSubscription(subscribed: boolean): void {
+  if (typeof window !== "undefined") {
+    if (subscribed) {
+      window.localStorage.setItem(SUBSCRIPTION_KEY, "true");
+    } else {
+      window.localStorage.removeItem(SUBSCRIPTION_KEY);
+    }
   }
 }

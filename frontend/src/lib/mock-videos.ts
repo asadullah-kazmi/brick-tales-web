@@ -34,8 +34,10 @@ export const mockVideos: Video[] = [
     title: "Building a Video Platform",
     duration: "1:22:10",
     thumbnailUrl: null,
-    description: "Architecture and design patterns.",
+    description:
+      "A deep dive into architecture and design patterns for video platforms. We cover ingest pipelines, transcoding strategies, storage and CDN choices, API design, and scaling to millions of viewers. This long-form session includes real-world case studies and Q&A.",
     category: "Architecture",
+    publishedAt: "2024-03-15",
   },
   {
     id: "5",
