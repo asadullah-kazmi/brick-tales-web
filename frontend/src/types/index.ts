@@ -21,3 +21,16 @@ export type Video = {
   /** ISO date string for display (e.g. "2024-01-15"). */
   publishedAt?: string;
 };
+
+/** Video metadata as stored by admin (mock). No file upload yet. */
+export type AdminVideo = {
+  id: string;
+  title: string;
+  duration: string;
+  description?: string;
+  category?: string;
+  /** Whether the content is visible in the catalog. */
+  published: boolean;
+  /** ISO date string when the record was created. */
+  createdAt: string;
+};
