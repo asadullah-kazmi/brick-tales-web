@@ -9,7 +9,7 @@ const LOGO_HEIGHT = 36;
 const LOGO_WIDTH = 140;
 
 export function Header() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm sticky top-0 z-50">
@@ -55,6 +55,14 @@ export function Header() {
               >
                 Dashboard
               </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="hover:text-neutral-900 dark:hover:text-white transition-colors font-medium"
+                >
+                  Admin
+                </Link>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
