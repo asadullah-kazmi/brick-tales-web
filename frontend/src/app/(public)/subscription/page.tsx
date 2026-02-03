@@ -4,6 +4,33 @@ import { SITE_BRAND, SITE_DESCRIPTION, absoluteUrl } from "@/lib/seo";
 import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
 import { cn } from "@/lib/utils";
 
+function TvIcon({ className }: { className?: string }) {
+  return (
+    <svg className={cn("h-10 w-10 sm:h-12 sm:w-12", className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+      <polyline points="17 2 12 7 7 2" />
+    </svg>
+  );
+}
+
+function PhoneIcon({ className }: { className?: string }) {
+  return (
+    <svg className={cn("h-10 w-10 sm:h-12 sm:w-12", className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+      <line x1="12" y1="18" x2="12.01" y2="18" />
+    </svg>
+  );
+}
+
+function TabletIcon({ className }: { className?: string }) {
+  return (
+    <svg className={cn("h-10 w-10 sm:h-12 sm:w-12", className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+      <line x1="12" y1="18" x2="12.01" y2="18" />
+    </svg>
+  );
+}
+
 export const metadata: Metadata = {
   title: "Subscription Plans",
   description: `Compare ${SITE_BRAND} plans: Fan, Mega Fan, and Ultimate. Ad-free, multi-device, downloads, simulcasts, and more.`,
@@ -95,6 +122,46 @@ export default function SubscriptionPage() {
             free trial.
           </p>
         </header>
+
+        {/* Watch Anywhere — device icons + multi-device per tier */}
+        <section
+          className="mt-10 rounded-2xl border border-neutral-200 bg-neutral-50 px-6 py-8 dark:border-neutral-800 dark:bg-neutral-900/50 sm:px-8 sm:py-10"
+          aria-labelledby="watch-anywhere-heading"
+        >
+          <h2
+            id="watch-anywhere-heading"
+            className="text-center text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl"
+          >
+            Watch Anywhere
+          </h2>
+          <p className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-400">
+            Stream on TV, phone, and tablet. Multi-device support depends on your plan.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-8 sm:gap-12" aria-hidden>
+            <span className="flex flex-col items-center gap-2 text-neutral-600 dark:text-neutral-400">
+              <TvIcon className="text-neutral-700 dark:text-neutral-300" />
+              <span className="text-xs font-medium">TV</span>
+            </span>
+            <span className="flex flex-col items-center gap-2 text-neutral-600 dark:text-neutral-400">
+              <PhoneIcon className="text-neutral-700 dark:text-neutral-300" />
+              <span className="text-xs font-medium">Phone</span>
+            </span>
+            <span className="flex flex-col items-center gap-2 text-neutral-600 dark:text-neutral-400">
+              <TabletIcon className="text-neutral-700 dark:text-neutral-300" />
+              <span className="text-xs font-medium">Tablet</span>
+            </span>
+          </div>
+          <div className="mt-6 border-t border-neutral-200 pt-6 dark:border-neutral-800">
+            <p className="text-center text-sm font-medium text-neutral-800 dark:text-neutral-200">
+              Multi-device support per tier
+            </p>
+            <ul className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-neutral-600 dark:text-neutral-400 sm:gap-x-8">
+              <li><strong className="text-neutral-900 dark:text-white">Fan:</strong> 1 device at a time</li>
+              <li><strong className="text-neutral-900 dark:text-white">Mega Fan:</strong> Up to 4 devices</li>
+              <li><strong className="text-neutral-900 dark:text-white">Ultimate:</strong> Up to 6 devices</li>
+            </ul>
+          </div>
+        </section>
 
         <section
           className="mt-10 grid gap-6 sm:gap-8 lg:grid-cols-3"

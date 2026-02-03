@@ -7,7 +7,13 @@ import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
 import type { VideoDto } from "@/types/api";
 import { formatDuration, formatDate, isLongForm } from "@/lib/video-utils";
-import { Loader } from "@/components/ui";
+import {
+  Loader,
+  Modal,
+  ModalContent,
+  ModalFooter,
+  Button,
+} from "@/components/ui";
 
 type WatchPageClientProps = {
   params: { id: string };
@@ -69,6 +75,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   const displayVideo = video ? dtoToDisplayVideo(video) : null;
   const title = displayVideo?.title ?? `Video ${id}`;
   const longForm = displayVideo ? isLongForm(displayVideo) : false;
+  const [offlineModalOpen, setOfflineModalOpen] = useState(false);
 
   if (authLoading || loading) {
     return (
@@ -141,7 +148,50 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
               Long-form
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => setOfflineModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 dark:focus-visible:ring-neutral-100 dark:focus-visible:ring-offset-neutral-900"
+            aria-label="Download for offline viewing — opens info"
+          >
+            <span aria-hidden>⬇</span>
+            Download for Offline
+          </button>
         </div>
+
+        <Modal
+          isOpen={offlineModalOpen}
+          onClose={() => setOfflineModalOpen(false)}
+          title="Download for Offline"
+        >
+          <ModalContent>
+            <p className="text-neutral-600 dark:text-neutral-300">
+              Offline downloads let you save videos to your device and watch
+              them without an internet connection.
+            </p>
+            <p className="mt-3 text-neutral-600 dark:text-neutral-300">
+              <strong className="text-neutral-900 dark:text-white">
+                Offline downloads are available on our iOS and Android apps.
+              </strong>{" "}
+              Install the BRICK TALES.TV app from the App Store or Google Play,
+              sign in with your subscription account, and use the download
+              button on supported videos.
+            </p>
+            <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+              This feature is not available in the web player. Download the
+              mobile app to watch offline.
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setOfflineModalOpen(false)}
+            >
+              Got it
+            </Button>
+          </ModalFooter>
+        </Modal>
 
         {/* Description — supports long-form content (1–3+ hours) */}
         <section
