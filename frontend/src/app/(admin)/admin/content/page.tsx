@@ -34,12 +34,12 @@ export default function AdminContentPage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl">
             Content
           </h1>
-          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             Manage uploaded content. Toggle publish to show or hide in the
             catalog (mock).
           </p>
@@ -47,7 +47,7 @@ export default function AdminContentPage() {
         <Link href="/admin/content/upload">
           <Button type="button">Upload metadata</Button>
         </Link>
-      </div>
+      </header>
 
       {videos.length === 0 ? (
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 py-12 text-center dark:border-neutral-800 dark:bg-neutral-900/50">

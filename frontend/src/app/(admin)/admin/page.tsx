@@ -56,28 +56,30 @@ export default function AdminPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">
-        Dashboard
-      </h1>
-      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-        Mock analytics. Replace with real data when backend is available.
-      </p>
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-3xl">
+          Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+          Mock analytics. Replace with real data when backend is available.
+        </p>
+      </header>
 
       {/* Stats cards */}
       <Suspense
         fallback={
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-24 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800"
+                className="h-32 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800"
               />
             ))}
           </div>
         }
       >
         <section
-          className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
           aria-label="Overview statistics"
         >
           <StatCard
@@ -101,23 +103,27 @@ export default function AdminPage() {
         </section>
       </Suspense>
 
-      {/* Simple chart: videos by category */}
+      {/* Videos by category */}
       <Suspense
         fallback={
-          <div className="mt-8 h-64 max-w-md animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+          <div className="mt-10 h-72 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800" />
         }
       >
         <section
-          className="mt-8 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+          className="mt-10 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 sm:p-8"
           aria-label="Videos by category"
         >
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            Videos by category
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            Mock distribution
-          </p>
-          <div className="mt-4 max-w-md">
+          <div className="mb-6 flex items-baseline justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
+                Videos by category
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                Mock distribution
+              </p>
+            </div>
+          </div>
+          <div className="max-w-md">
             <SimpleBarChart data={videosByCategory} />
           </div>
         </section>

@@ -1,8 +1,92 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { AdminProtectedRoute } from "@/components/auth";
 import { AdminContentProvider } from "@/contexts";
+import { SITE_BRAND } from "@/lib/seo";
+import { cn } from "@/lib/utils";
+
+const NAV_ITEMS = [
+  { href: "/admin", label: "Overview", icon: IconOverview },
+  { href: "/admin/content", label: "Content", icon: IconContent },
+  { href: "/admin/content/upload", label: "Upload", icon: IconUpload },
+  { href: "/admin/users", label: "Users", icon: IconUsers },
+] as const;
+
+function IconOverview({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+      />
+    </svg>
+  );
+}
+function IconContent({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+      />
+    </svg>
+  );
+}
+function IconUpload({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+      />
+    </svg>
+  );
+}
+function IconUsers({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+      />
+    </svg>
+  );
+}
 
 /**
  * Protected admin layout with sidebar. Only renders when user is authenticated
@@ -13,42 +97,80 @@ export default function AdminLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
   return (
     <AdminProtectedRoute>
       <AdminContentProvider>
-        <div className="flex min-h-screen flex-col sm:flex-row">
-          <aside className="w-full border-b border-red-200 bg-red-50/50 px-4 py-4 dark:border-red-900/50 dark:bg-red-950/20 sm:w-56 sm:border-b-0 sm:border-r">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-red-700 dark:text-red-400">
-              Admin
-            </p>
-            <nav className="flex flex-wrap gap-x-4 gap-y-1 sm:flex-col sm:gap-1">
+        <div className="flex min-h-screen bg-neutral-100 dark:bg-neutral-950">
+          {/* Sidebar */}
+          <aside
+            className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+            aria-label="Admin navigation"
+          >
+            <div className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-200 px-5 dark:border-neutral-800">
               <Link
-                href="/admin"
-                className="text-sm font-medium text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
+                href="/"
+                className="flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 dark:focus:ring-offset-neutral-900 rounded"
               >
-                Overview
+                <Image
+                  src="/logo.png"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded object-contain"
+                />
+                <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">
+                  {SITE_BRAND} Admin
+                </span>
               </Link>
-              <Link
-                href="/admin/content"
-                className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-              >
-                Content
-              </Link>
-              <Link
-                href="/admin/content/upload"
-                className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-              >
-                Upload
-              </Link>
-              <Link
-                href="/admin/users"
-                className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-              >
-                Users
-              </Link>
+            </div>
+            <nav className="flex-1 space-y-0.5 p-3">
+              {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                const isActive =
+                  href === "/admin"
+                    ? pathname === "/admin"
+                    : pathname.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      "border-l-2",
+                      isActive
+                        ? "border-neutral-900 bg-neutral-100 text-neutral-900 dark:border-white dark:bg-neutral-800 dark:text-white"
+                        : "border-transparent text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800/50 dark:hover:text-white",
+                    )}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
+                    {label}
+                  </Link>
+                );
+              })}
             </nav>
+            <div className="border-t border-neutral-200 p-3 dark:border-neutral-800">
+              <Link
+                href="/"
+                className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              >
+                ← Back to site
+              </Link>
+            </div>
           </aside>
-          <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+
+          {/* Top bar + main content */}
+          <div className="flex min-h-screen flex-1 flex-col pl-64">
+            <header className="sticky top-0 z-30 shrink-0 border-b border-neutral-200 bg-white/80 px-8 py-4 backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-900/80">
+              <p className="text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                Admin
+              </p>
+            </header>
+            <main className="flex-1">
+              <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+            </main>
+          </div>
         </div>
       </AdminContentProvider>
     </AdminProtectedRoute>
