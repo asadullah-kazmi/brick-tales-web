@@ -12,7 +12,9 @@ const LOGO_WIDTH = 140;
 
 export function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
-  const [loginOrigin, setLoginOriginState] = useState<"admin" | "customer" | null>(null);
+  const [loginOrigin, setLoginOriginState] = useState<
+    "admin" | "customer" | null
+  >(null);
 
   useEffect(() => {
     setLoginOriginState(user ? getLoginOrigin() : null);
