@@ -83,6 +83,7 @@ export function HLSVideoPlayer({
         ref={videoRef}
         className="video-js vjs-big-play-centered vjs-fluid"
         playsInline
+        preload="auto"
         aria-label={title}
       />
     </div>

@@ -1,11 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { contentService } from "@/lib/services";
 import type { Video } from "@/types";
-import { VideoCard } from "@/components/content";
+import { VideoCardSkeleton } from "@/components/content";
 import { Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
+
+const ABOVE_THE_FOLD_COUNT = 8;
+
+const VideoCard = dynamic(
+  () => import("@/components/content").then((mod) => mod.VideoCard),
+  {
+    loading: () => <VideoCardSkeleton />,
+  },
+);
 
 const ALL_VALUE = "All";
 
@@ -105,8 +115,12 @@ export default function BrowsePage() {
 
       {filteredVideos.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredVideos.map((video) => (
-            <VideoCard key={video.id} video={video} />
+          {filteredVideos.map((video, index) => (
+            <VideoCard
+              key={video.id}
+              video={video}
+              priority={index < ABOVE_THE_FOLD_COUNT}
+            />
           ))}
         </div>
       ) : (

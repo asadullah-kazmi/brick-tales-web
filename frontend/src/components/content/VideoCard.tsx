@@ -5,9 +5,15 @@ import Image from "next/image";
 import type { Video } from "@/types";
 import { cn } from "@/lib/utils";
 
+/** Minimal gray blur placeholder for image loading (avoids layout shift). */
+const BLUR_DATA_URL =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIGZpbGw9IiNlNWU3ZWIiLz48L3N2Zz4=";
+
 type VideoCardProps = {
   video: Video;
   className?: string;
+  /** Set for above-the-fold cards (e.g. first row) for faster LCP. */
+  priority?: boolean;
 };
 
 /**
@@ -35,7 +41,11 @@ function ThumbnailPlaceholder({
   );
 }
 
-export function VideoCard({ video, className }: VideoCardProps) {
+export function VideoCard({
+  video,
+  className,
+  priority = false,
+}: VideoCardProps) {
   return (
     <Link
       href={`/watch/${video.id}`}
@@ -52,6 +62,9 @@ export function VideoCard({ video, className }: VideoCardProps) {
             fill
             className="object-cover transition-transform group-hover:scale-[1.02]"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={priority}
+            placeholder="blur"
+            blurDataURL={BLUR_DATA_URL}
           />
         ) : (
           <ThumbnailPlaceholder title={video.title} />

@@ -1,10 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { Suspense, useEffect, useState } from "react";
 import { analyticsService } from "@/lib/services";
 import type { MockDashboardStats } from "@/lib/mock-analytics";
-import { StatCard, SimpleBarChart } from "@/components/admin";
 import { Loader } from "@/components/ui";
+
+const StatCard = dynamic(
+  () => import("@/components/admin").then((mod) => mod.StatCard),
+  {
+    loading: () => (
+      <div className="h-24 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+    ),
+  },
+);
+
+const SimpleBarChart = dynamic(
+  () => import("@/components/admin").then((mod) => mod.SimpleBarChart),
+  {
+    loading: () => (
+      <div className="h-48 max-w-md animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
+    ),
+  },
+);
 
 export default function AdminPage() {
   const [stats, setStats] = useState<MockDashboardStats | null>(null);
@@ -46,45 +64,64 @@ export default function AdminPage() {
       </p>
 
       {/* Stats cards */}
-      <section
-        className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        aria-label="Overview statistics"
+      <Suspense
+        fallback={
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-24 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800"
+              />
+            ))}
+          </div>
+        }
       >
-        <StatCard
-          label="Total users"
-          value={stats.totalUsers.toLocaleString()}
-          trend={stats.usersTrend}
-          icon="👥"
-        />
-        <StatCard
-          label="Total videos"
-          value={stats.totalVideos.toLocaleString()}
-          trend={stats.videosTrend}
-          icon="🎬"
-        />
-        <StatCard
-          label="Total subscribers"
-          value={stats.totalSubscribers.toLocaleString()}
-          trend={stats.subscribersTrend}
-          icon="⭐"
-        />
-      </section>
+        <section
+          className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          aria-label="Overview statistics"
+        >
+          <StatCard
+            label="Total users"
+            value={stats.totalUsers.toLocaleString()}
+            trend={stats.usersTrend}
+            icon="👥"
+          />
+          <StatCard
+            label="Total videos"
+            value={stats.totalVideos.toLocaleString()}
+            trend={stats.videosTrend}
+            icon="🎬"
+          />
+          <StatCard
+            label="Total subscribers"
+            value={stats.totalSubscribers.toLocaleString()}
+            trend={stats.subscribersTrend}
+            icon="⭐"
+          />
+        </section>
+      </Suspense>
 
       {/* Simple chart: videos by category */}
-      <section
-        className="mt-8 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
-        aria-label="Videos by category"
+      <Suspense
+        fallback={
+          <div className="mt-8 h-64 max-w-md animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-800" />
+        }
       >
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
-          Videos by category
-        </h2>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          Mock distribution
-        </p>
-        <div className="mt-4 max-w-md">
-          <SimpleBarChart data={videosByCategory} />
-        </div>
-      </section>
+        <section
+          className="mt-8 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+          aria-label="Videos by category"
+        >
+          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
+            Videos by category
+          </h2>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            Mock distribution
+          </p>
+          <div className="mt-4 max-w-md">
+            <SimpleBarChart data={videosByCategory} />
+          </div>
+        </section>
+      </Suspense>
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HLSVideoPlayer } from "@/components/player";
+import { HLSVideoPlayerLazy } from "@/components/player";
 import { SubscriptionPrompt } from "@/components/content";
 import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
@@ -95,7 +95,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
         <section className="mb-6" aria-label="Video player">
           {isSubscribed ? (
             <div className="overflow-hidden rounded-xl bg-black shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
-              <HLSVideoPlayer
+              <HLSVideoPlayerLazy
                 src={streamUrl}
                 title={title}
                 className="vjs-theme-stream"
