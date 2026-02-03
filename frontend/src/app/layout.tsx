@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/seo";
+import { getAppUrl } from "@/lib/env";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -15,8 +16,7 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? "https://stream.example.com";
+const baseUrl = getAppUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),

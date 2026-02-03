@@ -15,12 +15,14 @@ export const SITE_KEYWORDS = [
   "video on demand",
 ];
 
+import { getAppUrl } from "@/lib/env";
+
 /** Base URL for canonical links and Open Graph. Set NEXT_PUBLIC_APP_URL in production. */
 export function getBaseUrl(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return process.env.NEXT_PUBLIC_APP_URL ?? "https://stream.example.com";
+  return getAppUrl();
 }
 
 /** Absolute URL for a path (canonical, og:url). */
