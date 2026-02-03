@@ -2,7 +2,8 @@ import { cn } from "@/lib/utils";
 
 export type LoaderVariant = "spinner" | "dots" | "pulse";
 
-const spinnerStyles = "animate-spin rounded-full border-2 border-current border-t-transparent";
+const spinnerStyles =
+  "animate-spin rounded-full border-2 border-current border-t-transparent";
 
 export interface LoaderProps {
   /** Visual style of the loader */
@@ -18,7 +19,7 @@ const sizeStyles = {
   sm: { spinner: "h-4 w-4", dots: "gap-1", dot: "h-1.5 w-1.5" },
   md: { spinner: "h-6 w-6", dots: "gap-1.5", dot: "h-2 w-2" },
   lg: { spinner: "h-8 w-8", dots: "gap-2", dot: "h-2.5 w-2.5" },
-};
+} as const;
 
 export function Loader({
   variant = "spinner",
@@ -31,7 +32,10 @@ export function Loader({
   if (variant === "spinner") {
     return (
       <div
-        className={cn("inline-block text-neutral-500 dark:text-neutral-400", className)}
+        className={cn(
+          "inline-block text-neutral-500 dark:text-neutral-400",
+          className,
+        )}
         role="status"
         aria-label={label}
       >
@@ -51,7 +55,7 @@ export function Loader({
           className={cn(
             "rounded-full bg-current text-neutral-500 dark:text-neutral-400",
             sizes.dot,
-            "animate-bounce"
+            "animate-bounce",
           )}
           style={{ animationDelay: "0ms" }}
         />
@@ -59,7 +63,7 @@ export function Loader({
           className={cn(
             "rounded-full bg-current text-neutral-500 dark:text-neutral-400",
             sizes.dot,
-            "animate-bounce"
+            "animate-bounce",
           )}
           style={{ animationDelay: "150ms" }}
         />
@@ -67,7 +71,7 @@ export function Loader({
           className={cn(
             "rounded-full bg-current text-neutral-500 dark:text-neutral-400",
             sizes.dot,
-            "animate-bounce"
+            "animate-bounce",
           )}
           style={{ animationDelay: "300ms" }}
         />
@@ -78,16 +82,19 @@ export function Loader({
   // pulse: single pulsing circle
   return (
     <div
-      className={cn("inline-block text-neutral-500 dark:text-neutral-400", className)}
+      className={cn(
+        "inline-block text-neutral-500 dark:text-neutral-400",
+        className,
+      )}
       role="status"
       aria-label={label}
     >
       <span
         className={cn(
           "block rounded-full bg-current animate-pulse",
-          sizes.spinner
+          sizes.spinner,
         )}
-      </span>
+      />
     </div>
   );
 }

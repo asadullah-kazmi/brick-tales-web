@@ -11,6 +11,7 @@ export const mockVideos: Video[] = [
     duration: "12:34",
     thumbnailUrl: null,
     description: "Learn the basics of video streaming.",
+    category: "Tutorial",
   },
   {
     id: "2",
@@ -18,6 +19,7 @@ export const mockVideos: Video[] = [
     duration: "28:15",
     thumbnailUrl: null,
     description: "Optimize your video encoding pipeline.",
+    category: "Technical",
   },
   {
     id: "3",
@@ -25,6 +27,7 @@ export const mockVideos: Video[] = [
     duration: "45:00",
     thumbnailUrl: null,
     description: "Tips for reliable live broadcasts.",
+    category: "Best Practices",
   },
   {
     id: "4",
@@ -32,6 +35,7 @@ export const mockVideos: Video[] = [
     duration: "1:22:10",
     thumbnailUrl: null,
     description: "Architecture and design patterns.",
+    category: "Architecture",
   },
   {
     id: "5",
@@ -39,6 +43,7 @@ export const mockVideos: Video[] = [
     duration: "18:42",
     thumbnailUrl: null,
     description: "Scale delivery worldwide.",
+    category: "Infrastructure",
   },
   {
     id: "6",
@@ -46,6 +51,7 @@ export const mockVideos: Video[] = [
     duration: "24:08",
     thumbnailUrl: null,
     description: "Measure engagement and performance.",
+    category: "Analytics",
   },
   {
     id: "7",
@@ -53,6 +59,7 @@ export const mockVideos: Video[] = [
     duration: "15:30",
     thumbnailUrl: null,
     description: "Captions, audio description, and more.",
+    category: "Best Practices",
   },
   {
     id: "8",
@@ -60,6 +67,7 @@ export const mockVideos: Video[] = [
     duration: "32:55",
     thumbnailUrl: null,
     description: "Adaptive bitrate and mobile UX.",
+    category: "Technical",
   },
   {
     id: "9",
@@ -67,5 +75,14 @@ export const mockVideos: Video[] = [
     duration: "41:20",
     thumbnailUrl: null,
     description: "Protect your content.",
+    category: "Security",
   },
+];
+
+/** Unique categories from mock data, sorted. Used for filter pills. */
+export const mockCategories = [
+  "All",
+  ...(Array.from(
+    new Set(mockVideos.map((v) => v.category).filter(Boolean)),
+  ).sort() as string[]),
 ];

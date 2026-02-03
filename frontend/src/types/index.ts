@@ -13,4 +13,5 @@ export type Video = {
   duration: string;
   thumbnailUrl: string | null;
   description?: string;
+  category?: string;
 };

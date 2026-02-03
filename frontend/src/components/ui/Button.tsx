@@ -44,6 +44,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size = "md",
       fullWidth = false,
       disabled,
+      type = "button",
       ...props
     },
     ref,
