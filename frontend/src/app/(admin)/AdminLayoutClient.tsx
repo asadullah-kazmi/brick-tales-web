@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -7,6 +8,43 @@ import { AdminProtectedRoute } from "@/components/auth";
 import { AdminContentProvider } from "@/contexts";
 import { SITE_BRAND } from "@/lib/seo";
 import { cn } from "@/lib/utils";
+
+function MenuIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 6h16M4 12h16M4 18h16"
+      />
+    </svg>
+  );
+}
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  );
+}
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: IconOverview },
@@ -109,76 +147,142 @@ export default function AdminLayoutClient({
     );
   }
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [drawerOpen]);
+
+  const sidebarContent = (
+    <>
+      <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-neutral-700/50 px-5 lg:justify-start">
+        <Link
+          href="/"
+          className="flex items-center gap-3 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-off-black"
+        >
+          <Image
+            src="/logo.png"
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded object-contain"
+          />
+          <span className="text-sm font-semibold tracking-tight text-white">
+            {SITE_BRAND} Admin
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(false)}
+          className="rounded p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white lg:hidden"
+          aria-label="Close menu"
+        >
+          <CloseIcon className="h-6 w-6" />
+        </button>
+      </div>
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const isActive =
+            href === "/admin"
+              ? pathname === "/admin"
+              : pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "border-l-2",
+                isActive
+                  ? "border-accent bg-accent/10 text-white"
+                  : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
+              )}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="border-t border-neutral-700/50 p-3">
+        <Link
+          href="/"
+          className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-accent"
+        >
+          ← Back to site
+        </Link>
+      </div>
+    </>
+  );
+
   return (
     <AdminProtectedRoute loginRedirectTo="/admin/login">
       <AdminContentProvider>
         <div className="flex min-h-screen bg-off-black">
-          {/* Sidebar */}
+          {/* Desktop sidebar */}
           <aside
-            className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-neutral-700/50 bg-off-black/95"
+            className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-neutral-700/50 bg-off-black/95 lg:flex"
             aria-label="Admin navigation"
           >
-            <div className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-700/50 px-5">
-              <Link
-                href="/"
-                className="flex items-center gap-3 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-off-black"
-              >
-                <Image
-                  src="/logo.png"
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded object-contain"
-                />
-                <span className="text-sm font-semibold tracking-tight text-white">
-                  {SITE_BRAND} Admin
-                </span>
-              </Link>
-            </div>
-            <nav className="flex-1 space-y-0.5 p-3">
-              {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-                const isActive =
-                  href === "/admin"
-                    ? pathname === "/admin"
-                    : pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                      "border-l-2",
-                      isActive
-                        ? "border-accent bg-accent/10 text-white"
-                        : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
-                    )}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
-            <div className="border-t border-neutral-700/50 p-3">
-              <Link
-                href="/"
-                className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-accent"
-              >
-                ← Back to site
-              </Link>
-            </div>
+            {sidebarContent}
           </aside>
 
+          {/* Mobile drawer */}
+          <div
+            className={cn(
+              "fixed inset-0 z-50 lg:hidden",
+              drawerOpen ? "pointer-events-auto" : "pointer-events-none",
+            )}
+            aria-hidden={!drawerOpen}
+          >
+            <div
+              className={cn(
+                "absolute inset-0 bg-black/60 transition-opacity duration-200",
+                drawerOpen ? "opacity-100" : "opacity-0",
+              )}
+              onClick={() => setDrawerOpen(false)}
+              aria-hidden
+            />
+            <aside
+              className={cn(
+                "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-neutral-700/50 bg-off-black shadow-xl transition-transform duration-200 ease-out",
+                drawerOpen ? "translate-x-0" : "-translate-x-full",
+              )}
+              aria-label="Admin navigation"
+            >
+              {sidebarContent}
+            </aside>
+          </div>
+
           {/* Top bar + main content */}
-          <div className="flex min-h-screen flex-1 flex-col pl-64">
-            <header className="sticky top-0 z-30 shrink-0 border-b border-neutral-700/50 bg-off-black/95 px-8 py-4 backdrop-blur-sm">
+          <div className="flex min-h-screen min-w-0 flex-1 flex-col pl-0 lg:pl-64">
+            <header className="sticky top-0 z-30 flex shrink-0 items-center gap-3 border-b border-neutral-700/50 bg-off-black/95 px-4 py-4 backdrop-blur-sm sm:px-6 lg:px-8">
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className="rounded p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white lg:hidden"
+                aria-label="Open menu"
+              >
+                <MenuIcon className="h-6 w-6" />
+              </button>
               <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
                 Admin
               </p>
             </header>
             <main className="flex-1">
-              <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+              <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+                {children}
+              </div>
             </main>
           </div>
         </div>
