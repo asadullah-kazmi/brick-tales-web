@@ -137,16 +137,6 @@ export default function AdminLayoutClient({
 }) {
   const pathname = usePathname();
   const isAdminLoginPage = pathname === "/admin/login";
-
-  // Admin login page: minimal layout, no protection
-  if (isAdminLoginPage) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-off-black px-4">
-        {children}
-      </div>
-    );
-  }
-
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -161,6 +151,15 @@ export default function AdminLayoutClient({
       document.body.style.overflow = prev;
     };
   }, [drawerOpen]);
+
+  // Admin login page: minimal layout, no protection (no sidebar/drawer)
+  if (isAdminLoginPage) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-off-black px-4">
+        {children}
+      </div>
+    );
+  }
 
   const sidebarContent = (
     <>
