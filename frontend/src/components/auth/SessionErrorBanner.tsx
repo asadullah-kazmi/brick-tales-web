@@ -8,7 +8,7 @@ import { Button } from "@/components/ui";
  * Provides a retry action and stays visible until retry succeeds or user logs out.
  */
 export function SessionErrorBanner() {
-  const { sessionError, retrySession, logout } = useAuth();
+  const { sessionError, refreshUser, logout } = useAuth();
 
   if (!sessionError) return null;
 
@@ -23,7 +23,7 @@ export function SessionErrorBanner() {
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() => void retrySession()}
+          onClick={() => void refreshUser()}
         >
           Retry
         </Button>

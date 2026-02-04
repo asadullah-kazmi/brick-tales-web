@@ -13,26 +13,39 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { authService, getStoredSubscription } from "@/lib/services";
 import { subscriptionService } from "@/lib/services";
 
-type AuthState = {
+// ---------------------------------------------------------------------------
+// Global auth state (Context)
+// ---------------------------------------------------------------------------
+
+/** User data and derived auth/subscription status. */
+export type AuthState = {
+  /** Current user or null when not authenticated. */
   user: User | null;
+  /** True while fetching session on load or during refreshUser. */
   isLoading: boolean;
-  /** Error from /me on load (e.g. network failure). Cleared on retry, login, or logout. */
+  /** Error from GET /me (e.g. network failure). Cleared on refresh, login, or logout. */
   sessionError: string | null;
-  /** Mocked subscription status. When false, subscription prompt is shown instead of video. */
+  /** Whether the user has an active subscription (mock or real). */
   isSubscribed: boolean;
+  /** True when user is set. */
+  isAuthenticated: boolean;
+  /** True when user.role === "admin". */
+  isAdmin: boolean;
 };
 
-type AuthContextValue = AuthState & {
+/** Actions that update auth state. */
+export type AuthActions = {
+  /** Set user after successful login/signup (and clear sessionError). */
   login: (user: User) => void;
+  /** Clear tokens/storage and set user to null. */
   logout: () => void;
   /** Re-fetch current user from GET /users/me (clears sessionError, sets loading). */
-  retrySession: () => Promise<void>;
-  isAuthenticated: boolean;
-  /** True when user has mocked role "admin" (e.g. admin@example.com). */
-  isAdmin: boolean;
-  /** Mock: set subscription status (e.g. after user "subscribes"). */
+  refreshUser: () => Promise<void>;
+  /** Set subscription status (e.g. after user subscribes). */
   setSubscribed: (subscribed: boolean) => void;
 };
+
+export type AuthContextValue = AuthState & AuthActions;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -112,15 +125,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value: AuthContextValue = {
+    // State
     user,
     isLoading,
     sessionError,
     isSubscribed,
-    login,
-    logout,
-    retrySession,
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
+    // Actions
+    login,
+    logout,
+    refreshUser,
     setSubscribed,
   };
 
