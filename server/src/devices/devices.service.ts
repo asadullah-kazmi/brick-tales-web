@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Platform } from '@prisma/client';
 import type { Device, User } from '@prisma/client';

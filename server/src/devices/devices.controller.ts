@@ -9,15 +9,8 @@ export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
   @Post('register')
-  async register(
-    @CurrentUser() user: User,
-    @Body() dto: RegisterDeviceDto,
-  ) {
-    return this.devicesService.registerDevice(
-      user.id,
-      dto.platform,
-      dto.deviceIdentifier,
-    );
+  async register(@CurrentUser() user: User, @Body() dto: RegisterDeviceDto) {
+    return this.devicesService.registerDevice(user.id, dto.platform, dto.deviceIdentifier);
   }
 
   @Get()
@@ -26,10 +19,7 @@ export class DevicesController {
   }
 
   @Delete(':id')
-  async remove(
-    @CurrentUser() user: User,
-    @Param('id') id: string,
-  ) {
+  async remove(@CurrentUser() user: User, @Param('id') id: string) {
     return this.devicesService.removeDevice(user.id, id);
   }
 }
