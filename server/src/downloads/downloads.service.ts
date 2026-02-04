@@ -257,4 +257,75 @@ export class DownloadsService {
     };
     return n * (multipliers[unit] ?? 1);
   }
+
+  /**
+   * Sync download status: return all downloads for the user (optionally filtered by device).
+   * Includes video and device so the app can sync local state.
+   */
+  async listDownloadsForSync(userId: string, deviceId?: string) {
+    const where: Record<string, unknown> = { userId };
+    if (deviceId?.trim()) where.deviceId = deviceId.trim();
+
+    return (this.prisma as any).download.findMany({
+      where,
+      include: {
+        video: { select: { id: true, title: true, duration: true, thumbnailUrl: true } },
+        device: { select: { id: true, platform: true, deviceIdentifier: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Fetch active offline downloads: AUTHORIZED or DOWNLOADED with expiresAt > now.
+   * Optionally filter by deviceId.
+   */
+  async listActiveDownloads(userId: string, deviceId?: string) {
+    const now = new Date();
+    const where: Record<string, unknown> = {
+      userId,
+      status: { in: ['AUTHORIZED', 'DOWNLOADED'] },
+      expiresAt: { gt: now },
+    };
+    if (deviceId?.trim()) where.deviceId = deviceId.trim();
+
+    return (this.prisma as any).download.findMany({
+      where,
+      include: {
+        video: { select: { id: true, title: true, duration: true, thumbnailUrl: true } },
+        device: { select: { id: true, platform: true, deviceIdentifier: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Notify backend that download has completed. Updates status from AUTHORIZED to DOWNLOADED.
+   * Only the owning user can complete; download must be AUTHORIZED and not expired.
+   */
+  async markDownloadComplete(userId: string, downloadId: string) {
+    const download = await (this.prisma as any).download.findFirst({
+      where: { id: downloadId, userId },
+    });
+    if (!download) {
+      throw new NotFoundException('Download not found');
+    }
+    if (download.status !== 'AUTHORIZED') {
+      throw new ForbiddenException(
+        `Download cannot be marked complete (current status: ${download.status})`,
+      );
+    }
+    if (download.expiresAt < new Date()) {
+      throw new ForbiddenException('Download has expired');
+    }
+
+    return (this.prisma as any).download.update({
+      where: { id: downloadId },
+      data: { status: 'DOWNLOADED' },
+      include: {
+        video: { select: { id: true, title: true } },
+        device: { select: { id: true, platform: true } },
+      },
+    });
+  }
 }
