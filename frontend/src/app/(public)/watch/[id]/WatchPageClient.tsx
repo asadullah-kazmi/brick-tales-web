@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { HLSVideoPlayerLazy } from "@/components/player";
 import { SubscriptionPrompt } from "@/components/content";
 import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
 import { USE_MOCK_API } from "@/lib/services/config";
+import { ApiError } from "@/lib/api-client";
 import type { VideoDto } from "@/types/api";
+import { Button } from "@/components/ui";
 import { formatDuration, formatDate, isLongForm } from "@/lib/video-utils";
 import {
   Loader,
@@ -49,6 +52,10 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   const [video, setVideo] = useState<VideoDto | null>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Set when playback permission is denied (401/403) or unavailable. */
+  const [playbackError, setPlaybackError] = useState<
+    "unauthorized" | "forbidden" | "unavailable" | null
+  >(null);
 
   // Redirect inactive subscribers to pricing (real API only; mock allows playback via prompt).
   useEffect(() => {
@@ -72,20 +79,27 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
 
   useEffect(() => {
     let cancelled = false;
+    setPlaybackError(null);
     (async () => {
       setLoading(true);
       try {
-        const [detailRes, playbackRes] = await Promise.all([
-          contentService.getVideoById(id),
-          streamingService.getPlaybackInfo(id),
-        ]);
+        const detailRes = await contentService.getVideoById(id);
         if (cancelled) return;
         setVideo(detailRes?.video ?? null);
+        if (!detailRes?.video) return;
+        const playbackRes = await streamingService.getPlaybackInfo(id);
+        if (cancelled) return;
         setStreamUrl(playbackRes.url);
-      } catch {
+      } catch (err) {
         if (!cancelled) {
-          setVideo(null);
           setStreamUrl(null);
+          if (err instanceof ApiError) {
+            if (err.status === 401) setPlaybackError("unauthorized");
+            else if (err.status === 403) setPlaybackError("forbidden");
+            else setPlaybackError("unavailable");
+          } else {
+            setPlaybackError("unavailable");
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -124,6 +138,52 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
         >
           Browse videos
         </a>
+      </main>
+    );
+  }
+
+  if (video && playbackError) {
+    const returnUrl = pathname ?? `/watch/${id}`;
+    return (
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 py-12">
+        <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
+          {playbackError === "unauthorized"
+            ? "Sign in to watch"
+            : playbackError === "forbidden"
+            ? "Active subscription required"
+            : "Playback not available"}
+        </h2>
+        <p className="text-center text-neutral-600 dark:text-neutral-400">
+          {playbackError === "unauthorized"
+            ? "You need to sign in to stream this video."
+            : playbackError === "forbidden"
+            ? "An active subscription is required to watch. Subscribe to get access."
+            : "This video cannot be played right now. Try again later."}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {playbackError === "unauthorized" && (
+            <Link
+              href={`/login?returnUrl=${encodeURIComponent(returnUrl)}`}
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+            >
+              Sign in
+            </Link>
+          )}
+          {(playbackError === "forbidden" ||
+            playbackError === "unauthorized") && (
+            <Link
+              href={`/subscription?returnUrl=${encodeURIComponent(returnUrl)}`}
+              className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-accent px-4 text-sm font-medium text-accent hover:bg-accent/10"
+            >
+              View plans
+            </Link>
+          )}
+          <Link href="/browse">
+            <Button type="button" variant="secondary">
+              Browse videos
+            </Button>
+          </Link>
+        </div>
       </main>
     );
   }

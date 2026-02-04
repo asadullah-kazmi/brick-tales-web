@@ -12,7 +12,7 @@ const StatCard = dynamic(
     loading: () => (
       <div className="h-24 animate-pulse rounded-xl bg-neutral-800" />
     ),
-  },
+  }
 );
 
 const SimpleBarChart = dynamic(
@@ -21,7 +21,7 @@ const SimpleBarChart = dynamic(
     loading: () => (
       <div className="h-48 max-w-md animate-pulse rounded bg-neutral-800" />
     ),
-  },
+  }
 );
 
 export default function AdminPage() {
@@ -61,7 +61,7 @@ export default function AdminPage() {
           Dashboard
         </h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Mock analytics. Replace with real data when backend is available.
+          Overview statistics and content by category.
         </p>
       </header>
 
@@ -119,7 +119,7 @@ export default function AdminPage() {
                 Videos by category
               </h2>
               <p className="mt-1 text-sm text-neutral-400">
-                Mock distribution
+                Videos per category
               </p>
             </div>
           </div>

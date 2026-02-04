@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
+import type { AdminUserDto } from './dto/admin-user.dto';
+import type { AdminContentItemDto } from './dto/admin-content.dto';
 
 export interface DownloadsPerPlanDto {
   planId: string;
@@ -15,9 +18,108 @@ export interface OfflineAnalyticsDto {
   downloadsPerPlan: DownloadsPerPlanDto[];
 }
 
+function formatDurationSeconds(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getDashboardStats(): Promise<DashboardStatsDto> {
+    const now = new Date();
+    const [totalUsers, totalVideos, totalSubscribers, videos] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.video.count(),
+      this.prisma.subscription.count({
+        where: { status: 'ACTIVE', endDate: { gte: now } },
+      }),
+      this.prisma.video.findMany({
+        select: { category: { select: { name: true } } },
+      }),
+    ]);
+    const categoryCounts = new Map<string, number>();
+    for (const v of videos) {
+      const name = v.category.name;
+      categoryCounts.set(name, (categoryCounts.get(name) ?? 0) + 1);
+    }
+    const videosByCategory = Array.from(categoryCounts.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+    return {
+      totalUsers,
+      totalVideos,
+      totalSubscribers,
+      videosByCategory,
+    };
+  }
+
+  async getUsers(page = 1, limit = 20): Promise<{ users: AdminUserDto[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, email: true, name: true, role: true, createdAt: true },
+      }),
+      this.prisma.user.count(),
+    ]);
+    return {
+      users: users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        createdAt: u.createdAt.toISOString(),
+      })),
+      total,
+    };
+  }
+
+  async getContentList(): Promise<AdminContentItemDto[]> {
+    const videos = await this.prisma.video.findMany({
+      include: { category: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return videos.map((v) => ({
+      id: v.id,
+      title: v.title,
+      duration: formatDurationSeconds(v.duration),
+      description: v.description ?? undefined,
+      category: v.category.name,
+      published: !!v.publishedAt,
+      publishedAt: v.publishedAt?.toISOString(),
+      createdAt: v.createdAt.toISOString(),
+    }));
+  }
+
+  async updateVideoPublish(id: string, published: boolean): Promise<AdminContentItemDto | null> {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      include: { category: true },
+    });
+    if (!video) return null;
+    const updated = await this.prisma.video.update({
+      where: { id },
+      data: { publishedAt: published ? new Date() : null },
+      include: { category: true },
+    });
+    return {
+      id: updated.id,
+      title: updated.title,
+      duration: formatDurationSeconds(updated.duration),
+      description: updated.description ?? undefined,
+      category: updated.category.name,
+      published: !!updated.publishedAt,
+      publishedAt: updated.publishedAt?.toISOString(),
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
 
   /**
    * Analytics for offline downloads: total downloads, active offline users, downloads per plan.

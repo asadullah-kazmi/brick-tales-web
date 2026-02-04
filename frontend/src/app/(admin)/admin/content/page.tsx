@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAdminContent } from "@/contexts";
-import { Button } from "@/components/ui";
+import { Button, Loader } from "@/components/ui";
 import { formatDuration } from "@/lib/video-utils";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ function formatCreatedAt(iso: string): string {
 }
 
 export default function AdminContentPage() {
-  const { videos, updateVideo } = useAdminContent();
+  const { videos, loading, error, updateVideo, refresh } = useAdminContent();
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   async function handleTogglePublish(id: string, current: boolean) {
@@ -40,8 +40,7 @@ export default function AdminContentPage() {
             Content
           </h1>
           <p className="mt-1 text-sm text-neutral-400">
-            Manage uploaded content. Toggle publish to show or hide in the
-            catalog (mock).
+            Manage content. Toggle publish to show or hide in the catalog.
           </p>
         </div>
         <Link href="/admin/content/upload">
@@ -49,7 +48,23 @@ export default function AdminContentPage() {
         </Link>
       </header>
 
-      {videos.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12">
+          <Loader size="lg" label="Loading content…" />
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-red-900/50 bg-red-950/20 py-12 text-center">
+          <p className="text-red-300">{error}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-4"
+            onClick={() => void refresh()}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : videos.length === 0 ? (
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12 text-center">
           <p className="text-neutral-400">
             No content yet. Upload video metadata to get started.
@@ -110,7 +125,7 @@ export default function AdminContentPage() {
                           "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
                           video.published
                             ? "bg-green-900/40 text-green-200"
-                            : "bg-neutral-700 text-neutral-300",
+                            : "bg-neutral-700 text-neutral-300"
                         )}
                       >
                         {video.published ? "Published" : "Unpublished"}

@@ -123,6 +123,15 @@ export function put<T>(
   return request<T>(path, { ...config, method: "PUT", body });
 }
 
+/** PATCH request. */
+export function patch<T>(
+  path: string,
+  body?: unknown,
+  config?: Omit<RequestConfig, "method" | "body">
+): Promise<T> {
+  return request<T>(path, { ...config, method: "PATCH", body });
+}
+
 /** DELETE request. */
 export function del<T>(
   path: string,
