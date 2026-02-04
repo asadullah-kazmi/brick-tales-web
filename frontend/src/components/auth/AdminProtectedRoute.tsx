@@ -4,7 +4,6 @@ import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts";
-import { Loader } from "@/components/ui";
 import {
   Card,
   CardContent,
@@ -13,6 +12,7 @@ import {
   CardTitle,
   Button,
 } from "@/components/ui";
+import { AuthLoadingScreen } from "./AuthLoadingScreen";
 
 type AdminProtectedRouteProps = {
   children: ReactNode;
@@ -21,8 +21,10 @@ type AdminProtectedRouteProps = {
 };
 
 /**
- * Wraps admin content. Requires authenticated user with mocked role "admin".
- * Redirects to admin login if not authenticated; shows "Access denied" if not admin.
+ * Admin protected route: only renders children when the user is authenticated and has admin role.
+ * - Redirects unauthenticated users to admin login (with returnUrl).
+ * - Shows "Access denied" for authenticated non-admin users (restricts by role).
+ * - Shows a loading state while auth is being resolved.
  */
 export function AdminProtectedRoute({
   children,
@@ -43,11 +45,7 @@ export function AdminProtectedRoute({
   }, [user, isLoading, router, loginRedirectTo, pathname]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader size="lg" label="Checking access" />
-      </div>
-    );
+    return <AuthLoadingScreen label="Checking access" />;
   }
 
   if (!user) {

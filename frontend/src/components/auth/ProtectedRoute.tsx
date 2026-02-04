@@ -3,19 +3,20 @@
 import { useEffect, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts";
-import { Loader } from "@/components/ui";
+import { AuthLoadingScreen } from "./AuthLoadingScreen";
 
 type ProtectedRouteProps = {
   children: ReactNode;
   /** Where to redirect if not authenticated. Default: /login */
   redirectTo?: string;
-  /** Optional: pass current path as query so login can redirect back after auth */
+  /** Pass current path as returnUrl so login can redirect back. Default: true */
   appendReturnUrl?: boolean;
 };
 
 /**
- * Wraps content that requires authentication. Redirects to login if user is not
- * authenticated. Shows a loader while auth state is hydrating.
+ * Protected route: only renders children when the user is authenticated.
+ * - Redirects unauthenticated users to login (with optional returnUrl).
+ * - Shows a loading state while auth is being resolved (e.g. GET /me on load).
  */
 export function ProtectedRoute({
   children,
@@ -38,11 +39,7 @@ export function ProtectedRoute({
   }, [user, isLoading, router, redirectTo, pathname, appendReturnUrl]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader size="lg" label="Checking authentication" />
-      </div>
-    );
+    return <AuthLoadingScreen label="Checking authentication" />;
   }
 
   if (!user) {
