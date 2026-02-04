@@ -1,4 +1,4 @@
-# Stream — Video Streaming Platform (Frontend)
+# BRICK TALES.TV — Video Streaming Platform (Frontend)
 
 Next.js 14 app with App Router, TypeScript, and Tailwind CSS. Set up for a video streaming platform with a clean structure and no business logic yet.
 
@@ -61,6 +61,14 @@ Install dependencies (if needed):
 npm install
 ```
 
+Copy environment variables and adjust for local use:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` if needed (see [Environment variables](#environment-variables)).
+
 Run the development server:
 
 ```bash
@@ -68,6 +76,23 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Environment variables
+
+| Variable                   | Description                                                     | Default                      |
+| -------------------------- | --------------------------------------------------------------- | ---------------------------- |
+| `NEXT_PUBLIC_APP_URL`      | Base URL for SEO and Open Graph (production).                   | `https://stream.example.com` |
+| `NEXT_PUBLIC_USE_MOCK_API` | Use mock API (auth, content). Set `false` when backend is live. | `true`                       |
+
+See `.env.example` for details. Never commit `.env.local`.
+
+## Production deployment
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for:
+
+- Deploying to **Vercel** (env vars, build settings)
+- Custom domain and post-deploy checks
+- Switching from mock API to a real backend
 
 ## Scripts
 
