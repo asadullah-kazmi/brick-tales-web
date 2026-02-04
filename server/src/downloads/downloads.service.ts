@@ -199,6 +199,18 @@ export class DownloadsService {
   }
 
   /**
+   * Verify download token and ensure it is bound to the given device.
+   * Returns payload only if token is valid and payload.deviceId matches; otherwise null.
+   * Use this when redeeming a token so tokens cannot be reused on a different device.
+   */
+  verifyDownloadTokenForDevice(token: string, deviceId: string): DownloadTokenPayload | null {
+    const payload = this.verifyDownloadToken(token);
+    if (!payload) return null;
+    if (payload.deviceId !== deviceId) return null;
+    return payload;
+  }
+
+  /**
    * Ensure an active Download exists for user+video+device; return it or null.
    */
   async getActiveDownload(
@@ -297,6 +309,63 @@ export class DownloadsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Redeem a download token to get the video stream URL. Enforces device-binding:
+   * token must be valid and payload.deviceId must match the provided deviceId;
+   * device must belong to the user; an active Download must exist.
+   * Ensures tokens cannot be reused on a different device.
+   */
+  async redeemDownloadToken(
+    userId: string,
+    token: string,
+    deviceId: string,
+  ): Promise<{ downloadUrl: string }> {
+    const payload = this.verifyDownloadTokenForDevice(token, deviceId);
+    if (!payload) {
+      throw new ForbiddenException(
+        'Invalid or expired download token, or token is not valid for this device.',
+      );
+    }
+    if (payload.userId !== userId) {
+      throw new ForbiddenException('Download token does not belong to this user.');
+    }
+
+    const device = await (this.prisma as any).device.findFirst({
+      where: { id: deviceId, userId },
+    });
+    if (!device) {
+      throw new ForbiddenException('Device not found or does not belong to you.');
+    }
+
+    const download = await (this.prisma as any).download.findFirst({
+      where: {
+        userId,
+        videoId: payload.videoId,
+        deviceId,
+        status: { in: ['AUTHORIZED', 'DOWNLOADED'] },
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (!download) {
+      throw new ForbiddenException(
+        'No active download authorization for this video on this device.',
+      );
+    }
+
+    const video = await (this.prisma as any).video.findUnique({
+      where: { id: payload.videoId },
+      select: { streamUrl: true, publishedAt: true },
+    });
+    if (!video?.streamUrl) {
+      throw new NotFoundException('Video not found or not available for download');
+    }
+    if (video.publishedAt && video.publishedAt > new Date()) {
+      throw new ForbiddenException('Video is not yet available');
+    }
+
+    return { downloadUrl: video.streamUrl };
   }
 
   /**
