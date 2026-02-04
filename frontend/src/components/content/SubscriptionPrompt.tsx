@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/contexts";
 import {
   Card,
@@ -9,25 +10,33 @@ import {
   CardTitle,
   Button,
 } from "@/components/ui";
+import { USE_MOCK_API } from "@/lib/services/config";
 
 type SubscriptionPromptProps = {
   /** Optional title of the content (e.g. video title) for context. */
   contentTitle?: string;
+  /** Optional return URL after subscribing (e.g. /watch/123). Used for pricing page link. */
+  returnUrl?: string;
   /** Optional class name for the wrapper. */
   className?: string;
 };
 
 /**
- * Shown when the user is not subscribed. Prompts them to subscribe (mock:
- * sets subscription in AuthContext) to access the content.
+ * Shown when the user is not subscribed. Prompts them to subscribe.
+ * Mock: button sets subscription in AuthContext. Real API: link to pricing page.
  */
 export function SubscriptionPrompt({
   contentTitle,
+  returnUrl,
   className,
 }: SubscriptionPromptProps) {
   const { isAuthenticated, setSubscribed } = useAuth();
 
-  function handleSubscribe() {
+  const subscriptionHref = returnUrl
+    ? `/subscription?returnUrl=${encodeURIComponent(returnUrl)}`
+    : "/subscription";
+
+  function handleSubscribeMock() {
     setSubscribed(true);
   }
 
@@ -51,13 +60,22 @@ export function SubscriptionPrompt({
           <li>Unlimited access to all videos</li>
           <li>HD and 4K streaming</li>
           <li>Watch on any device</li>
-          <li>Cancel anytime (mock)</li>
+          <li>Cancel anytime</li>
         </ul>
       </CardContent>
       <CardFooter className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button onClick={handleSubscribe} className="w-full sm:w-auto">
-          Subscribe now (mock)
-        </Button>
+        {USE_MOCK_API ? (
+          <Button onClick={handleSubscribeMock} className="w-full sm:w-auto">
+            Subscribe now (mock)
+          </Button>
+        ) : (
+          <Link
+            href={subscriptionHref}
+            className="w-full sm:w-auto sm:inline-block"
+          >
+            <Button className="w-full sm:w-auto">View plans & subscribe</Button>
+          </Link>
+        )}
         {!isAuthenticated && (
           <p className="text-center text-sm text-neutral-500 dark:text-neutral-400 sm:text-left">
             You may need to sign in first to subscribe.

@@ -7,6 +7,7 @@ import type { User } from '@prisma/client';
 import { SubscriptionsService } from './subscriptions.service';
 import { StripeService } from './stripe.service';
 import { PlanResponseDto } from './dto/plan-response.dto';
+import { SubscriptionMeResponseDto } from './dto/subscription-me-response.dto';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 
 @Controller('subscriptions')
@@ -38,8 +39,17 @@ export class SubscriptionsController {
    * Authenticated: get current user's active subscription (with plan).
    */
   @Get('me')
-  async getMySubscription(@CurrentUser() user: User) {
-    return this.subscriptionsService.getCurrentSubscription(user.id);
+  async getMySubscription(@CurrentUser() user: User): Promise<SubscriptionMeResponseDto> {
+    const sub = await this.subscriptionsService.getCurrentSubscription(user.id);
+    if (!sub) {
+      return { isSubscribed: false };
+    }
+    return {
+      isSubscribed: true,
+      planId: sub.plan.id,
+      currentPeriodEnd: sub.endDate.toISOString(),
+      createdAt: sub.createdAt.toISOString(),
+    };
   }
 
   /**

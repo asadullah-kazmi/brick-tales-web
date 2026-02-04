@@ -5,19 +5,35 @@ import type {
   UpdateSubscriptionRequestDto,
   UpdateSubscriptionResponseDto,
 } from "@/types/api";
+import { get } from "@/lib/api-client";
+import { getStoredAuth } from "@/lib/auth-storage";
 import { getMockSubscription, setMockSubscription } from "@/lib/mock-auth";
+import { USE_MOCK_API } from "./config";
 
 /**
- * Subscription service. Use this instead of calling mock-auth subscription helpers.
- * Switch to real API (e.g. POST /subscriptions) when USE_MOCK_API is false.
+ * Subscription service. Uses real API (GET /subscriptions/me) when USE_MOCK_API is false.
  */
 export const subscriptionService = {
   async getSubscription(): Promise<GetSubscriptionResponseDto> {
-    const isSubscribed = getMockSubscription();
-    return {
-      isSubscribed,
-      planId: isSubscribed ? "monthly" : "free",
-    };
+    if (USE_MOCK_API) {
+      const isSubscribed = getMockSubscription();
+      return {
+        isSubscribed,
+        planId: isSubscribed ? "monthly" : "free",
+      };
+    }
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) {
+      return { isSubscribed: false };
+    }
+    try {
+      const res = await get<GetSubscriptionResponseDto>("subscriptions/me", {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      });
+      return res ?? { isSubscribed: false };
+    } catch {
+      return { isSubscribed: false };
+    }
   },
 
   async subscribe(body: SubscribeRequestDto): Promise<SubscribeResponseDto> {
@@ -33,7 +49,7 @@ export const subscriptionService = {
   },
 
   async updateSubscription(
-    body: UpdateSubscriptionRequestDto,
+    body: UpdateSubscriptionRequestDto
   ): Promise<UpdateSubscriptionResponseDto> {
     void body; // reserved for real API
     const isSubscribed = getMockSubscription();

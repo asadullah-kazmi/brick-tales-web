@@ -13,18 +13,19 @@ const LOGO_WIDTH = 140;
 function NavContent({
   dashboardHref,
   isAuthenticated,
+  isSubscribed,
   user,
   logout,
   onLinkClick,
 }: {
   dashboardHref: string;
   isAuthenticated: boolean;
+  isSubscribed: boolean;
   user: { name: string; email: string } | null;
   logout: () => void;
   onLinkClick?: () => void;
 }) {
-  const linkClass =
-    "hover:text-accent transition-colors text-neutral-300";
+  const linkClass = "hover:text-accent transition-colors text-neutral-300";
   return (
     <>
       <Link href="/browse" className={linkClass} onClick={onLinkClick}>
@@ -33,12 +34,25 @@ function NavContent({
       <Link href="/subscription" className={linkClass} onClick={onLinkClick}>
         Plans
       </Link>
+      {isAuthenticated && !isSubscribed && (
+        <Link
+          href="/subscription"
+          className="rounded-md bg-amber-500/90 px-2.5 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400"
+          onClick={onLinkClick}
+        >
+          Upgrade
+        </Link>
+      )}
       {isAuthenticated && user ? (
         <>
           <span className="text-neutral-400" title={user.email}>
             {user.name}
           </span>
-          <Link href={dashboardHref} className={linkClass} onClick={onLinkClick}>
+          <Link
+            href={dashboardHref}
+            className={linkClass}
+            onClick={onLinkClick}
+          >
             Dashboard
           </Link>
           <Button
@@ -70,7 +84,7 @@ function NavContent({
 }
 
 export function Header() {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isSubscribed, isAdmin, logout } = useAuth();
   const [loginOrigin, setLoginOriginState] = useState<
     "admin" | "customer" | null
   >(null);
@@ -120,6 +134,7 @@ export function Header() {
           <NavContent
             dashboardHref={dashboardHref}
             isAuthenticated={isAuthenticated}
+            isSubscribed={isSubscribed}
             user={user}
             logout={logout}
           />
@@ -133,28 +148,55 @@ export function Header() {
           onClick={() => setMobileMenuOpen((o) => !o)}
         >
           {mobileMenuOpen ? (
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           ) : (
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             </svg>
           )}
         </button>
       </div>
       {/* Mobile nav drawer */}
       <div
-        className={`fixed inset-0 top-14 z-40 bg-off-black/98 backdrop-blur-sm md:hidden ${mobileMenuOpen ? "visible" : "invisible"}`}
+        className={`fixed inset-0 top-14 z-40 bg-off-black/98 backdrop-blur-sm md:hidden ${
+          mobileMenuOpen ? "visible" : "invisible"
+        }`}
         aria-hidden={!mobileMenuOpen}
       >
         <nav
-          className={`flex flex-col gap-1 px-4 py-4 text-base transition-opacity duration-200 ${mobileMenuOpen ? "opacity-100" : "opacity-0"}`}
+          className={`flex flex-col gap-1 px-4 py-4 text-base transition-opacity duration-200 ${
+            mobileMenuOpen ? "opacity-100" : "opacity-0"
+          }`}
           aria-label="Main mobile"
         >
           <NavContent
             dashboardHref={dashboardHref}
             isAuthenticated={isAuthenticated}
+            isSubscribed={isSubscribed}
             user={user}
             logout={logout}
             onLinkClick={() => setMobileMenuOpen(false)}

@@ -10,8 +10,12 @@ import {
 } from "react";
 import type { User } from "@/types";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { authService, getStoredSubscription } from "@/lib/services";
-import { subscriptionService } from "@/lib/services";
+import {
+  authService,
+  getStoredSubscription,
+  subscriptionService,
+} from "@/lib/services";
+import { USE_MOCK_API } from "@/lib/services/config";
 
 // ---------------------------------------------------------------------------
 // Global auth state (Context)
@@ -75,7 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setUser(session ? dtoToUser(session) : null);
           setSessionError(null);
-          setIsSubscribedState(getStoredSubscription());
+          if (USE_MOCK_API) {
+            setIsSubscribedState(getStoredSubscription());
+          } else if (session) {
+            subscriptionService.getSubscription().then((res) => {
+              if (!cancelled) setIsSubscribedState(res.isSubscribed);
+            });
+          } else {
+            setIsSubscribedState(false);
+          }
         }
       })
       .catch((err) => {
@@ -92,13 +104,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const retrySession = useCallback(async () => {
+  const refreshUser = useCallback(async () => {
     setSessionError(null);
     setIsLoading(true);
     try {
       const session = await fetchSession();
       setUser(session ? dtoToUser(session) : null);
-      setIsSubscribedState(getStoredSubscription());
+      if (USE_MOCK_API) {
+        setIsSubscribedState(getStoredSubscription());
+      } else if (session) {
+        const sub = await subscriptionService.getSubscription();
+        setIsSubscribedState(sub.isSubscribed);
+      } else {
+        setIsSubscribedState(false);
+      }
     } catch (err) {
       setUser(null);
       setSessionError(getApiErrorMessage(err));

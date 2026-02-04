@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { HLSVideoPlayerLazy } from "@/components/player";
 import { SubscriptionPrompt } from "@/components/content";
 import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
+import { USE_MOCK_API } from "@/lib/services/config";
 import type { VideoDto } from "@/types/api";
 import { formatDuration, formatDate, isLongForm } from "@/lib/video-utils";
 import {
@@ -41,10 +43,32 @@ function dtoToDisplayVideo(dto: VideoDto): {
 
 export default function WatchPageClient({ params }: WatchPageClientProps) {
   const { id } = params;
+  const router = useRouter();
+  const pathname = usePathname();
   const { isSubscribed, isLoading: authLoading } = useAuth();
   const [video, setVideo] = useState<VideoDto | null>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Redirect inactive subscribers to pricing (real API only; mock allows playback via prompt).
+  useEffect(() => {
+    if (USE_MOCK_API || authLoading || loading) return;
+    if (video && streamUrl && !isSubscribed) {
+      const returnUrl = pathname ?? `/watch/${id}`;
+      router.replace(
+        `/subscription?returnUrl=${encodeURIComponent(returnUrl)}`
+      );
+    }
+  }, [
+    authLoading,
+    loading,
+    video,
+    streamUrl,
+    isSubscribed,
+    router,
+    pathname,
+    id,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,12 +138,14 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     );
   }
 
+  // Real API: inactive users are redirected above. Mock: show prompt.
+  const showPlayer = isSubscribed;
+
   return (
     <main className="min-h-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        {/* Subscription guard: show prompt instead of video when not subscribed */}
         <section className="mb-6" aria-label="Video player">
-          {isSubscribed ? (
+          {showPlayer ? (
             <div className="overflow-hidden rounded-xl bg-black shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
               <HLSVideoPlayerLazy
                 src={streamUrl}
@@ -131,6 +157,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
             <div className="overflow-hidden rounded-xl shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
               <SubscriptionPrompt
                 contentTitle={title}
+                returnUrl={pathname ?? `/watch/${id}`}
                 className="rounded-xl border-0"
               />
             </div>
