@@ -9,6 +9,7 @@ import { ContentModule } from './content/content.module';
 import { StreamingModule } from './streaming/streaming.module';
 import { DownloadsModule } from './downloads/downloads.module';
 import { DevicesModule } from './devices/devices.module';
+import { JobsModule } from './jobs/jobs.module';
 import { AdminModule } from './admin/admin.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { AdminModule } from './admin/admin.module';
     StreamingModule,
     DownloadsModule,
     DevicesModule,
+    JobsModule,
     AdminModule,
   ],
   providers: [
