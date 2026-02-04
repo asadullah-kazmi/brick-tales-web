@@ -1,13 +1,20 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, BadRequestException } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { User } from '@prisma/client';
 import { SubscriptionsService } from './subscriptions.service';
+import { StripeService } from './stripe.service';
 import { PlanResponseDto } from './dto/plan-response.dto';
+import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 
 @Controller('subscriptions')
 export class SubscriptionsController {
-  constructor(private readonly subscriptionsService: SubscriptionsService) {}
+  constructor(
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly stripeService: StripeService,
+  ) {}
 
   /**
    * Public: list all subscription plans (includes offlineAllowed, maxOfflineDownloads).
@@ -33,5 +40,52 @@ export class SubscriptionsController {
   @Get('me')
   async getMySubscription(@CurrentUser() user: User) {
     return this.subscriptionsService.getCurrentSubscription(user.id);
+  }
+
+  /**
+   * Authenticated: create Stripe Checkout Session for a plan. Returns { url } to redirect.
+   */
+  @Post('checkout-session')
+  async createCheckoutSession(@CurrentUser() user: User, @Body() dto: CreateCheckoutSessionDto) {
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:5000';
+    const successUrl = dto.successUrl ?? `${baseUrl}/subscription/success`;
+    const cancelUrl = dto.cancelUrl ?? `${baseUrl}/subscription`;
+    return this.stripeService.createCheckoutSession(
+      user.id,
+      dto.planId,
+      successUrl,
+      cancelUrl,
+      user.email,
+      user.name,
+    );
+  }
+
+  /**
+   * Authenticated: create Stripe Customer Portal session. Returns { url } to manage subscription.
+   */
+  @Post('portal-session')
+  async createPortalSession(@CurrentUser() user: User, @Body('returnUrl') returnUrl?: string) {
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:5000';
+    const url = returnUrl ?? `${baseUrl}/subscription`;
+    return this.stripeService.createPortalSession(user.id, url);
+  }
+
+  /**
+   * Public: Stripe webhook. Uses rawBody (enable rawBody: true in main.ts).
+   */
+  @Public()
+  @Post('webhook')
+  async stripeWebhook(@Req() req: RawBodyRequest<Request>) {
+    const rawBody = req.rawBody;
+    if (!Buffer.isBuffer(rawBody)) {
+      throw new BadRequestException(
+        'Webhook requires raw body. Set rawBody: true when creating the Nest app.',
+      );
+    }
+    const signature = req.headers['stripe-signature'];
+    if (typeof signature !== 'string') {
+      throw new BadRequestException('Missing stripe-signature header');
+    }
+    await this.stripeService.handleWebhookEvent(rawBody, signature);
   }
 }
