@@ -8,6 +8,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ContentModule } from './content/content.module';
 import { StreamingModule } from './streaming/streaming.module';
 import { DownloadsModule } from './downloads/downloads.module';
+import { DevicesModule } from './devices/devices.module';
 import { AdminModule } from './admin/admin.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { AdminModule } from './admin/admin.module';
     ContentModule,
     StreamingModule,
     DownloadsModule,
+    DevicesModule,
     AdminModule,
   ],
   providers: [
