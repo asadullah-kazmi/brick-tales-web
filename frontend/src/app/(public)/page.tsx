@@ -58,14 +58,14 @@ export default function Home() {
 
       {/* Full-screen hero: banner image behind entire first view */}
       <section
-        className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
+        className="relative flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
         aria-label="Hero"
       >
         <Image
           src="/hero-banner.png"
           alt=""
           fill
-          className="object-cover object-center"
+          className="object-cover object-center min-w-0 min-h-0"
           priority
           sizes="100vw"
         />
