@@ -69,7 +69,7 @@ export default function Home() {
           priority
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-black/50" aria-hidden />
+        <div className="absolute inset-0 bg-black/30" aria-hidden />
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           <div className="relative mb-8">
             <Image
