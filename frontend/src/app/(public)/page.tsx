@@ -61,14 +61,14 @@ export default function Home() {
         className="relative flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
         aria-label="Hero"
       >
-        <Image
+        {/* <Image
           src="/hero-banner.png"
           alt=""
           fill
           className="object-cover object-center min-w-0 min-h-0"
           priority
           sizes="100vw"
-        />
+        /> */}
         <div className="absolute inset-0 bg-black/30" aria-hidden />
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           <div className="relative mb-8">
