@@ -1,4 +1,4 @@
-// Prisma schema for PostgreSQL
+// Prisma schema for PostgreSQL – streaming platform
 // https://pris.ly/d/prisma-schema
 
 generator client {
@@ -10,12 +10,207 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder model – add your entities and run: npm run db:migrate:dev
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Platform {
+  ANDROID
+  IOS
+}
+
+enum DownloadStatus {
+  AUTHORIZED
+  DOWNLOADED
+  EXPIRED
+  REVOKED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+// ---------------------------------------------------------------------------
+// User
+// ---------------------------------------------------------------------------
+
 model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String?
+  role         String    @default("user")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  subscriptions  Subscription[]
+  devices        Device[]
+  downloads      Download[]
+  viewHistory    ViewHistory[]
+  refreshTokens  RefreshToken[]
+
+  @@index([email])
+}
+
+model RefreshToken {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  role      String   @default("user")
+  userId    String
+  tokenHash String   // hash of the JWT for lookup/revocation
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Plan & Subscription
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id                  String   @id @default(cuid())
+  name                String
+  price               Decimal  @db.Decimal(10, 2)
+  duration            String   // e.g. "MONTHLY", "YEARLY" or duration in months
+  deviceLimit         Int
+  offlineAllowed      Boolean  @default(false)
+  maxOfflineDownloads Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([name])
+}
+
+model Subscription {
+  id         String             @id @default(cuid())
+  userId     String
+  planId     String
+  status     SubscriptionStatus @default(ACTIVE)
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Category & Video
+// ---------------------------------------------------------------------------
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  parentId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  parent   Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
+  videos   Video[]
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Video {
+  id          String    @id @default(cuid())
+  categoryId  String
+  title       String
+  description String?
+  duration    Int       // seconds
+  thumbnailUrl String?
+  streamUrl   String?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  downloads  Download[]
+  viewHistory ViewHistory[]
+
+  @@index([categoryId])
+  @@index([publishedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Device
+// ---------------------------------------------------------------------------
+
+model Device {
+  id               String   @id @default(cuid())
+  userId           String
+  platform         Platform
+  deviceIdentifier String
+  lastActiveAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  downloads Download[]
+
+  @@unique([userId, deviceIdentifier])
+  @@index([userId])
+  @@index([platform])
+}
+
+// ---------------------------------------------------------------------------
+// Download
+// ---------------------------------------------------------------------------
+
+model Download {
+  id        String         @id @default(cuid())
+  userId    String
+  videoId   String
+  deviceId  String
+  status    DownloadStatus @default(AUTHORIZED)
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video  Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([videoId])
+  @@index([deviceId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// ViewHistory
+// ---------------------------------------------------------------------------
+
+model ViewHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  watchedAt DateTime @default(now())
+  progress  Int      @default(0) // seconds watched
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([videoId])
+  @@index([userId, videoId])
 }
