@@ -39,6 +39,10 @@ This project uses [Prisma](https://www.prisma.io/) with PostgreSQL. Migrations a
 3. **Use Prisma Client in services**  
    Inject `PrismaService` (from `src/prisma/prisma.service.ts`) and use `this.prisma.user.findMany()`, etc.
 
+## Baseline (existing database)
+
+If the database was created with `db push` and has no migration history, `migrate deploy` fails with P3005. A baseline migration (`0_baseline`) was added and marked as applied so Prisma treats the current DB as up to date. For new production DBs, run `prisma migrate deploy` to apply all migrations from scratch.
+
 ## Production
 
 - Run **only** `npm run db:migrate` (or `prisma migrate deploy`) in production. Do not run `db:migrate:dev` there.
