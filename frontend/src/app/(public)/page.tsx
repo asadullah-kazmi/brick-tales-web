@@ -61,17 +61,17 @@ export default function Home() {
         className="relative flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
         aria-label="Hero"
       >
-        {/* <Image
+        <Image
           src="/hero-banner.png"
           alt=""
           fill
           className="object-cover object-center min-w-0 min-h-0"
           priority
           sizes="100vw"
-        /> */}
-        <div className="absolute inset-0 bg-black/30" aria-hidden />
+        />
+        <div className="absolute inset-0 bg-black/20" aria-hidden />
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
-          <div className="relative mb-8">
+          {/* <div className="relative mb-8">
             <Image
               src="/logo.png"
               alt={SITE_BRAND}
@@ -80,7 +80,7 @@ export default function Home() {
               className="h-20 w-auto object-contain sm:h-24"
               priority
             />
-          </div>
+          </div> */}
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg sm:text-4xl md:text-5xl lg:text-6xl">
             Your Digital Home for Urban History
           </h1>
