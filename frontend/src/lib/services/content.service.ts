@@ -10,6 +10,7 @@ import type {
   PublishVideoRequestDto,
   PublishVideoResponseDto,
 } from "@/types/api";
+import { get } from "@/lib/api-client";
 import { mockVideos } from "@/lib/mock-videos";
 import {
   getAdminVideos,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/mock-admin-content";
 import type { Video } from "@/types";
 import type { AdminVideo } from "@/types";
+import { USE_MOCK_API } from "./config";
 
 function videoToDto(v: Video | AdminVideo, published = true): VideoDto {
   const created = "createdAt" in v ? v.createdAt : new Date().toISOString();
@@ -38,7 +40,7 @@ function videoToDto(v: Video | AdminVideo, published = true): VideoDto {
 function paginate<T>(
   items: T[],
   page = 1,
-  limit = 20,
+  limit = 20
 ): { items: T[]; total: number; totalPages: number } {
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -48,23 +50,27 @@ function paginate<T>(
 }
 
 /**
- * Content service. Use this instead of calling mock-videos or mock-admin-content directly.
- * Switch to real API (GET/POST/PATCH /content/videos) when USE_MOCK_API is false.
+ * Content service. Uses real API when USE_MOCK_API is false.
  */
 export const contentService = {
   /**
-   * List videos (catalog). Mock: merges mockVideos with admin content; real API: GET /content/videos.
+   * List videos (catalog). Real API: GET /content/videos with pagination.
    */
   async getVideos(params?: PaginationQueryDto): Promise<VideoListResponseDto> {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 24;
+    if (!USE_MOCK_API) {
+      return get<VideoListResponseDto>("content/videos", {
+        params: { page: String(page), limit: String(limit) },
+      });
+    }
     const adminVideos = getAdminVideos();
     const catalog: VideoDto[] = [
       ...mockVideos.map((v) =>
         videoToDto(
           { ...v, id: v.id, createdAt: new Date().toISOString() },
-          true,
-        ),
+          true
+        )
       ),
       ...adminVideos.map((v) => videoToDto(v)),
     ];
@@ -83,30 +89,47 @@ export const contentService = {
   },
 
   /**
-   * Get videos for browse (mock: catalog + published admin videos). For filtering, filter client-side or add query params when using real API.
+   * Get all videos for browse (for client-side filter/search). Real API: GET /content/videos with high limit.
    */
-  getVideosForBrowse(): VideoDto[] {
+  async getVideosForBrowse(): Promise<VideoDto[]> {
+    if (!USE_MOCK_API) {
+      const res = await get<VideoListResponseDto>("content/videos", {
+        params: { limit: "500" },
+      });
+      return res.videos;
+    }
     const adminVideos = getAdminVideos().filter((v) => v.published);
     const fromCatalog = mockVideos.map((v) =>
-      videoToDto({ ...v, id: v.id, createdAt: new Date().toISOString() }, true),
+      videoToDto({ ...v, id: v.id, createdAt: new Date().toISOString() }, true)
     );
     const fromAdmin = adminVideos.map((v) => videoToDto(v));
     return [...fromCatalog, ...fromAdmin];
   },
 
-  /** Unique categories from catalog (for browse filters). */
-  getCategories(): string[] {
-    const videos = this.getVideosForBrowse();
+  /** Categories for browse filters. Real API: GET /content/categories. */
+  async getCategories(): Promise<string[]> {
+    if (!USE_MOCK_API) {
+      const res = await get<{ categories: string[] }>("content/categories");
+      return res.categories ?? [];
+    }
+    const videos = await this.getVideosForBrowse();
     const set = new Set(
-      videos.map((v) => v.category).filter((c): c is string => !!c),
+      videos.map((v) => v.category).filter((c): c is string => !!c)
     );
     return ["All", ...Array.from(set).sort()];
   },
 
   /**
-   * Get single video. Mock: lookup in mockVideos then admin; real API: GET /content/videos/:id.
+   * Get single video. Real API: GET /content/videos/:id.
    */
   async getVideoById(id: string): Promise<VideoDetailResponseDto | null> {
+    if (!USE_MOCK_API) {
+      try {
+        return await get<VideoDetailResponseDto>(`content/videos/${id}`);
+      } catch {
+        return null;
+      }
+    }
     const admin = getAdminVideos();
     const fromAdmin = admin.find((v) => v.id === id);
     if (fromAdmin) {
@@ -117,7 +140,7 @@ export const contentService = {
       return {
         video: videoToDto(
           { ...fromCatalog, createdAt: new Date().toISOString() },
-          true,
+          true
         ),
       };
     }
@@ -128,7 +151,7 @@ export const contentService = {
    * Create video (metadata). Mock: createAdminVideo; real API: POST /content/videos.
    */
   async createVideo(
-    body: CreateVideoRequestDto,
+    body: CreateVideoRequestDto
   ): Promise<CreateVideoResponseDto> {
     const video = createAdminVideo(body);
     return { video: videoToDto(video) };
@@ -139,7 +162,7 @@ export const contentService = {
    */
   async updateVideo(
     id: string,
-    body: UpdateVideoRequestDto,
+    body: UpdateVideoRequestDto
   ): Promise<UpdateVideoResponseDto | null> {
     const updated = updateAdminVideoStorage(id, body);
     if (!updated) return null;
@@ -151,7 +174,7 @@ export const contentService = {
    */
   async publishVideo(
     id: string,
-    body: PublishVideoRequestDto,
+    body: PublishVideoRequestDto
   ): Promise<PublishVideoResponseDto | null> {
     const updated = updateAdminVideoStorage(id, {
       published: body.published,

@@ -80,7 +80,26 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   if (authLoading || loading) {
     return (
       <main className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
-        <Loader size="lg" label="Loading…" />
+        <Loader size="lg" label="Loading video…" />
+      </main>
+    );
+  }
+
+  if (!video) {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 py-12">
+        <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
+          Video not found
+        </h2>
+        <p className="text-center text-neutral-600 dark:text-neutral-400">
+          The video you’re looking for doesn’t exist or is no longer available.
+        </p>
+        <a
+          href="/browse"
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+        >
+          Browse videos
+        </a>
       </main>
     );
   }
@@ -89,7 +108,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     return (
       <main className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
         <p className="text-neutral-600 dark:text-neutral-400">
-          Video or playback info not found.
+          Playback is not available for this video.
         </p>
       </main>
     );
