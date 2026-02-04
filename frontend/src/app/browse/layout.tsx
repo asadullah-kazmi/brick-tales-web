@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Header, Footer } from "@/components/layout";
 import { SITE_BRAND, SITE_DESCRIPTION, absoluteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -50,9 +51,11 @@ export default function BrowseLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden bg-background dark:bg-off-black">
+      <Header />
       <CollectionPageJsonLd />
       {children}
-    </>
+      <Footer />
+    </div>
   );
 }

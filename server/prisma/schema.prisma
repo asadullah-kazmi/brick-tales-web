@@ -50,9 +50,25 @@ model User {
   devices        Device[]
   downloads      Download[]
   viewHistory    ViewHistory[]
-  refreshTokens  RefreshToken[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([email])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model RefreshToken {

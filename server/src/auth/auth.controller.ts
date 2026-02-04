@@ -1,8 +1,10 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { TokensResponseDto } from './dto/tokens-response.dto';
 
@@ -28,5 +30,19 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshTokenDto): Promise<TokensResponseDto> {
     return this.authService.refresh(dto.refreshToken);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
+    return this.authService.requestPasswordReset(dto.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
   }
 }

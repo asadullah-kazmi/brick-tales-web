@@ -6,13 +6,15 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import type { User } from '@prisma/client';
 
 const SALT_ROUNDS = 10;
 const ACCESS_TOKEN_EXPIRES_SEC = 900; // 15 min
 const REFRESH_TOKEN_EXPIRES_SEC = 7 * 24 * 60 * 60; // 7 days
+const PASSWORD_RESET_EXPIRES_MS = 60 * 60 * 1000; // 1 hour
 
 export interface JwtPayload {
   sub: string;
@@ -26,6 +28,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async signUp(email: string, password: string, name?: string) {
@@ -86,6 +89,52 @@ export class AuthService {
 
   async validateUserById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  /** Request password reset: create token, store hash, send email. Always returns same message for security. */
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+    const message = 'If an account exists for this email, you will receive a reset link shortly.';
+    if (!user) return { message };
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRES_MS);
+
+    await this.prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash, expiresAt },
+    });
+
+    const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
+    const resetLink = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${rawToken}`;
+    await this.mailService.sendPasswordResetEmail(user.email, resetLink);
+    return { message };
+  }
+
+  /** Reset password using token from email link. */
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const tokenHash = this.hashToken(token);
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired reset link. Please request a new one.');
+    }
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: record.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+    return { message: 'Your password has been reset. You can sign in with your new password.' };
   }
 
   private async issueTokens(user: User) {

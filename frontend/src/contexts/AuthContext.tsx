@@ -54,11 +54,19 @@ export type AuthContextValue = AuthState & AuthActions;
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /** Map UserDto from service to User for context (session already persisted by service). */
-function dtoToUser(dto: { email: string; name: string; role: string }): User {
+function dtoToUser(dto: {
+  id?: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt?: string;
+}): User {
   return {
+    id: dto.id,
     email: dto.email,
-    name: dto.name,
+    name: dto.name ?? "",
     role: dto.role === "admin" ? "admin" : "user",
+    createdAt: dto.createdAt,
   };
 }
 

@@ -20,6 +20,7 @@ const baseUrl = getAppUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
+  icons: { icon: "/favicon.ico" },
   title: {
     default: `${SITE_NAME}.TV — Video Streaming Platform`,
     template: `%s | ${SITE_NAME}.TV`,

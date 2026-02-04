@@ -6,10 +6,13 @@
 export type UserRole = "user" | "admin";
 
 export type User = {
+  /** Set when user comes from API (GET /users/me). */
+  id?: string;
   email: string;
   name: string;
-  /** Mocked role. Admin users can access /admin. */
   role?: UserRole;
+  /** ISO date string when from API. */
+  createdAt?: string;
 };
 
 export type Video = {

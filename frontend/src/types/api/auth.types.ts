@@ -49,6 +49,17 @@ export interface ForgotPasswordResponseDto {
   message: string;
 }
 
+/** Request body for POST /auth/reset-password */
+export interface ResetPasswordRequestDto {
+  token: string;
+  newPassword: string;
+}
+
+/** Response for POST /auth/reset-password */
+export interface ResetPasswordResponseDto {
+  message: string;
+}
+
 /** Request body for POST /auth/refresh (if using refresh tokens). */
 export interface RefreshTokenRequestDto {
   refreshToken: string;

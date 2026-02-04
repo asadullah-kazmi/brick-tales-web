@@ -5,6 +5,8 @@ import type {
   RegisterResponseDto,
   ForgotPasswordRequestDto,
   ForgotPasswordResponseDto,
+  ResetPasswordRequestDto,
+  ResetPasswordResponseDto,
   UserDto,
 } from "@/types/api";
 import type { User } from "@/types";
@@ -184,10 +186,21 @@ export const authService = {
       if (!result.success) throw new Error(result.error ?? "Request failed");
       return { message: result.message };
     }
-    // Backend may not have forgot-password yet; keep mock or add endpoint later
-    const result = await mockForgotPassword(body.email);
-    if (!result.success) throw new Error(result.error ?? "Request failed");
-    return { message: result.message };
+    return post<ForgotPasswordResponseDto>("auth/forgot-password", {
+      email: body.email,
+    });
+  },
+
+  async resetPassword(
+    body: ResetPasswordRequestDto
+  ): Promise<ResetPasswordResponseDto> {
+    if (USE_MOCK_API) {
+      throw new Error("Reset password is not available in mock mode.");
+    }
+    return post<ResetPasswordResponseDto>("auth/reset-password", {
+      token: body.token,
+      newPassword: body.newPassword,
+    });
   },
 
   logout(): void {

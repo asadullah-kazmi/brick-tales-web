@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again.",
+          : "Something went wrong. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -55,9 +55,6 @@ export default function ForgotPasswordPage() {
         <CardContent>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
             {message}
-          </p>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-500">
-            This is a mock flow. No email is actually sent.
           </p>
         </CardContent>
         <CardFooter>
