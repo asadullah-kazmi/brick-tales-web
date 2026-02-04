@@ -56,10 +56,10 @@ export default function Home() {
     <main className="flex flex-1 flex-col">
       <WebSiteJsonLd />
 
-      {/* Hero banner: urban skyline with tagline */}
+      {/* Full-screen hero: banner image behind entire first view */}
       <section
-        className="relative flex min-h-[40vh] w-full items-center justify-center overflow-hidden sm:min-h-[50vh]"
-        aria-label="Hero banner"
+        className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
+        aria-label="Hero"
       >
         <Image
           src="/hero-banner.png"
@@ -70,46 +70,42 @@ export default function Home() {
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-black/50" aria-hidden />
-        <div className="relative z-10 px-4 text-center">
-          <p className="text-2xl font-semibold tracking-wide text-white drop-shadow-lg sm:text-3xl md:text-4xl lg:text-5xl">
-            Your Digital Home For Urban History
+        <div className="relative z-10 flex flex-col items-center justify-center text-center">
+          <div className="relative mb-8">
+            <Image
+              src="/logo.png"
+              alt={SITE_BRAND}
+              width={280}
+              height={96}
+              className="h-20 w-auto object-contain sm:h-24"
+              priority
+            />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg sm:text-4xl md:text-5xl lg:text-6xl">
+            Your Digital Home for Urban History
+          </h1>
+          <p className="mt-4 max-w-xl text-center text-lg text-white/90 drop-shadow-md">
+            Your video streaming platform. Browse content and start watching.
           </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/browse"
+              className="rounded-lg bg-accent px-6 py-3 text-sm font-medium text-accent-foreground shadow-accent-glow transition-colors hover:bg-accent/90"
+            >
+              Browse content
+            </Link>
+            <Link
+              href="/subscription"
+              className="rounded-lg border-2 border-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent/10"
+            >
+              View plans
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col items-center justify-center px-4 py-16">
-        <div className="relative mb-8">
-          <Image
-            src="/logo.png"
-            alt={SITE_BRAND}
-            width={280}
-            height={96}
-            className="h-20 w-auto object-contain sm:h-24"
-            priority
-          />
-        </div>
-        <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-          Welcome to {SITE_BRAND}
-        </h1>
-        <p className="mt-4 max-w-xl text-center text-neutral-400">
-          Your video streaming platform. Browse content and start watching.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Link
-            href="/browse"
-            className="rounded-lg bg-accent px-6 py-3 text-sm font-medium text-accent-foreground shadow-accent-glow transition-colors hover:bg-accent/90 dark:shadow-accent-glow"
-          >
-            Browse content
-          </Link>
-          <Link
-            href="/subscription"
-            className="rounded-lg border-2 border-accent px-6 py-3 text-sm font-medium text-neutral-900 transition-colors hover:bg-accent/10 dark:text-accent dark:hover:bg-accent/10"
-          >
-            View plans
-          </Link>
-        </div>
-
+      {/* Upsell section below the fold */}
+      <div className="flex flex-1 flex-col items-center px-4 py-16">
         {/* Upsell banner */}
         <section
           className="mt-16 w-full max-w-3xl rounded-2xl border border-neutral-700/50 bg-neutral-900/50 px-6 py-8 sm:px-8 sm:py-10"
@@ -117,7 +113,7 @@ export default function Home() {
         >
           <h2
             id="upsell-heading"
-            className="text-center text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl"
+            className="text-center text-xl font-bold text-white sm:text-2xl"
           >
             Upgrade for more
           </h2>
@@ -129,10 +125,10 @@ export default function Home() {
               <span className="text-2xl sm:text-3xl" aria-hidden>
                 🎁
               </span>
-              <span className="mt-2 font-semibold text-neutral-900 dark:text-white">
+              <span className="mt-2 font-semibold text-white">
                 Free trial offer
               </span>
-              <span className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              <span className="mt-1 text-sm text-neutral-400">
                 Try premium free for 7–14 days. No commitment.
               </span>
             </li>
@@ -140,10 +136,10 @@ export default function Home() {
               <span className="text-2xl sm:text-3xl" aria-hidden>
                 ✨
               </span>
-              <span className="mt-2 font-semibold text-neutral-900 dark:text-white">
+              <span className="mt-2 font-semibold text-white">
                 Ad-free viewing
               </span>
-              <span className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              <span className="mt-1 text-sm text-neutral-400">
                 Watch without interruptions.
               </span>
             </li>
@@ -151,10 +147,10 @@ export default function Home() {
               <span className="text-2xl sm:text-3xl" aria-hidden>
                 🚀
               </span>
-              <span className="mt-2 font-semibold text-neutral-900 dark:text-white">
+              <span className="mt-2 font-semibold text-white">
                 Early access to new content
               </span>
-              <span className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              <span className="mt-1 text-sm text-neutral-400">
                 Be first to stream new releases.
               </span>
             </li>
