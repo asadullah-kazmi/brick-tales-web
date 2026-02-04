@@ -1,16 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts";
 import { Loader, Button } from "@/components/ui";
 
-/**
- * Shown after successful Stripe checkout. Refreshes subscription state and redirects
- * to returnUrl or dashboard so the user sees active subscription.
- */
-export default function SubscriptionSuccessPage() {
+function SubscriptionSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { refreshUser, isSubscribed } = useAuth();
@@ -65,5 +61,23 @@ export default function SubscriptionSuccessPage() {
         <Button variant="primary">Go to dashboard</Button>
       </Link>
     </main>
+  );
+}
+
+/**
+ * Shown after successful Stripe checkout. Refreshes subscription state and redirects
+ * to returnUrl or dashboard so the user sees active subscription.
+ */
+export default function SubscriptionSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-4 py-12">
+          <Loader size="lg" label="Loading…" />
+        </main>
+      }
+    >
+      <SubscriptionSuccessContent />
+    </Suspense>
   );
 }

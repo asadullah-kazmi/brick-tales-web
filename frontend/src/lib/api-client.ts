@@ -105,6 +105,12 @@ type RequestConfig = RequestInit & {
   params?: Record<string, string>;
 };
 
+function toBodyInit(body: unknown): BodyInit | undefined {
+  if (body === undefined || body === null) return undefined;
+  if (typeof body === "string") return body;
+  return JSON.stringify(body);
+}
+
 function buildUrl(path: string, params?: Record<string, string>): string {
   const base = getApiBaseUrl().replace(/\/$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -193,7 +199,11 @@ export function post<T>(
   body?: unknown,
   config?: Omit<RequestConfig, "method" | "body">
 ): Promise<T> {
-  return request<T>(path, { ...config, method: "POST", body });
+  return request<T>(path, {
+    ...config,
+    method: "POST",
+    body: toBodyInit(body),
+  });
 }
 
 /** PUT request. */
@@ -202,7 +212,7 @@ export function put<T>(
   body?: unknown,
   config?: Omit<RequestConfig, "method" | "body">
 ): Promise<T> {
-  return request<T>(path, { ...config, method: "PUT", body });
+  return request<T>(path, { ...config, method: "PUT", body: toBodyInit(body) });
 }
 
 /** PATCH request. */
@@ -211,7 +221,11 @@ export function patch<T>(
   body?: unknown,
   config?: Omit<RequestConfig, "method" | "body">
 ): Promise<T> {
-  return request<T>(path, { ...config, method: "PATCH", body });
+  return request<T>(path, {
+    ...config,
+    method: "PATCH",
+    body: toBodyInit(body),
+  });
 }
 
 /** DELETE request. */

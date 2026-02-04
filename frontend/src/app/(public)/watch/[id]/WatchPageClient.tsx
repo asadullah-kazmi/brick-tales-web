@@ -10,7 +10,6 @@ import { contentService, streamingService } from "@/lib/services";
 import { USE_MOCK_API } from "@/lib/services/config";
 import { ApiError } from "@/lib/api-client";
 import type { VideoDto } from "@/types/api";
-import { Button } from "@/components/ui";
 import { formatDuration, formatDate, isLongForm } from "@/lib/video-utils";
 import {
   Loader,
