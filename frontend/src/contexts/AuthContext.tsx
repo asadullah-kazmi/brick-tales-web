@@ -46,10 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubscribed, setIsSubscribedState] = useState(false);
 
   useEffect(() => {
-    const session = authService.getSession();
-    setUser(session ? dtoToUser(session) : null);
-    setIsSubscribedState(getStoredSubscription());
-    setIsLoading(false);
+    let cancelled = false;
+    authService.getSession().then((session) => {
+      if (!cancelled) {
+        setUser(session ? dtoToUser(session) : null);
+        setIsSubscribedState(getStoredSubscription());
+      }
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback((newUser: User) => {

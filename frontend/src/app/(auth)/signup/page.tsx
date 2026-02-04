@@ -17,6 +17,7 @@ import {
   validateRequired,
   validatePasswordMatch,
 } from "@/lib/validation";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { authService } from "@/lib/services";
 import { useAuth } from "@/contexts";
 
@@ -65,11 +66,7 @@ export default function SignupPage() {
       });
       setSuccess(true);
     } catch (err) {
-      setSubmitError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
+      setSubmitError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

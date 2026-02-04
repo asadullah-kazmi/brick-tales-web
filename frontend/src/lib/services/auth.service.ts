@@ -8,6 +8,13 @@ import type {
   UserDto,
 } from "@/types/api";
 import type { User } from "@/types";
+import { get, post, ApiError } from "@/lib/api-client";
+import {
+  getStoredAuth,
+  setStoredAuth,
+  clearStoredAuth,
+} from "@/lib/auth-storage";
+import { USE_MOCK_API } from "./config";
 import {
   mockLogin,
   mockSignup,
@@ -19,6 +26,32 @@ import {
 
 const MOCK_TOKEN = "mock-jwt-token";
 
+/** Backend GET /users/me response */
+interface MeResponse {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  createdAt: string;
+}
+
+/** Backend POST /auth/login and /auth/signup response (tokens only) */
+interface TokensResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+function meToUserDto(me: MeResponse): UserDto {
+  return {
+    id: me.id,
+    email: me.email,
+    name: me.name ?? "",
+    role: me.role === "admin" ? "admin" : "user",
+    createdAt: me.createdAt,
+  };
+}
+
 function userToDto(user: User): UserDto {
   return {
     id: (user as User & { id?: string }).id ?? `user-${user.email}`,
@@ -28,67 +61,175 @@ function userToDto(user: User): UserDto {
   };
 }
 
-function persistSession(user: User): void {
+function persistMockSession(user: User): void {
   setMockSession(user);
 }
 
+async function refreshTokens(): Promise<boolean> {
+  const auth = getStoredAuth();
+  if (!auth?.refreshToken) return false;
+  try {
+    const data = await post<TokensResponse>("auth/refresh", {
+      refreshToken: auth.refreshToken,
+    });
+    setStoredAuth({
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      expiresAt: Date.now() + data.expiresIn * 1000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function getMe(): Promise<UserDto> {
+  const auth = getStoredAuth();
+  if (!auth?.accessToken) throw new ApiError("Not authenticated", 401);
+  try {
+    const me = await get<MeResponse>("users/me", {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    });
+    return meToUserDto(me);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      const refreshed = await refreshTokens();
+      if (refreshed) {
+        const auth2 = getStoredAuth();
+        if (auth2?.accessToken) {
+          const me = await get<MeResponse>("users/me", {
+            headers: { Authorization: `Bearer ${auth2.accessToken}` },
+          });
+          return meToUserDto(me);
+        }
+      }
+      clearStoredAuth();
+      throw new ApiError("Session expired", 401);
+    }
+    throw e;
+  }
+}
+
 /**
- * Auth service. Use this instead of calling mock-auth directly.
- * Switch to real API by implementing fetch in this file when USE_MOCK_API is false.
+ * Auth service. Uses real API when USE_MOCK_API is false, mock otherwise.
  */
 export const authService = {
   async login(body: LoginRequestDto): Promise<LoginResponseDto> {
-    const result = await mockLogin(body.email, body.password);
-    if (!result.success) {
-      throw new Error(result.error);
+    if (USE_MOCK_API) {
+      const result = await mockLogin(body.email, body.password);
+      if (!result.success) throw new Error(result.error);
+      persistMockSession(result.user);
+      return {
+        user: userToDto(result.user),
+        accessToken: MOCK_TOKEN,
+        expiresIn: 3600,
+      };
     }
-    persistSession(result.user);
+
+    const tokens = await post<TokensResponse>("auth/login", {
+      email: body.email,
+      password: body.password,
+    });
+    setStoredAuth({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: Date.now() + tokens.expiresIn * 1000,
+    });
+    const user = await getMe();
     return {
-      user: userToDto(result.user),
-      accessToken: MOCK_TOKEN,
-      expiresIn: 3600,
+      user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
     };
   },
 
   async register(body: RegisterRequestDto): Promise<RegisterResponseDto> {
-    const result = await mockSignup(body.name, body.email, body.password);
-    if (!result.success) {
-      throw new Error(result.error ?? "Registration failed");
+    if (USE_MOCK_API) {
+      const result = await mockSignup(body.name, body.email, body.password);
+      if (!result.success)
+        throw new Error(result.error ?? "Registration failed");
+      persistMockSession(result.user);
+      return {
+        user: userToDto(result.user),
+        accessToken: MOCK_TOKEN,
+        expiresIn: 3600,
+      };
     }
-    persistSession(result.user);
+
+    const tokens = await post<TokensResponse>("auth/signup", {
+      email: body.email,
+      password: body.password,
+      name: body.name,
+    });
+    setStoredAuth({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: Date.now() + tokens.expiresIn * 1000,
+    });
+    const user = await getMe();
     return {
-      user: userToDto(result.user),
-      accessToken: MOCK_TOKEN,
-      expiresIn: 3600,
+      user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
     };
   },
 
   async forgotPassword(
-    body: ForgotPasswordRequestDto,
+    body: ForgotPasswordRequestDto
   ): Promise<ForgotPasswordResponseDto> {
-    const result = await mockForgotPassword(body.email);
-    if (!result.success) {
-      throw new Error(result.error ?? "Request failed");
+    if (USE_MOCK_API) {
+      const result = await mockForgotPassword(body.email);
+      if (!result.success) throw new Error(result.error ?? "Request failed");
+      return { message: result.message };
     }
+    // Backend may not have forgot-password yet; keep mock or add endpoint later
+    const result = await mockForgotPassword(body.email);
+    if (!result.success) throw new Error(result.error ?? "Request failed");
     return { message: result.message };
   },
 
   logout(): void {
-    clearMockSession();
+    if (!USE_MOCK_API) clearStoredAuth();
+    else clearMockSession();
   },
 
   /**
-   * Get current session from storage (mock). For real API, validate token or call GET /auth/me.
+   * Get current session. With real API: validates token and fetches user from GET /users/me.
+   * Tries refresh token on 401, then returns null if still unauthenticated.
    */
-  getSession(): UserDto | null {
+  async getSession(): Promise<UserDto | null> {
+    if (USE_MOCK_API) {
+      if (typeof window === "undefined") return null;
+      try {
+        const raw = window.localStorage.getItem("mockAuthUser");
+        if (!raw) return null;
+        const user = JSON.parse(raw) as User;
+        if (!user?.email) return null;
+        return userToDto(user);
+      } catch {
+        return null;
+      }
+    }
+
     if (typeof window === "undefined") return null;
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) return null;
     try {
-      const raw = window.localStorage.getItem("mockAuthUser");
-      if (!raw) return null;
-      const user = JSON.parse(raw) as User;
-      if (!user?.email) return null;
-      return userToDto(user);
-    } catch {
+      return await getMe();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        const refreshed = await refreshTokens();
+        if (refreshed) {
+          try {
+            return await getMe();
+          } catch {
+            // fall through to clear and return null
+          }
+        }
+        clearStoredAuth();
+      }
       return null;
     }
   },

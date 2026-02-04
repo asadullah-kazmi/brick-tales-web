@@ -14,6 +14,7 @@ import {
   Loader,
 } from "@/components/ui";
 import { validateEmail } from "@/lib/validation";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { authService } from "@/lib/services";
 import { setLoginOrigin } from "@/lib/mock-auth";
 import { useAuth } from "@/contexts";
@@ -26,7 +27,7 @@ function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {},
+    {}
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,11 +59,7 @@ function LoginPageContent() {
       });
       setSuccess(true);
     } catch (err) {
-      setSubmitError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
+      setSubmitError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
