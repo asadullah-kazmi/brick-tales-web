@@ -31,6 +31,76 @@ export function getApiErrorMessage(err: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
+/**
+ * User-friendly message for global display (auth, subscription, server, network).
+ * Use for banners/toasts; use getApiErrorMessage for form-level display.
+ */
+export function getApiErrorUserMessage(err: unknown): string {
+  if (!(err instanceof ApiError)) {
+    if (err instanceof Error) {
+      if (
+        err.message.includes("fetch") ||
+        err.message.includes("network") ||
+        err.message.includes("Failed to fetch")
+      )
+        return "Network error. Check your connection and try again.";
+      return err.message;
+    }
+    return "Something went wrong. Please try again.";
+  }
+  if (err.status === 0)
+    return "Network error. Check your connection and try again.";
+  switch (err.status) {
+    case 401:
+      return (
+        (err.body &&
+        typeof err.body === "object" &&
+        "message" in err.body &&
+        typeof (err.body as { message: unknown }).message === "string"
+          ? (err.body as { message: string }).message
+          : null) ?? "Your session may have expired. Please sign in again."
+      );
+    case 403:
+      return (
+        (err.body &&
+        typeof err.body === "object" &&
+        "message" in err.body &&
+        typeof (err.body as { message: unknown }).message === "string"
+          ? (err.body as { message: string }).message
+          : null) ??
+        "You don’t have permission to do that. An active subscription may be required."
+      );
+    case 404:
+      return "The requested resource was not found.";
+    case 500:
+    case 502:
+    case 503:
+      return "Our servers are having trouble. Please try again in a moment.";
+    default:
+      if (err.status >= 500)
+        return "Something went wrong on our end. Please try again.";
+      if (err.status >= 400) return getApiErrorMessage(err);
+      return "Something went wrong. Please try again.";
+  }
+}
+
+/** Callback for global API error reporting (set by ApiErrorProvider). */
+let globalApiErrorHandler: ((err: ApiError) => void) | null = null;
+
+export function setGlobalApiErrorHandler(
+  handler: ((err: ApiError) => void) | null
+): void {
+  globalApiErrorHandler = handler;
+}
+
+function notifyGlobalHandler(err: ApiError): void {
+  try {
+    globalApiErrorHandler?.(err);
+  } catch {
+    // ignore handler errors
+  }
+}
+
 type RequestConfig = RequestInit & {
   params?: Record<string, string>;
 };
@@ -68,7 +138,17 @@ async function request<T>(
         : undefined,
   };
 
-  const response = await fetch(url, init);
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (fetchErr) {
+    const message =
+      fetchErr instanceof Error ? fetchErr.message : "Network request failed";
+    const apiError = new ApiError(message, 0, undefined);
+    notifyGlobalHandler(apiError);
+    throw apiError;
+  }
+
   let parsed: unknown;
   const contentType = response.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
@@ -91,7 +171,9 @@ async function request<T>(
         ? (parsed as { message: string }).message
         : response.statusText ||
           `Request failed with status ${response.status}`;
-    throw new ApiError(message, response.status, parsed);
+    const apiError = new ApiError(message, response.status, parsed);
+    notifyGlobalHandler(apiError);
+    throw apiError;
   }
 
   return parsed as T;
