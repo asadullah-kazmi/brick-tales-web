@@ -196,8 +196,9 @@ export const authService = {
   },
 
   /**
-   * Get current session. With real API: validates token and fetches user from GET /users/me.
+   * Get current session. With real API: fetches user from GET /users/me using stored token.
    * Tries refresh token on 401, then returns null if still unauthenticated.
+   * Throws on network/server errors so the caller can show an error state.
    */
   async getSession(): Promise<UserDto | null> {
     if (USE_MOCK_API) {
@@ -216,6 +217,7 @@ export const authService = {
     if (typeof window === "undefined") return null;
     const auth = getStoredAuth();
     if (!auth?.accessToken) return null;
+
     try {
       return await getMe();
     } catch (e) {
@@ -229,8 +231,10 @@ export const authService = {
           }
         }
         clearStoredAuth();
+        return null;
       }
-      return null;
+      // Network or server error: let caller handle (show error state)
+      throw e;
     }
   },
 };
