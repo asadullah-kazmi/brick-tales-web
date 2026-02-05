@@ -5,14 +5,18 @@
 
 const isProd = process.env.NODE_ENV === "production";
 
-/** Base URL for the app (SEO, canonical, OG). Set in production. */
+/** Base URL for the app (SEO, canonical, OG). Must include scheme (https://). Set in production. */
 export function getAppUrl(): string {
-  return (
+  const raw =
     process.env.NEXT_PUBLIC_APP_URL ??
     (typeof window !== "undefined"
       ? window.location.origin
-      : "https://bricktales.tv")
-  );
+      : "https://bricktales.tv");
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "https://bricktales.tv";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
+    return trimmed;
+  return `https://${trimmed}`;
 }
 
 /** Base URL for backend API (no trailing slash). Used by api-client. */
