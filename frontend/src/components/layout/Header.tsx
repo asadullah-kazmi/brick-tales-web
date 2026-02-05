@@ -17,6 +17,7 @@ function NavContent({
   user,
   logout,
   onLinkClick,
+  variant = "desktop",
 }: {
   dashboardHref: string;
   isAuthenticated: boolean;
@@ -24,8 +25,15 @@ function NavContent({
   user: { name: string; email: string } | null;
   logout: () => void;
   onLinkClick?: () => void;
+  variant?: "desktop" | "mobile";
 }) {
-  const linkClass = "hover:text-accent transition-colors text-neutral-300";
+  const isMobile = variant === "mobile";
+  const linkClass = isMobile
+    ? "w-full rounded-md px-3 py-2 text-base text-neutral-200 transition-colors hover:bg-neutral-800/70 hover:text-white"
+    : "hover:text-accent transition-colors text-neutral-300";
+  const pillClass = isMobile
+    ? "w-full rounded-md bg-amber-500/90 px-3 py-2 text-base font-medium text-neutral-900 hover:bg-amber-400"
+    : "rounded-md bg-amber-500/90 px-2.5 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400";
   return (
     <>
       <Link href="/browse" className={linkClass} onClick={onLinkClick}>
@@ -35,17 +43,20 @@ function NavContent({
         Plans
       </Link>
       {isAuthenticated && !isSubscribed && (
-        <Link
-          href="/subscription"
-          className="rounded-md bg-amber-500/90 px-2.5 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400"
-          onClick={onLinkClick}
-        >
+        <Link href="/subscription" className={pillClass} onClick={onLinkClick}>
           Upgrade
         </Link>
       )}
       {isAuthenticated && user ? (
         <>
-          <span className="text-neutral-400" title={user.email}>
+          <span
+            className={
+              isMobile
+                ? "w-full rounded-md px-3 py-2 text-sm text-neutral-400"
+                : "text-neutral-400"
+            }
+            title={user.email}
+          >
             {user.name}
           </span>
           <Link
@@ -58,6 +69,8 @@ function NavContent({
           <Button
             variant="ghost"
             size="sm"
+            fullWidth={isMobile}
+            className={isMobile ? "justify-start" : undefined}
             type="button"
             onClick={() => {
               onLinkClick?.();
@@ -73,7 +86,13 @@ function NavContent({
             Sign in
           </Link>
           <Link href="/signup" onClick={onLinkClick}>
-            <Button variant="outline" size="sm" type="button">
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              fullWidth={isMobile}
+              className={isMobile ? "justify-start" : undefined}
+            >
               Sign up
             </Button>
           </Link>
@@ -182,13 +201,22 @@ export function Header() {
       </div>
       {/* Mobile nav drawer */}
       <div
-        className={`fixed inset-0 top-14 z-40 bg-off-black/98 backdrop-blur-sm md:hidden ${
-          mobileMenuOpen ? "visible" : "invisible"
+        className={`fixed inset-0 top-14 z-50 md:hidden ${
+          mobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
         aria-hidden={!mobileMenuOpen}
       >
+        <button
+          type="button"
+          className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+            mobileMenuOpen ? "opacity-100" : "opacity-0"
+          }`}
+          aria-label="Close menu"
+          onClick={() => setMobileMenuOpen(false)}
+          tabIndex={mobileMenuOpen ? 0 : -1}
+        />
         <nav
-          className={`flex flex-col gap-1 px-4 py-4 text-base transition-opacity duration-200 ${
+          className={`relative mx-4 mt-4 flex flex-col gap-2 rounded-xl border border-neutral-700/70 bg-off-black p-4 text-base shadow-xl transition-opacity duration-200 ${
             mobileMenuOpen ? "opacity-100" : "opacity-0"
           }`}
           aria-label="Main mobile"
@@ -200,6 +228,7 @@ export function Header() {
             user={user}
             logout={logout}
             onLinkClick={() => setMobileMenuOpen(false)}
+            variant="mobile"
           />
         </nav>
       </div>
