@@ -21,6 +21,15 @@ In Vercel → Project Settings → **Environment Variables**, add at least:
 | `FRONTEND_URL`       | Yes         | Your frontend URL, e.g. `https://brick-tales-web-j89i.vercel.app`. |
 | `CORS_ORIGIN`        | Recommended | Same as `FRONTEND_URL` or comma-separated origins.                 |
 
+**Important:** `DATABASE_URL` must point to a **cloud** PostgreSQL instance (e.g. Neon, Supabase, Railway). Do not use `localhost` — the Vercel runtime cannot reach your machine.
+
+### Using Neon (PostgreSQL)
+
+1. Create a project at [Neon Console](https://console.neon.tech).
+2. In the project, open **Connection string** and choose **Pooled connection** (recommended for serverless; host ends with `-pooler`).
+3. Copy the URL (it includes `?sslmode=require`). Set it as `DATABASE_URL` in Vercel and in your local `.env` when running migrations.
+4. Run migrations with that same URL: `npx prisma migrate deploy` (see section 3 below).
+
 Optional but useful: `SMTP_*` (for password reset emails), `STRIPE_*` (for subscriptions).
 
 ## 3. Database migrations
@@ -31,7 +40,7 @@ Run migrations against the **production** database before or after deploy.
 
 ```powershell
 cd server
-$env:DATABASE_URL = "postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+$env:DATABASE_URL = "postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require"
 npx prisma migrate deploy
 ```
 
@@ -41,7 +50,7 @@ Run the two commands **separately** (set env, then run migrate). Or one line: `$
 
 ```bash
 cd server
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE" npx prisma migrate deploy
+DATABASE_URL="postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require" npx prisma migrate deploy
 ```
 
 You can do this locally with the production `DATABASE_URL`, or in CI.

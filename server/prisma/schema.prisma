@@ -1,5 +1,6 @@
 // Prisma schema for PostgreSQL – streaming platform
 // https://pris.ly/d/prisma-schema
+// For Neon: use the Pooled connection string from Neon dashboard (includes ?sslmode=require).
 
 generator client {
   provider      = "prisma-client-js"
