@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AdminProtectedRoute } from "@/components/auth";
 import { AdminContentProvider } from "@/contexts";
+import { useAuth } from "@/contexts";
 import { SITE_BRAND } from "@/lib/seo";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui";
 
 function MenuIcon({ className }: { className?: string }) {
   return (
@@ -161,6 +163,8 @@ export default function AdminLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
   const isAdminLoginPage = pathname === "/admin/login";
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -238,7 +242,19 @@ export default function AdminLayoutClient({
           );
         })}
       </nav>
-      <div className="border-t border-neutral-700/50 p-3">
+      <div className="border-t border-neutral-700/50 p-3 space-y-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-neutral-300"
+          onClick={() => {
+            logout();
+            router.replace("/admin/login");
+          }}
+        >
+          Sign out
+        </Button>
         <Link
           href="/"
           className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-accent"

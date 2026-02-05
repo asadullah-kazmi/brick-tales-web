@@ -211,10 +211,34 @@ export const authService = {
     if (USE_MOCK_API) {
       throw new Error("Change password is not available in mock mode.");
     }
-    return post<ChangePasswordResponseDto>("auth/change-password", {
-      currentPassword: body.currentPassword,
-      newPassword: body.newPassword,
-    });
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) throw new ApiError("Not authenticated", 401);
+    try {
+      return await post<ChangePasswordResponseDto>(
+        "auth/change-password",
+        {
+          currentPassword: body.currentPassword,
+          newPassword: body.newPassword,
+        },
+        { headers: { Authorization: `Bearer ${auth.accessToken}` } },
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        const refreshed = await refreshTokens();
+        const auth2 = getStoredAuth();
+        if (refreshed && auth2?.accessToken) {
+          return post<ChangePasswordResponseDto>(
+            "auth/change-password",
+            {
+              currentPassword: body.currentPassword,
+              newPassword: body.newPassword,
+            },
+            { headers: { Authorization: `Bearer ${auth2.accessToken}` } },
+          );
+        }
+      }
+      throw err;
+    }
   },
 
   logout(): void {

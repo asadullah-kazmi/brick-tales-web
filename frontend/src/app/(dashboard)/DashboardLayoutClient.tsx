@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/auth";
+import { useAuth } from "@/contexts";
 import { SITE_BRAND } from "@/lib/seo";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui";
 
 function MenuIcon({ className }: { className?: string }) {
   return (
@@ -117,6 +119,8 @@ export default function DashboardLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -184,7 +188,19 @@ export default function DashboardLayoutClient({
           );
         })}
       </nav>
-      <div className="border-t border-neutral-700/50 p-3">
+      <div className="border-t border-neutral-700/50 p-3 space-y-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-neutral-300"
+          onClick={() => {
+            logout();
+            router.replace("/login");
+          }}
+        >
+          Sign out
+        </Button>
         <Link
           href="/"
           className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-accent"
