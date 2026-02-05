@@ -1,10 +1,13 @@
-import { get, patch, post, ApiError } from "@/lib/api-client";
+import { del, get, patch, post, ApiError } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { authService } from "@/lib/services/auth.service";
 import type {
   PresignUploadRequestDto,
   PresignUploadResponseDto,
   CreateAdminVideoRequestDto,
+  UpdateAdminVideoRequestDto,
+  AdminCategoryDto,
+  CreateAdminCategoryRequestDto,
   SitePageDto,
   SitePageSummaryDto,
   UpdateSitePageRequestDto,
@@ -96,6 +99,16 @@ export const adminService = {
     );
   },
 
+  async getContentItem(id: string): Promise<AdminContentItemDto | null> {
+    try {
+      return await withAuthRetry((headers) =>
+        get<AdminContentItemDto>(`admin/content/${id}`, { headers }),
+      );
+    } catch {
+      return null;
+    }
+  },
+
   async updateVideoPublish(
     id: string,
     published: boolean,
@@ -107,6 +120,19 @@ export const adminService = {
           { published },
           { headers },
         ),
+      );
+    } catch {
+      return null;
+    }
+  },
+
+  async updateVideo(
+    id: string,
+    body: UpdateAdminVideoRequestDto,
+  ): Promise<AdminContentItemDto | null> {
+    try {
+      return await withAuthRetry((headers) =>
+        patch<AdminContentItemDto>(`admin/content/${id}`, body, { headers }),
       );
     } catch {
       return null;
@@ -128,6 +154,26 @@ export const adminService = {
   ): Promise<AdminContentItemDto> {
     return withAuthRetry((headers) =>
       post<AdminContentItemDto>("admin/content", body, { headers }),
+    );
+  },
+
+  async getCategories(): Promise<AdminCategoryDto[]> {
+    return withAuthRetry((headers) =>
+      get<AdminCategoryDto[]>("admin/categories", { headers }),
+    );
+  },
+
+  async createCategory(
+    body: CreateAdminCategoryRequestDto,
+  ): Promise<AdminCategoryDto> {
+    return withAuthRetry((headers) =>
+      post<AdminCategoryDto>("admin/categories", body, { headers }),
+    );
+  },
+
+  async deleteCategory(id: string): Promise<void> {
+    return withAuthRetry((headers) =>
+      del<void>(`admin/categories/${id}`, { headers }),
     );
   },
 

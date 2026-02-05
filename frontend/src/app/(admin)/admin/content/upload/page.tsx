@@ -1,27 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Button,
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-  Button,
   Input,
 } from "@/components/ui";
 import { useAdminContent } from "@/contexts";
-
-const CATEGORY_OPTIONS = [
-  "Tutorial",
-  "Technical",
-  "Best Practices",
-  "Architecture",
-  "Infrastructure",
-  "Analytics",
-  "Security",
-];
+import { adminService } from "@/lib/services";
+import type { AdminCategoryDto } from "@/types/api";
 
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/mkv"];
 const THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -40,6 +32,19 @@ function isValidDuration(value: string): boolean {
   return /^\d{1,2}:\d{2}(?::\d{2})?$/.test(value.trim());
 }
 
+function getCategoryOptions(list: AdminCategoryDto[]): AdminCategoryDto[] {
+  const seen = new Set<string>();
+  return list.filter((item) => {
+    const name = item.name.trim();
+    if (!name) return false;
+    const key = name.toLowerCase();
+    if (key === "uncategorized") return false;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export default function AdminUploadPage() {
   const router = useRouter();
   const { addVideo } = useAdminContent();
@@ -47,11 +52,40 @@ export default function AdminUploadPage() {
   const [duration, setDuration] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<AdminCategoryDto[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setCategoriesLoading(true);
+    setCategoriesError(null);
+    adminService
+      .getCategories()
+      .then((list) => {
+        if (!active) return;
+        setCategories(list);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setCategories([]);
+        setCategoriesError(
+          err instanceof Error ? err.message : "Failed to load categories.",
+        );
+      })
+      .finally(() => {
+        if (!active) return;
+        setCategoriesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function runValidation(): boolean {
     if (!title.trim()) {
@@ -239,12 +273,26 @@ export default function AdminUploadPage() {
                 className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
               >
                 <option value="">Select category</option>
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+                <option value="Uncategorized">Uncategorized</option>
+                {getCategoryOptions(categories).map((opt) => (
+                  <option key={opt.id} value={opt.name}>
+                    {opt.name}
                   </option>
                 ))}
               </select>
+              {categoriesLoading ? (
+                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                  Loading categories...
+                </p>
+              ) : categoriesError ? (
+                <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">
+                  {categoriesError}
+                </p>
+              ) : categories.length === 0 ? (
+                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                  No categories yet. Create one in the Categories page.
+                </p>
+              ) : null}
             </div>
             <div>
               <label
@@ -265,7 +313,7 @@ export default function AdminUploadPage() {
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Uploading…" : "Upload video"}
+              {submitting ? "Uploading..." : "Upload video"}
             </Button>
             <Button
               type="button"

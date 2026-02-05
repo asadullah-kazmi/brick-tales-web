@@ -152,21 +152,19 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
         >
       >,
     ) => {
-      if (!USE_MOCK_API && typeof updates.published === "boolean") {
-        const updated = await adminService.updateVideoPublish(
-          id,
-          updates.published,
-        );
-        if (updated) {
-          setVideos((prev) =>
-            prev.map((v) =>
-              v.id === id ? mapContentToAdminVideo(updated) : v,
-            ),
-          );
-          return;
-        }
+      if (USE_MOCK_API) {
+        await contentService.updateVideo(id, updates);
+        await refresh();
+        return;
       }
-      await contentService.updateVideo(id, updates);
+
+      const updated = await adminService.updateVideo(id, updates);
+      if (updated) {
+        setVideos((prev) =>
+          prev.map((v) => (v.id === id ? mapContentToAdminVideo(updated) : v)),
+        );
+        return;
+      }
       await refresh();
     },
     [refresh],

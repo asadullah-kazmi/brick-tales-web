@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -23,6 +24,9 @@ import { randomUUID } from 'crypto';
 import { SiteService } from '../site/site.service';
 import type { SitePageDto, SitePageSummaryDto } from '../site/dto/site-page.dto';
 import { UpdateSitePageDto } from '../site/dto/update-site-page.dto';
+import type { AdminCategoryDto } from './dto/admin-category.dto';
+import { CreateAdminCategoryDto } from './dto/create-admin-category.dto';
+import { UpdateAdminVideoDto } from './dto/update-admin-video.dto';
 
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/mkv']);
 const THUMBNAIL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -103,16 +107,62 @@ export class AdminController {
   }
 
   /**
-   * Update video publish state.
+   * Get a single content item for editing.
    */
-  @Patch('content/:id')
-  async updateContentPublish(
+  @Get('content/:id')
+  async getContentById(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() body: { published: boolean },
   ): Promise<AdminContentItemDto | null> {
     ensureAdmin(user);
-    return this.adminService.updateVideoPublish(id, body.published);
+    return this.adminService.getContentById(id);
+  }
+
+  /**
+   * List all categories (admin view).
+   */
+  @Get('categories')
+  async getCategories(@CurrentUser() user: User): Promise<AdminCategoryDto[]> {
+    ensureAdmin(user);
+    return this.adminService.getCategories();
+  }
+
+  /**
+   * Create a new category.
+   */
+  @Post('categories')
+  async createCategory(
+    @CurrentUser() user: User,
+    @Body() body: CreateAdminCategoryDto,
+  ): Promise<AdminCategoryDto> {
+    ensureAdmin(user);
+    return this.adminService.createCategory(body);
+  }
+
+  /**
+   * Delete an empty category.
+   */
+  @Delete('categories/:id')
+  async deleteCategory(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
+    ensureAdmin(user);
+    await this.adminService.deleteCategory(id);
+    return { success: true };
+  }
+
+  /**
+   * Update video metadata or publish state.
+   */
+  @Patch('content/:id')
+  async updateContent(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: UpdateAdminVideoDto,
+  ): Promise<AdminContentItemDto | null> {
+    ensureAdmin(user);
+    return this.adminService.updateVideo(id, body);
   }
 
   /**

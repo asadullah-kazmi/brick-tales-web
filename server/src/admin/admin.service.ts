@@ -4,6 +4,9 @@ import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
 import type { AdminContentItemDto } from './dto/admin-content.dto';
 import type { CreateAdminVideoDto } from './dto/create-admin-video.dto';
+import type { AdminCategoryDto } from './dto/admin-category.dto';
+import type { CreateAdminCategoryDto } from './dto/create-admin-category.dto';
+import type { UpdateAdminVideoDto } from './dto/update-admin-video.dto';
 
 export interface DownloadsPerPlanDto {
   planId: string;
@@ -50,6 +53,22 @@ function slugify(value: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function toAdminCategoryDto(category: {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): AdminCategoryDto {
+  return {
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    createdAt: category.createdAt.toISOString(),
+    updatedAt: category.updatedAt.toISOString(),
+  };
 }
 
 @Injectable()
@@ -124,6 +143,55 @@ export class AdminService {
     }));
   }
 
+  async getContentById(id: string): Promise<AdminContentItemDto | null> {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      include: { category: true },
+    });
+    if (!video) return null;
+    return {
+      id: video.id,
+      title: video.title,
+      duration: formatDurationSeconds(video.duration),
+      description: video.description ?? undefined,
+      category: video.category.name,
+      published: !!video.publishedAt,
+      publishedAt: video.publishedAt?.toISOString(),
+      createdAt: video.createdAt.toISOString(),
+    };
+  }
+
+  async getCategories(): Promise<AdminCategoryDto[]> {
+    const categories = await this.prisma.category.findMany({
+      orderBy: { name: 'asc' },
+    });
+    return categories.map(toAdminCategoryDto);
+  }
+
+  async createCategory(dto: CreateAdminCategoryDto): Promise<AdminCategoryDto> {
+    const name = dto.name.trim();
+    const slug = slugify(name);
+    if (!slug) {
+      throw new BadRequestException('Category name is required');
+    }
+
+    const existing = await this.prisma.category.findUnique({ where: { slug } });
+    if (existing) return toAdminCategoryDto(existing);
+
+    const created = await this.prisma.category.create({
+      data: { name, slug },
+    });
+    return toAdminCategoryDto(created);
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    const usedCount = await this.prisma.video.count({ where: { categoryId: id } });
+    if (usedCount > 0) {
+      throw new BadRequestException('Category has videos and cannot be deleted');
+    }
+    await this.prisma.category.delete({ where: { id } });
+  }
+
   async updateVideoPublish(id: string, published: boolean): Promise<AdminContentItemDto | null> {
     const video = await this.prisma.video.findUnique({
       where: { id },
@@ -135,6 +203,76 @@ export class AdminService {
       data: { publishedAt: published ? new Date() : null },
       include: { category: true },
     });
+    return {
+      id: updated.id,
+      title: updated.title,
+      duration: formatDurationSeconds(updated.duration),
+      description: updated.description ?? undefined,
+      category: updated.category.name,
+      published: !!updated.publishedAt,
+      publishedAt: updated.publishedAt?.toISOString(),
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
+  async updateVideo(id: string, dto: UpdateAdminVideoDto): Promise<AdminContentItemDto | null> {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      include: { category: true },
+    });
+    if (!video) return null;
+
+    const data: {
+      title?: string;
+      description?: string | null;
+      duration?: number;
+      categoryId?: string;
+      publishedAt?: Date | null;
+    } = {};
+
+    if (typeof dto.title === 'string') {
+      const title = dto.title.trim();
+      if (!title) throw new BadRequestException('Title is required');
+      data.title = title;
+    }
+
+    if (typeof dto.duration === 'string') {
+      const seconds = parseDurationToSeconds(dto.duration);
+      if (seconds <= 0) {
+        throw new BadRequestException('Invalid duration format');
+      }
+      data.duration = seconds;
+    }
+
+    if (typeof dto.description === 'string') {
+      const desc = dto.description.trim();
+      data.description = desc ? desc : null;
+    }
+
+    if (typeof dto.category === 'string') {
+      const categoryName = dto.category.trim() || 'Uncategorized';
+      const slug = slugify(categoryName) || 'uncategorized';
+      const category = await this.prisma.category.findUnique({ where: { slug } });
+      const categoryId = category
+        ? category.id
+        : (
+            await this.prisma.category.create({
+              data: { name: categoryName, slug },
+            })
+          ).id;
+      data.categoryId = categoryId;
+    }
+
+    if (typeof dto.published === 'boolean') {
+      data.publishedAt = dto.published ? new Date() : null;
+    }
+
+    const updated = await this.prisma.video.update({
+      where: { id },
+      data,
+      include: { category: true },
+    });
+
     return {
       id: updated.id,
       title: updated.title,

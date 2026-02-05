@@ -85,6 +85,29 @@ export interface CreateAdminVideoRequestDto {
   published?: boolean;
 }
 
+/** Request body for PATCH /admin/content/:id */
+export interface UpdateAdminVideoRequestDto {
+  title?: string;
+  duration?: string;
+  description?: string;
+  category?: string;
+  published?: boolean;
+}
+
+/** Admin category representation. */
+export interface AdminCategoryDto {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Request body for POST /admin/categories */
+export interface CreateAdminCategoryRequestDto {
+  name: string;
+}
+
 /** Response for POST /content/videos */
 export interface CreateVideoResponseDto {
   video: VideoDto;

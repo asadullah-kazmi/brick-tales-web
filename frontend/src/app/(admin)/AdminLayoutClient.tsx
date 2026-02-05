@@ -52,6 +52,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: IconOverview },
   { href: "/admin/content", label: "Content", icon: IconContent },
   { href: "/admin/content/upload", label: "Upload", icon: IconUpload },
+  { href: "/admin/categories", label: "Categories", icon: IconCategories },
   { href: "/admin/users", label: "Users", icon: IconUsers },
   { href: "/admin/settings", label: "Settings", icon: IconSettings },
 ] as const;
@@ -124,6 +125,25 @@ function IconUsers({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+      />
+    </svg>
+  );
+}
+
+function IconCategories({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7 7h10M7 12h10M7 17h10"
       />
     </svg>
   );
@@ -219,10 +239,19 @@ export default function AdminLayoutClient({
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive =
-            href === "/admin"
-              ? pathname === "/admin"
-              : pathname.startsWith(href);
+          let isActive = false;
+          if (href === "/admin") {
+            isActive = pathname === "/admin";
+          } else if (href === "/admin/content") {
+            isActive =
+              pathname === "/admin/content" ||
+              (pathname.startsWith("/admin/content/") &&
+                !pathname.startsWith("/admin/content/upload"));
+          } else if (href === "/admin/content/upload") {
+            isActive = pathname.startsWith("/admin/content/upload");
+          } else {
+            isActive = pathname.startsWith(href);
+          }
           return (
             <Link
               key={href}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAdminContent } from "@/contexts";
 import { Button, Loader } from "@/components/ui";
@@ -20,6 +21,7 @@ function formatCreatedAt(iso: string): string {
 }
 
 export default function AdminContentPage() {
+  const router = useRouter();
   const { videos, loading, error, updateVideo, refresh } = useAdminContent();
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -132,17 +134,29 @@ export default function AdminContentPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={togglingId === video.id}
-                        onClick={() =>
-                          handleTogglePublish(video.id, video.published)
-                        }
-                      >
-                        {video.published ? "Unpublish" : "Publish"}
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            void router.push(`/admin/content/${video.id}/edit`)
+                          }
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={togglingId === video.id}
+                          onClick={() =>
+                            handleTogglePublish(video.id, video.published)
+                          }
+                        >
+                          {video.published ? "Unpublish" : "Publish"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
