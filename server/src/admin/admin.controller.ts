@@ -27,6 +27,7 @@ import { UpdateSitePageDto } from '../site/dto/update-site-page.dto';
 import type { AdminCategoryDto } from './dto/admin-category.dto';
 import { CreateAdminCategoryDto } from './dto/create-admin-category.dto';
 import { UpdateAdminVideoDto } from './dto/update-admin-video.dto';
+import type { AdminSubscriptionsResponseDto } from './dto/admin-subscription.dto';
 
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/mkv']);
 const THUMBNAIL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -95,6 +96,21 @@ export class AdminController {
     const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
     return this.adminService.getUsers(pageNum, limitNum);
+  }
+
+  /**
+   * List subscriptions and revenue summary.
+   */
+  @Get('subscriptions')
+  async getSubscriptions(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<AdminSubscriptionsResponseDto> {
+    ensureAdmin(user);
+    const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
+    return this.adminService.getSubscriptions(pageNum, limitNum);
   }
 
   /**

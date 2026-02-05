@@ -43,3 +43,36 @@ export interface UpdateSubscriptionRequestDto {
 export interface UpdateSubscriptionResponseDto {
   subscription: SubscriptionStatusDto;
 }
+
+// ---------------------------------------------------------------------------
+// Admin subscriptions
+// ---------------------------------------------------------------------------
+
+export interface AdminSubscriptionDto {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName?: string;
+  planId: string;
+  planName: string;
+  planPrice: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  stripeSubscriptionId?: string;
+}
+
+export interface AdminSubscriptionsSummaryDto {
+  totalCount: number;
+  activeCount: number;
+  cancelledCount: number;
+  expiredCount: number;
+  activeRevenue: string;
+}
+
+export interface AdminSubscriptionsResponseDto {
+  total: number;
+  subscriptions: AdminSubscriptionDto[];
+  summary: AdminSubscriptionsSummaryDto;
+}

@@ -7,6 +7,10 @@ import type { CreateAdminVideoDto } from './dto/create-admin-video.dto';
 import type { AdminCategoryDto } from './dto/admin-category.dto';
 import type { CreateAdminCategoryDto } from './dto/create-admin-category.dto';
 import type { UpdateAdminVideoDto } from './dto/update-admin-video.dto';
+import type {
+  AdminSubscriptionDto,
+  AdminSubscriptionsResponseDto,
+} from './dto/admin-subscription.dto';
 
 export interface DownloadsPerPlanDto {
   planId: string;
@@ -69,6 +73,12 @@ function toAdminCategoryDto(category: {
     createdAt: category.createdAt.toISOString(),
     updatedAt: category.updatedAt.toISOString(),
   };
+}
+
+function formatMoney(value: unknown): string {
+  const num = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(num)) return '0.00';
+  return num.toFixed(2);
 }
 
 @Injectable()
@@ -141,6 +151,66 @@ export class AdminService {
       publishedAt: v.publishedAt?.toISOString(),
       createdAt: v.createdAt.toISOString(),
     }));
+  }
+
+  async getSubscriptions(page = 1, limit = 20): Promise<AdminSubscriptionsResponseDto> {
+    const skip = (page - 1) * limit;
+    const now = new Date();
+
+    const [subscriptions, total, activeCount, cancelledCount, expiredCount, activeRevenueRows] =
+      await Promise.all([
+        this.prisma.subscription.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: { select: { id: true, email: true, name: true } },
+            plan: { select: { id: true, name: true, price: true } },
+          },
+        }),
+        this.prisma.subscription.count(),
+        this.prisma.subscription.count({
+          where: { status: 'ACTIVE', endDate: { gte: now } },
+        }),
+        this.prisma.subscription.count({ where: { status: 'CANCELLED' } }),
+        this.prisma.subscription.count({ where: { status: 'EXPIRED' } }),
+        this.prisma.subscription.findMany({
+          where: { status: 'ACTIVE', endDate: { gte: now } },
+          select: { plan: { select: { price: true } } },
+        }),
+      ]);
+
+    const activeRevenue = activeRevenueRows.reduce((sum, row) => {
+      const value = Number(row.plan.price);
+      return Number.isFinite(value) ? sum + value : sum;
+    }, 0);
+
+    const items: AdminSubscriptionDto[] = subscriptions.map((sub) => ({
+      id: sub.id,
+      userId: sub.userId,
+      userEmail: sub.user.email,
+      userName: sub.user.name ?? undefined,
+      planId: sub.plan.id,
+      planName: sub.plan.name,
+      planPrice: formatMoney(sub.plan.price),
+      status: sub.status,
+      startDate: sub.startDate.toISOString(),
+      endDate: sub.endDate.toISOString(),
+      createdAt: sub.createdAt.toISOString(),
+      stripeSubscriptionId: sub.stripeSubscriptionId ?? undefined,
+    }));
+
+    return {
+      total,
+      subscriptions: items,
+      summary: {
+        totalCount: total,
+        activeCount,
+        cancelledCount,
+        expiredCount,
+        activeRevenue: formatMoney(activeRevenue),
+      },
+    };
   }
 
   async getContentById(id: string): Promise<AdminContentItemDto | null> {

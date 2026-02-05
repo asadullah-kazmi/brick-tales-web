@@ -11,6 +11,7 @@ import type {
   SitePageDto,
   SitePageSummaryDto,
   UpdateSitePageRequestDto,
+  AdminSubscriptionsResponseDto,
 } from "@/types/api";
 
 /** Dashboard stats from GET /admin/stats */
@@ -87,6 +88,18 @@ export const adminService = {
   ): Promise<{ users: AdminUserDto[]; total: number }> {
     return withAuthRetry((headers) =>
       get<{ users: AdminUserDto[]; total: number }>("admin/users", {
+        params: { page: String(page), limit: String(limit) },
+        headers,
+      }),
+    );
+  },
+
+  async getSubscriptions(
+    page = 1,
+    limit = 20,
+  ): Promise<AdminSubscriptionsResponseDto> {
+    return withAuthRetry((headers) =>
+      get<AdminSubscriptionsResponseDto>("admin/subscriptions", {
         params: { page: String(page), limit: String(limit) },
         headers,
       }),
