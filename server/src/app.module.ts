@@ -14,6 +14,7 @@ import { DownloadsModule } from './downloads/downloads.module';
 import { DevicesModule } from './devices/devices.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AdminModule } from './admin/admin.module';
+import { SiteModule } from './site/site.module';
 
 @Module({
   controllers: [AppController],
@@ -30,6 +31,7 @@ import { AdminModule } from './admin/admin.module';
     DevicesModule,
     JobsModule,
     AdminModule,
+    SiteModule,
   ],
   providers: [
     {

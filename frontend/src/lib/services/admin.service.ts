@@ -1,9 +1,13 @@
 import { get, patch, post, ApiError } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
+import { authService } from "@/lib/services/auth.service";
 import type {
   PresignUploadRequestDto,
   PresignUploadResponseDto,
   CreateAdminVideoRequestDto,
+  SitePageDto,
+  SitePageSummaryDto,
+  UpdateSitePageRequestDto,
 } from "@/types/api";
 
 /** Dashboard stats from GET /admin/stats */
@@ -44,46 +48,65 @@ function authHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${auth.accessToken}` };
 }
 
+async function withAuthRetry<T>(
+  request: (headers: Record<string, string>) => Promise<T>,
+): Promise<T> {
+  const headers = authHeaders();
+  if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
+  try {
+    return await request(headers);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      await authService.getSession();
+      const refreshed = authHeaders();
+      if (!refreshed.Authorization)
+        throw new ApiError("Not authenticated", 401);
+      return request(refreshed);
+    }
+    throw err;
+  }
+}
+
 /**
  * Admin API service. All endpoints require admin role and valid JWT.
  * Use from admin dashboard only (user must be logged in as admin).
  */
 export const adminService = {
   async getStats(): Promise<DashboardStatsDto> {
-    const headers = authHeaders();
-    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
-    return get<DashboardStatsDto>("admin/stats", { headers });
+    return withAuthRetry((headers) =>
+      get<DashboardStatsDto>("admin/stats", { headers }),
+    );
   },
 
   async getUsers(
     page = 1,
     limit = 20,
   ): Promise<{ users: AdminUserDto[]; total: number }> {
-    const headers = authHeaders();
-    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
-    return get<{ users: AdminUserDto[]; total: number }>("admin/users", {
-      params: { page: String(page), limit: String(limit) },
-      headers,
-    });
+    return withAuthRetry((headers) =>
+      get<{ users: AdminUserDto[]; total: number }>("admin/users", {
+        params: { page: String(page), limit: String(limit) },
+        headers,
+      }),
+    );
   },
 
   async getContent(): Promise<AdminContentItemDto[]> {
-    const headers = authHeaders();
-    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
-    return get<AdminContentItemDto[]>("admin/content", { headers });
+    return withAuthRetry((headers) =>
+      get<AdminContentItemDto[]>("admin/content", { headers }),
+    );
   },
 
   async updateVideoPublish(
     id: string,
     published: boolean,
   ): Promise<AdminContentItemDto | null> {
-    const headers = authHeaders();
-    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
     try {
-      return await patch<AdminContentItemDto>(
-        `admin/content/${id}`,
-        { published },
-        { headers },
+      return await withAuthRetry((headers) =>
+        patch<AdminContentItemDto>(
+          `admin/content/${id}`,
+          { published },
+          { headers },
+        ),
       );
     } catch {
       return null;
@@ -93,18 +116,39 @@ export const adminService = {
   async presignUpload(
     body: PresignUploadRequestDto,
   ): Promise<PresignUploadResponseDto> {
-    const headers = authHeaders();
-    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
-    return post<PresignUploadResponseDto>("admin/uploads/presign", body, {
-      headers,
-    });
+    return withAuthRetry((headers) =>
+      post<PresignUploadResponseDto>("admin/uploads/presign", body, {
+        headers,
+      }),
+    );
   },
 
   async createVideo(
     body: CreateAdminVideoRequestDto,
   ): Promise<AdminContentItemDto> {
-    const headers = authHeaders();
-    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
-    return post<AdminContentItemDto>("admin/content", body, { headers });
+    return withAuthRetry((headers) =>
+      post<AdminContentItemDto>("admin/content", body, { headers }),
+    );
+  },
+
+  async getSitePages(): Promise<SitePageSummaryDto[]> {
+    return withAuthRetry((headers) =>
+      get<SitePageSummaryDto[]>("admin/pages", { headers }),
+    );
+  },
+
+  async getSitePage(slug: string): Promise<SitePageDto> {
+    return withAuthRetry((headers) =>
+      get<SitePageDto>(`admin/pages/${slug}`, { headers }),
+    );
+  },
+
+  async updateSitePage(
+    slug: string,
+    body: UpdateSitePageRequestDto,
+  ): Promise<SitePageDto> {
+    return withAuthRetry((headers) =>
+      patch<SitePageDto>(`admin/pages/${slug}`, body, { headers }),
+    );
   },
 };

@@ -1,8 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
 import { Public } from './auth/decorators/public.decorator';
+import { PrismaService } from './prisma/prisma.service';
 
 @Controller()
 export class AppController {
+  constructor(private readonly prisma: PrismaService) {}
+
   @Public()
   @Get()
   root() {
@@ -16,5 +19,27 @@ export class AppController {
         subscriptions: '/subscriptions',
       },
     };
+  }
+
+  /**
+   * Health check for SitePage table availability.
+   */
+  @Public()
+  @Get('health/site-pages')
+  async sitePagesHealth() {
+    const model = (this.prisma as any).sitePage;
+    if (!model) {
+      return { ok: false, sitePages: false, reason: 'SitePage model not found' };
+    }
+    try {
+      await model.findFirst({ select: { slug: true } });
+      return { ok: true, sitePages: true };
+    } catch (error) {
+      return {
+        ok: false,
+        sitePages: false,
+        reason: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 }

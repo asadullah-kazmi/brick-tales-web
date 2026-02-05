@@ -170,6 +170,21 @@ model Video {
 }
 
 // ---------------------------------------------------------------------------
+// Site Pages (editable legal pages)
+// ---------------------------------------------------------------------------
+
+model SitePage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+// ---------------------------------------------------------------------------
 // Device
 // ---------------------------------------------------------------------------
 

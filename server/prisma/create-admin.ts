@@ -26,6 +26,7 @@ async function main() {
 
   console.log(`ADMIN_EMAIL=${email}`);
   console.log(`ADMIN_PASSWORD=${password}`);
+  //sNWpSD9ec7tP
 }
 
 main()

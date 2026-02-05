@@ -60,6 +60,17 @@ export interface ResetPasswordResponseDto {
   message: string;
 }
 
+/** Request body for POST /auth/change-password */
+export interface ChangePasswordRequestDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/** Response for POST /auth/change-password */
+export interface ChangePasswordResponseDto {
+  message: string;
+}
+
 /** Request body for POST /auth/refresh (if using refresh tokens). */
 export interface RefreshTokenRequestDto {
   refreshToken: string;

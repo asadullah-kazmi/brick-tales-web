@@ -17,3 +17,4 @@ export type {
   AdminUserDto,
   AdminContentItemDto,
 } from "./admin.service";
+export { siteService } from "./site.service";

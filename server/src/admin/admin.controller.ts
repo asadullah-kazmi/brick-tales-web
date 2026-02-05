@@ -20,6 +20,9 @@ import { PresignUploadDto } from './dto/presign-upload.dto';
 import { CreateAdminVideoDto } from './dto/create-admin-video.dto';
 import { R2Service } from '../storage/r2.service';
 import { randomUUID } from 'crypto';
+import { SiteService } from '../site/site.service';
+import type { SitePageDto, SitePageSummaryDto } from '../site/dto/site-page.dto';
+import { UpdateSitePageDto } from '../site/dto/update-site-page.dto';
 
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/mkv']);
 const THUMBNAIL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -63,6 +66,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly r2Service: R2Service,
+    private readonly siteService: SiteService,
   ) {}
 
   /**
@@ -158,6 +162,37 @@ export class AdminController {
   ): Promise<AdminContentItemDto> {
     ensureAdmin(user);
     return this.adminService.createVideo(body);
+  }
+
+  /**
+   * List editable site pages (privacy, terms, etc.).
+   */
+  @Get('pages')
+  async getPages(@CurrentUser() user: User): Promise<SitePageSummaryDto[]> {
+    ensureAdmin(user);
+    return this.siteService.listPages();
+  }
+
+  /**
+   * Get a single site page by slug.
+   */
+  @Get('pages/:slug')
+  async getPage(@CurrentUser() user: User, @Param('slug') slug: string): Promise<SitePageDto> {
+    ensureAdmin(user);
+    return this.siteService.getPage(slug);
+  }
+
+  /**
+   * Update a site page.
+   */
+  @Patch('pages/:slug')
+  async updatePage(
+    @CurrentUser() user: User,
+    @Param('slug') slug: string,
+    @Body() body: UpdateSitePageDto,
+  ): Promise<SitePageDto> {
+    ensureAdmin(user);
+    return this.siteService.upsertPage(slug, body.title, body.content);
   }
 
   /**

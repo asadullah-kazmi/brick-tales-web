@@ -139,6 +139,28 @@ export class AuthService {
     return { message: 'Your password has been reset. You can sign in with your new password.' };
   }
 
+  /** Change password for authenticated user. */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.passwordHash) {
+      throw new BadRequestException('Password is not set for this account.');
+    }
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException('Current password is incorrect.');
+    }
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+    return { message: 'Password updated successfully.' };
+  }
+
   private async issueTokens(user: User) {
     const accessSecret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? 'dev-secret';
     const refreshSecret =

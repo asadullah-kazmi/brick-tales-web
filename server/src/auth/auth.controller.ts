@@ -7,6 +7,9 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { TokensResponseDto } from './dto/tokens-response.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { User } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -44,5 +47,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
     return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser() user: User,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.changePassword(user.id, dto.currentPassword, dto.newPassword);
   }
 }

@@ -1,8 +1,9 @@
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
-// Load server/.env and override any existing env (e.g. from shell or other loader)
+// Load base env first, then local overrides.
 dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true });
+dotenv.config({ path: path.join(__dirname, '..', '.env.local'), override: true });
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';

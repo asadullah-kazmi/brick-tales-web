@@ -7,6 +7,8 @@ import type {
   ForgotPasswordResponseDto,
   ResetPasswordRequestDto,
   ResetPasswordResponseDto,
+  ChangePasswordRequestDto,
+  ChangePasswordResponseDto,
   UserDto,
 } from "@/types/api";
 import type { User } from "@/types";
@@ -179,7 +181,7 @@ export const authService = {
   },
 
   async forgotPassword(
-    body: ForgotPasswordRequestDto
+    body: ForgotPasswordRequestDto,
   ): Promise<ForgotPasswordResponseDto> {
     if (USE_MOCK_API) {
       const result = await mockForgotPassword(body.email);
@@ -192,13 +194,25 @@ export const authService = {
   },
 
   async resetPassword(
-    body: ResetPasswordRequestDto
+    body: ResetPasswordRequestDto,
   ): Promise<ResetPasswordResponseDto> {
     if (USE_MOCK_API) {
       throw new Error("Reset password is not available in mock mode.");
     }
     return post<ResetPasswordResponseDto>("auth/reset-password", {
       token: body.token,
+      newPassword: body.newPassword,
+    });
+  },
+
+  async changePassword(
+    body: ChangePasswordRequestDto,
+  ): Promise<ChangePasswordResponseDto> {
+    if (USE_MOCK_API) {
+      throw new Error("Change password is not available in mock mode.");
+    }
+    return post<ChangePasswordResponseDto>("auth/change-password", {
+      currentPassword: body.currentPassword,
       newPassword: body.newPassword,
     });
   },
