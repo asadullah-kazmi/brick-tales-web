@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts";
 import { SITE_BRAND } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui";
+import { fetchBranding } from "@/lib/branding";
 
 function MenuIcon({ className }: { className?: string }) {
   return (
@@ -187,6 +188,7 @@ export default function AdminLayoutClient({
   const { logout } = useAuth();
   const isAdminLoginPage = pathname === "/admin/login";
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -200,6 +202,22 @@ export default function AdminLayoutClient({
       document.body.style.overflow = prev;
     };
   }, [drawerOpen]);
+
+  useEffect(() => {
+    let active = true;
+    fetchBranding()
+      .then((branding) => {
+        if (!active) return;
+        setLogoUrl(branding.logoUrl ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLogoUrl(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Admin login page: minimal layout, no protection (no sidebar/drawer)
   if (isAdminLoginPage) {
@@ -217,13 +235,21 @@ export default function AdminLayoutClient({
           href="/"
           className="flex items-center gap-3 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-off-black"
         >
-          <Image
-            src="/logo.png"
-            alt=""
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded object-contain"
-          />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-8 w-8 rounded object-contain"
+            />
+          ) : (
+            <Image
+              src="/logo.png"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded object-contain"
+            />
+          )}
           <span className="text-sm font-semibold tracking-tight text-white">
             {SITE_BRAND} Admin
           </span>

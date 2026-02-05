@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts";
+import { fetchBranding } from "@/lib/branding";
 import { getLoginOrigin } from "@/lib/mock-auth";
 import { Button } from "@/components/ui";
 
@@ -108,6 +109,7 @@ export function Header() {
     "admin" | "customer" | null
   >(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setLoginOriginState(user ? getLoginOrigin() : null);
@@ -124,6 +126,22 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    let active = true;
+    fetchBranding()
+      .then((branding) => {
+        if (!active) return;
+        setLogoUrl(branding.logoUrl ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLogoUrl(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   /** When admin signed in via /admin/login, Dashboard goes to admin panel; otherwise customer dashboard. */
   const dashboardHref =
     isAdmin && loginOrigin === "admin" ? "/admin" : "/dashboard";
@@ -136,14 +154,22 @@ export function Header() {
           className="flex shrink-0 items-center gap-2 text-white"
           aria-label="BRICK TALES.TV home"
         >
-          <Image
-            src="/logo.png"
-            alt="BRICK TALES.TV"
-            width={LOGO_WIDTH}
-            height={LOGO_HEIGHT}
-            className="h-9 w-auto object-contain"
-            priority
-          />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="BRICK TALES.TV"
+              className="h-9 w-auto object-contain"
+            />
+          ) : (
+            <Image
+              src="/logo.png"
+              alt="BRICK TALES.TV"
+              width={LOGO_WIDTH}
+              height={LOGO_HEIGHT}
+              className="h-9 w-auto object-contain"
+              priority
+            />
+          )}
         </Link>
         {/* Desktop nav: hidden on small screens to avoid overflow */}
         <nav

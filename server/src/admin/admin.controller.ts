@@ -172,7 +172,13 @@ export class AdminController {
   async presignUpload(
     @CurrentUser() user: User,
     @Body() body: PresignUploadDto,
-  ): Promise<{ uploadId: string; key: string; url: string; expiresAt: string }> {
+  ): Promise<{
+    uploadId: string;
+    key: string;
+    url: string;
+    expiresAt: string;
+    publicUrl?: string;
+  }> {
     ensureAdmin(user);
 
     const { kind, fileName, contentType, sizeBytes, uploadId } = body;
@@ -198,8 +204,9 @@ export class AdminController {
     const key = `uploads/${resolvedUploadId}/${kind}.${ext}`;
     const url = await this.r2Service.getSignedPutUrl(key, contentType);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const publicUrl = this.r2Service.getPublicUrl(key) ?? undefined;
 
-    return { uploadId: resolvedUploadId, key, url, expiresAt };
+    return { uploadId: resolvedUploadId, key, url, expiresAt, publicUrl };
   }
 
   /**

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import {
   SITE_BRAND,
@@ -7,6 +6,8 @@ import {
   SITE_KEYWORDS,
   absoluteUrl,
 } from "@/lib/seo";
+import { parseBranding } from "@/lib/branding";
+import { siteService } from "@/lib/services";
 
 export const metadata: Metadata = {
   title: "Watch & Discover Video Content",
@@ -51,7 +52,10 @@ function WebSiteJsonLd() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const brandingPage = await siteService.getPage("branding");
+  const branding = parseBranding(brandingPage?.content ?? "");
+  const bannerSrc = branding.bannerUrl?.trim() || "/hero-banner.png";
   return (
     <main className="flex flex-1 flex-col">
       <WebSiteJsonLd />
@@ -61,13 +65,10 @@ export default function Home() {
         className="relative flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
         aria-label="Hero"
       >
-        <Image
-          src="/hero-banner.png"
+        <img
+          src={bannerSrc}
           alt=""
-          fill
-          className="object-cover object-center min-w-0 min-h-0"
-          priority
-          sizes="100vw"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-black/5" aria-hidden />
         <div className="relative z-10 flex flex-col items-center justify-center text-center">

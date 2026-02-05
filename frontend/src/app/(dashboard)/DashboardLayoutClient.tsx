@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts";
 import { SITE_BRAND } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui";
+import { fetchBranding } from "@/lib/branding";
 
 function MenuIcon({ className }: { className?: string }) {
   return (
@@ -122,6 +123,7 @@ export default function DashboardLayoutClient({
   const router = useRouter();
   const { logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -136,6 +138,22 @@ export default function DashboardLayoutClient({
     };
   }, [drawerOpen]);
 
+  useEffect(() => {
+    let active = true;
+    fetchBranding()
+      .then((branding) => {
+        if (!active) return;
+        setLogoUrl(branding.logoUrl ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLogoUrl(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const sidebarContent = (
     <>
       <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-neutral-700/50 px-5 lg:justify-start">
@@ -143,13 +161,21 @@ export default function DashboardLayoutClient({
           href="/"
           className="flex items-center gap-3 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-off-black"
         >
-          <Image
-            src="/logo.png"
-            alt=""
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded object-contain"
-          />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-8 w-8 rounded object-contain"
+            />
+          ) : (
+            <Image
+              src="/logo.png"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded object-contain"
+            />
+          )}
           <span className="text-sm font-semibold tracking-tight text-white">
             {SITE_BRAND}
           </span>

@@ -72,6 +72,7 @@ export interface PresignUploadResponseDto {
   key: string;
   url: string;
   expiresAt: string;
+  publicUrl?: string;
 }
 
 /** Request body for POST /admin/content */

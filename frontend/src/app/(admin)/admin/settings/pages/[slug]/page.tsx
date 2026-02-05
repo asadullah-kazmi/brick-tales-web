@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminService } from "@/lib/services";
 import {
@@ -14,6 +14,29 @@ import {
   Loader,
 } from "@/components/ui";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function looksLikeHtml(value: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
+function toEditorHtml(value: string, treatAsHtml: boolean): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (treatAsHtml) return trimmed;
+  return escapeHtml(value).replace(/\n/g, "<br />");
+}
+
+function runCommand(command: string, value?: string): void {
+  if (typeof document === "undefined") return;
+  document.execCommand(command, false, value);
+}
+
 export default function AdminEditPage() {
   const params = useParams();
   const router = useRouter();
@@ -21,10 +44,13 @@ export default function AdminEditPage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [contentIsHtml, setContentIsHtml] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const isFocusedRef = useRef(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -34,7 +60,9 @@ export default function AdminEditPage() {
       .then((page) => {
         if (!active) return;
         setTitle(page.title);
-        setContent(page.content ?? "");
+        const nextContent = page.content ?? "";
+        setContent(nextContent);
+        setContentIsHtml(looksLikeHtml(nextContent));
         setError(null);
       })
       .catch((err) => {
@@ -49,6 +77,16 @@ export default function AdminEditPage() {
       active = false;
     };
   }, [slug]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (isFocusedRef.current) return;
+    const nextHtml = toEditorHtml(content, contentIsHtml);
+    if (editor.innerHTML !== nextHtml) {
+      editor.innerHTML = nextHtml;
+    }
+  }, [content, contentIsHtml]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -138,16 +176,81 @@ export default function AdminEditPage() {
               >
                 Content
               </label>
-              <textarea
+              <div className="flex flex-wrap gap-2 rounded-t-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs text-neutral-700 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200">
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => runCommand("bold")}
+                >
+                  Bold
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => runCommand("italic")}
+                >
+                  Italic
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => runCommand("underline")}
+                >
+                  Underline
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => runCommand("insertUnorderedList")}
+                >
+                  Bullet list
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => runCommand("insertOrderedList")}
+                >
+                  Numbered list
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => {
+                    const url = window.prompt("Enter a URL");
+                    if (!url) return;
+                    runCommand("createLink", url);
+                  }}
+                >
+                  Link
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  onClick={() => runCommand("unlink")}
+                >
+                  Unlink
+                </button>
+              </div>
+              <div
                 id="page-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={16}
-                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-500 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-400"
-                placeholder="Write the page content here."
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onFocus={() => {
+                  isFocusedRef.current = true;
+                }}
+                onBlur={() => {
+                  isFocusedRef.current = false;
+                }}
+                onInput={() => {
+                  const html = editorRef.current?.innerHTML ?? "";
+                  setContent(html);
+                  setContentIsHtml(true);
+                }}
+                className="min-h-[320px] w-full rounded-b-lg border border-t-0 border-neutral-300 bg-white px-3 py-3 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-accent dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
               />
               <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                Plain text supported. Line breaks will be preserved.
+                Rich text supported. Formatting is saved to the public pages.
               </p>
             </div>
           </CardContent>

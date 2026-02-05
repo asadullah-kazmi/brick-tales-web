@@ -10,6 +10,15 @@ export const metadata: Metadata = {
 export default async function PrivacyPolicyPage() {
   const page = await siteService.getPage("privacy-policy");
   const content = page?.content?.trim();
+  const html = content
+    ? /<\/?[a-z][\s\S]*>/i.test(content)
+      ? content
+      : content
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\n/g, "<br />")
+    : "";
   return (
     <main className="flex-1 px-4 py-10 sm:px-6 lg:px-8">
       <article className="mx-auto max-w-3xl">
@@ -20,9 +29,10 @@ export default async function PrivacyPolicyPage() {
           Last updated: {new Date().toLocaleDateString("en-US")}
         </p>
         {content ? (
-          <div className="mt-8 whitespace-pre-line text-neutral-600 dark:text-neutral-300">
-            {content}
-          </div>
+          <div
+            className="mt-8 text-neutral-600 dark:text-neutral-300"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
         ) : (
           <div className="mt-8 space-y-8 text-neutral-600 dark:text-neutral-300">
             <section>
