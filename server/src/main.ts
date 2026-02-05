@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { Request, Response } from 'express';
 
 function getAllowedOrigins(): string[] {
   const origin = process.env.CORS_ORIGIN ?? process.env.FRONTEND_URL;
@@ -46,8 +47,26 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  const isVercel = process.env.VERCEL === '1';
+  if (isVercel) {
+    await app.init();
+    return app.getHttpAdapter().getInstance();
+  }
+
   const port = process.env.PORT ?? 5000;
   await app.listen(port);
 }
 
-bootstrap();
+const appPromise = bootstrap();
+
+/** Vercel serverless handler: required so Vercel finds an export. */
+async function handler(req: Request, res: Response) {
+  const expressApp = await appPromise;
+  if (expressApp) {
+    return expressApp(req, res);
+  }
+  res.status(503).send('Server not ready');
+}
+
+export default handler;
