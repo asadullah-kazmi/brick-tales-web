@@ -7,7 +7,16 @@ const nextConfig = {
 
   images: {
     formats: ["image/avif", "image/webp"],
-    // Add remotePatterns with exact hostnames when using CDN thumbnails (e.g. d123.cloudfront.net).
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "pub-6ff6d4f0ab4d4f73a05a705b79f8a68e.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "d4fcb9a8321f585fbb68250e703eef4c.r2.cloudflarestorage.com",
+      },
+    ],
   },
 
   // Optional: add packages with many named exports for tree-shaking (e.g. "lucide-react")

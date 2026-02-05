@@ -55,6 +55,9 @@ export class R2Service {
           secretAccessKey: config.secretAccessKey,
         },
         forcePathStyle: true,
+        // Avoid checksum headers in presigned PUTs (R2 returns 400 for CRC placeholders).
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
       });
     }
     return this.client;
