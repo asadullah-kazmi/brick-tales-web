@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { R2Service } from '../storage/r2.service';
 
 const DEFAULT_DOWNLOAD_EXPIRES_DAYS = 30;
 const DEFAULT_DOWNLOAD_TOKEN_EXPIRES_SEC = 60 * 60; // 1 hour – token to initiate fetch
@@ -19,7 +20,10 @@ export interface DownloadTokenPayload {
 
 @Injectable()
 export class DownloadsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2Service: R2Service,
+  ) {}
 
   private getDownloadTokenSecret(): string {
     const secret =
@@ -278,7 +282,7 @@ export class DownloadsService {
     const where: Record<string, unknown> = { userId };
     if (deviceId?.trim()) where.deviceId = deviceId.trim();
 
-    return (this.prisma as any).download.findMany({
+    const rows = await (this.prisma as any).download.findMany({
       where,
       include: {
         video: { select: { id: true, title: true, duration: true, thumbnailUrl: true } },
@@ -286,6 +290,7 @@ export class DownloadsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return this.attachSignedThumbnails(rows);
   }
 
   /**
@@ -301,7 +306,7 @@ export class DownloadsService {
     };
     if (deviceId?.trim()) where.deviceId = deviceId.trim();
 
-    return (this.prisma as any).download.findMany({
+    const rows = await (this.prisma as any).download.findMany({
       where,
       include: {
         video: { select: { id: true, title: true, duration: true, thumbnailUrl: true } },
@@ -309,6 +314,7 @@ export class DownloadsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return this.attachSignedThumbnails(rows);
   }
 
   /**
@@ -365,7 +371,29 @@ export class DownloadsService {
       throw new ForbiddenException('Video is not yet available');
     }
 
-    return { downloadUrl: video.streamUrl };
+    if (/^https?:\/\//i.test(video.streamUrl)) {
+      return { downloadUrl: video.streamUrl };
+    }
+    const signed = await this.r2Service.getSignedGetUrl(video.streamUrl);
+    return { downloadUrl: signed };
+  }
+
+  private async attachSignedThumbnails(rows: any[]) {
+    return Promise.all(
+      rows.map(async (row) => {
+        const thumb = row?.video?.thumbnailUrl;
+        if (!thumb || /^https?:\/\//i.test(thumb)) return row;
+        const publicUrl = this.r2Service.getPublicUrl(thumb);
+        const signedUrl = publicUrl ?? (await this.r2Service.getSignedGetUrl(thumb));
+        return {
+          ...row,
+          video: {
+            ...row.video,
+            thumbnailUrl: signedUrl,
+          },
+        };
+      }),
+    );
   }
 
   /**

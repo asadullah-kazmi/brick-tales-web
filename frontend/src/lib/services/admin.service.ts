@@ -1,5 +1,10 @@
-import { get, patch, ApiError } from "@/lib/api-client";
+import { get, patch, post, ApiError } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
+import type {
+  PresignUploadRequestDto,
+  PresignUploadResponseDto,
+  CreateAdminVideoRequestDto,
+} from "@/types/api";
 
 /** Dashboard stats from GET /admin/stats */
 export interface DashboardStatsDto {
@@ -52,7 +57,7 @@ export const adminService = {
 
   async getUsers(
     page = 1,
-    limit = 20
+    limit = 20,
   ): Promise<{ users: AdminUserDto[]; total: number }> {
     const headers = authHeaders();
     if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
@@ -70,7 +75,7 @@ export const adminService = {
 
   async updateVideoPublish(
     id: string,
-    published: boolean
+    published: boolean,
   ): Promise<AdminContentItemDto | null> {
     const headers = authHeaders();
     if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
@@ -78,10 +83,28 @@ export const adminService = {
       return await patch<AdminContentItemDto>(
         `admin/content/${id}`,
         { published },
-        { headers }
+        { headers },
       );
     } catch {
       return null;
     }
+  },
+
+  async presignUpload(
+    body: PresignUploadRequestDto,
+  ): Promise<PresignUploadResponseDto> {
+    const headers = authHeaders();
+    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
+    return post<PresignUploadResponseDto>("admin/uploads/presign", body, {
+      headers,
+    });
+  },
+
+  async createVideo(
+    body: CreateAdminVideoRequestDto,
+  ): Promise<AdminContentItemDto> {
+    const headers = authHeaders();
+    if (!headers.Authorization) throw new ApiError("Not authenticated", 401);
+    return post<AdminContentItemDto>("admin/content", body, { headers });
   },
 };

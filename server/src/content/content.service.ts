@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { R2Service } from '../storage/r2.service';
 import type { VideoResponseDto } from './dto/video-response.dto';
 import type { VideoListResponseDto } from './dto/video-list-response.dto';
 import type { VideoDetailResponseDto } from './dto/video-detail-response.dto';
@@ -18,7 +19,10 @@ function formatDurationSeconds(seconds: number): string {
 
 @Injectable()
 export class ContentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2Service: R2Service,
+  ) {}
 
   async getVideos(page = 1, limit = 24): Promise<VideoListResponseDto> {
     const skip = (page - 1) * limit;
@@ -33,8 +37,9 @@ export class ContentService {
       this.prisma.video.count({ where: { publishedAt: { not: null } } }),
     ]);
     const totalPages = Math.max(1, Math.ceil(total / limit));
+    const mapped = await Promise.all(videos.map((v) => this.toVideoDto(v)));
     return {
-      videos: videos.map((v) => this.toVideoDto(v)),
+      videos: mapped,
       meta: {
         page,
         limit,
@@ -53,7 +58,7 @@ export class ContentService {
     });
     if (!video) return null;
     if (!video.publishedAt) return null;
-    return { video: this.toVideoDto(video) };
+    return { video: await this.toVideoDto(video) };
   }
 
   async getCategories(): Promise<CategoriesResponseDto> {
@@ -66,7 +71,7 @@ export class ContentService {
     return { categories };
   }
 
-  private toVideoDto(v: {
+  private async toVideoDto(v: {
     id: string;
     title: string;
     duration: number;
@@ -76,12 +81,13 @@ export class ContentService {
     createdAt: Date;
     updatedAt: Date;
     category: { name: string };
-  }): VideoResponseDto {
+  }): Promise<VideoResponseDto> {
+    const thumbnailUrl = await this.resolveThumbnailUrl(v.thumbnailUrl);
     return {
       id: v.id,
       title: v.title,
       duration: formatDurationSeconds(v.duration),
-      thumbnailUrl: v.thumbnailUrl,
+      thumbnailUrl,
       description: v.description ?? undefined,
       category: v.category.name,
       published: !!v.publishedAt,
@@ -89,5 +95,13 @@ export class ContentService {
       createdAt: v.createdAt.toISOString(),
       updatedAt: v.updatedAt.toISOString(),
     };
+  }
+
+  private async resolveThumbnailUrl(value: string | null): Promise<string | null> {
+    if (!value) return null;
+    if (/^https?:\/\//i.test(value)) return value;
+    const publicUrl = this.r2Service.getPublicUrl(value);
+    if (publicUrl) return publicUrl;
+    return this.r2Service.getSignedGetUrl(value);
   }
 }

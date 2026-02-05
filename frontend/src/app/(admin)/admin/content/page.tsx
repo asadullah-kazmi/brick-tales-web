@@ -44,7 +44,7 @@ export default function AdminContentPage() {
           </p>
         </div>
         <Link href="/admin/content/upload">
-          <Button type="button">Upload metadata</Button>
+          <Button type="button">Upload video</Button>
         </Link>
       </header>
 
@@ -67,11 +67,11 @@ export default function AdminContentPage() {
       ) : videos.length === 0 ? (
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12 text-center">
           <p className="text-neutral-400">
-            No content yet. Upload video metadata to get started.
+            No content yet. Upload a video to get started.
           </p>
           <Link href="/admin/content/upload" className="mt-4 inline-block">
             <Button type="button" variant="secondary">
-              Upload metadata
+              Upload video
             </Button>
           </Link>
         </div>
@@ -125,7 +125,7 @@ export default function AdminContentPage() {
                           "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
                           video.published
                             ? "bg-green-900/40 text-green-200"
-                            : "bg-neutral-700 text-neutral-300"
+                            : "bg-neutral-700 text-neutral-300",
                         )}
                       >
                         {video.published ? "Published" : "Unpublished"}

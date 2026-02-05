@@ -1,4 +1,14 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AdminService } from './admin.service';
@@ -6,6 +16,41 @@ import type { OfflineAnalyticsDto } from './admin.service';
 import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
 import type { AdminContentItemDto } from './dto/admin-content.dto';
+import { PresignUploadDto } from './dto/presign-upload.dto';
+import { CreateAdminVideoDto } from './dto/create-admin-video.dto';
+import { R2Service } from '../storage/r2.service';
+import { randomUUID } from 'crypto';
+
+const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/mkv']);
+const THUMBNAIL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024 * 1024;
+const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
+
+function getExtensionFromName(fileName: string): string {
+  const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const parts = safe.split('.');
+  if (parts.length < 2) return '';
+  return parts[parts.length - 1].toLowerCase();
+}
+
+function getExtensionForType(contentType: string): string {
+  switch (contentType) {
+    case 'video/mp4':
+      return 'mp4';
+    case 'video/webm':
+      return 'webm';
+    case 'video/mkv':
+      return 'mkv';
+    case 'image/jpeg':
+      return 'jpg';
+    case 'image/png':
+      return 'png';
+    case 'image/webp':
+      return 'webp';
+    default:
+      return '';
+  }
+}
 
 function ensureAdmin(user: User): void {
   if (user.role !== 'admin') {
@@ -15,7 +60,10 @@ function ensureAdmin(user: User): void {
 
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly r2Service: R2Service,
+  ) {}
 
   /**
    * Dashboard stats: total users, videos, subscribers, videos by category.
@@ -61,6 +109,55 @@ export class AdminController {
   ): Promise<AdminContentItemDto | null> {
     ensureAdmin(user);
     return this.adminService.updateVideoPublish(id, body.published);
+  }
+
+  /**
+   * Create a presigned upload URL for video or thumbnail.
+   */
+  @Post('uploads/presign')
+  async presignUpload(
+    @CurrentUser() user: User,
+    @Body() body: PresignUploadDto,
+  ): Promise<{ uploadId: string; key: string; url: string; expiresAt: string }> {
+    ensureAdmin(user);
+
+    const { kind, fileName, contentType, sizeBytes, uploadId } = body;
+    const isVideo = kind === 'video';
+    const allowedTypes = isVideo ? VIDEO_TYPES : THUMBNAIL_TYPES;
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_THUMBNAIL_BYTES;
+
+    if (!allowedTypes.has(contentType)) {
+      throw new BadRequestException('File type is not allowed');
+    }
+    if (sizeBytes > maxBytes) {
+      throw new BadRequestException('File is too large');
+    }
+
+    const extFromName = getExtensionFromName(fileName);
+    const extFromType = getExtensionForType(contentType);
+    const ext = extFromName || extFromType;
+    if (!ext) {
+      throw new BadRequestException('File extension is missing or invalid');
+    }
+
+    const resolvedUploadId = uploadId?.trim() || randomUUID();
+    const key = `uploads/${resolvedUploadId}/${kind}.${ext}`;
+    const url = await this.r2Service.getSignedPutUrl(key, contentType);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+    return { uploadId: resolvedUploadId, key, url, expiresAt };
+  }
+
+  /**
+   * Create a video record after uploads are completed.
+   */
+  @Post('content')
+  async createContent(
+    @CurrentUser() user: User,
+    @Body() body: CreateAdminVideoDto,
+  ): Promise<AdminContentItemDto> {
+    ensureAdmin(user);
+    return this.adminService.createVideo(body);
   }
 
   /**

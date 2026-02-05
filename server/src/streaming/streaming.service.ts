@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { R2Service } from '../storage/r2.service';
 
 const DEFAULT_TOKEN_EXPIRES_SEC = 60 * 60; // 1 hour
 
@@ -17,7 +18,10 @@ interface PlayTokenPayload {
 
 @Injectable()
 export class StreamingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2Service: R2Service,
+  ) {}
 
   private getSecret(): string {
     const secret = process.env.STREAMING_SIGNATURE_SECRET ?? process.env.JWT_ACCESS_SECRET;
@@ -111,7 +115,8 @@ export class StreamingService {
     if (video.publishedAt && video.publishedAt > new Date()) {
       throw new ForbiddenException('Video is not yet published');
     }
-    return video.streamUrl;
+    if (/^https?:\/\//i.test(video.streamUrl)) return video.streamUrl;
+    return this.r2Service.getSignedGetUrl(video.streamUrl);
   }
 
   /**

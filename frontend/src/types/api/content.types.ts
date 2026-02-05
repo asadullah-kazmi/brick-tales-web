@@ -57,6 +57,34 @@ export interface CreateVideoRequestDto {
   category?: string;
 }
 
+/** Request body for POST /admin/uploads/presign */
+export interface PresignUploadRequestDto {
+  kind: "video" | "thumbnail";
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadId?: string;
+}
+
+/** Response for POST /admin/uploads/presign */
+export interface PresignUploadResponseDto {
+  uploadId: string;
+  key: string;
+  url: string;
+  expiresAt: string;
+}
+
+/** Request body for POST /admin/content */
+export interface CreateAdminVideoRequestDto {
+  title: string;
+  duration: string;
+  description?: string;
+  category?: string;
+  videoKey: string;
+  thumbnailKey: string;
+  published?: boolean;
+}
+
 /** Response for POST /content/videos */
 export interface CreateVideoResponseDto {
   video: VideoDto;

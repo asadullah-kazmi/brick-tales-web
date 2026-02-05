@@ -22,6 +22,8 @@ type AdminContentContextValue = {
     duration: string;
     description?: string;
     category?: string;
+    videoFile: File;
+    thumbnailFile: File;
   }) => Promise<void>;
   updateVideo: (
     id: string,
@@ -30,13 +32,13 @@ type AdminContentContextValue = {
         AdminVideo,
         "published" | "title" | "duration" | "description" | "category"
       >
-    >
+    >,
   ) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
 const AdminContentContext = createContext<AdminContentContextValue | null>(
-  null
+  null,
 );
 
 function mapContentToAdminVideo(item: AdminContentItemDto): AdminVideo {
@@ -85,11 +87,59 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
       duration: string;
       description?: string;
       category?: string;
+      videoFile: File;
+      thumbnailFile: File;
     }) => {
-      await contentService.createVideo(metadata);
+      const { videoFile, thumbnailFile, ...rest } = metadata;
+
+      if (USE_MOCK_API) {
+        await contentService.createVideo(rest);
+        await refresh();
+        return;
+      }
+
+      const videoPresign = await adminService.presignUpload({
+        kind: "video",
+        fileName: videoFile.name,
+        contentType: videoFile.type,
+        sizeBytes: videoFile.size,
+      });
+
+      const thumbnailPresign = await adminService.presignUpload({
+        kind: "thumbnail",
+        fileName: thumbnailFile.name,
+        contentType: thumbnailFile.type,
+        sizeBytes: thumbnailFile.size,
+        uploadId: videoPresign.uploadId,
+      });
+
+      await Promise.all([
+        fetch(videoPresign.url, {
+          method: "PUT",
+          headers: { "Content-Type": videoFile.type },
+          body: videoFile,
+        }),
+        fetch(thumbnailPresign.url, {
+          method: "PUT",
+          headers: { "Content-Type": thumbnailFile.type },
+          body: thumbnailFile,
+        }),
+      ]).then(async (responses) => {
+        const failed = responses.find((res) => !res.ok);
+        if (failed) {
+          const message = await failed.text();
+          throw new Error(message || "Upload failed");
+        }
+      });
+
+      await adminService.createVideo({
+        ...rest,
+        videoKey: videoPresign.key,
+        thumbnailKey: thumbnailPresign.key,
+      });
       await refresh();
     },
-    [refresh]
+    [refresh],
   );
 
   const updateVideo = useCallback(
@@ -100,16 +150,18 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
           AdminVideo,
           "published" | "title" | "duration" | "description" | "category"
         >
-      >
+      >,
     ) => {
       if (!USE_MOCK_API && typeof updates.published === "boolean") {
         const updated = await adminService.updateVideoPublish(
           id,
-          updates.published
+          updates.published,
         );
         if (updated) {
           setVideos((prev) =>
-            prev.map((v) => (v.id === id ? mapContentToAdminVideo(updated) : v))
+            prev.map((v) =>
+              v.id === id ? mapContentToAdminVideo(updated) : v,
+            ),
           );
           return;
         }
@@ -117,7 +169,7 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
       await contentService.updateVideo(id, updates);
       await refresh();
     },
-    [refresh]
+    [refresh],
   );
 
   const value: AdminContentContextValue = {
@@ -140,7 +192,7 @@ export function useAdminContent(): AdminContentContextValue {
   const ctx = useContext(AdminContentContext);
   if (ctx === null) {
     throw new Error(
-      "useAdminContent must be used within an AdminContentProvider"
+      "useAdminContent must be used within an AdminContentProvider",
     );
   }
   return ctx;

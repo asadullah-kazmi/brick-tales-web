@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
 import type { AdminContentItemDto } from './dto/admin-content.dto';
+import type { CreateAdminVideoDto } from './dto/create-admin-video.dto';
 
 export interface DownloadsPerPlanDto {
   planId: string;
@@ -24,6 +25,31 @@ function formatDurationSeconds(seconds: number): string {
   const s = Math.floor(seconds % 60);
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function parseDurationToSeconds(duration: string): number {
+  const parts = duration
+    .trim()
+    .split(':')
+    .map((p) => Number(p));
+  if (parts.some((n) => Number.isNaN(n) || n < 0)) return -1;
+  if (parts.length === 3) {
+    const [h, m, s] = parts;
+    return h * 3600 + m * 60 + s;
+  }
+  if (parts.length === 2) {
+    const [m, s] = parts;
+    return m * 60 + s;
+  }
+  return -1;
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 @Injectable()
@@ -118,6 +144,49 @@ export class AdminService {
       published: !!updated.publishedAt,
       publishedAt: updated.publishedAt?.toISOString(),
       createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
+  async createVideo(dto: CreateAdminVideoDto): Promise<AdminContentItemDto> {
+    const seconds = parseDurationToSeconds(dto.duration);
+    if (seconds <= 0) {
+      throw new BadRequestException('Invalid duration format');
+    }
+
+    const categoryName = dto.category?.trim() || 'Uncategorized';
+    const slug = slugify(categoryName) || 'uncategorized';
+
+    const category = await this.prisma.category.findUnique({ where: { slug } });
+    const categoryId = category
+      ? category.id
+      : (
+          await this.prisma.category.create({
+            data: { name: categoryName, slug },
+          })
+        ).id;
+
+    const video = await this.prisma.video.create({
+      data: {
+        title: dto.title.trim(),
+        description: dto.description?.trim() || null,
+        duration: seconds,
+        categoryId,
+        streamUrl: dto.videoKey,
+        thumbnailUrl: dto.thumbnailKey,
+        publishedAt: dto.published ? new Date() : null,
+      },
+      include: { category: true },
+    });
+
+    return {
+      id: video.id,
+      title: video.title,
+      duration: formatDurationSeconds(video.duration),
+      description: video.description ?? undefined,
+      category: video.category.name,
+      published: !!video.publishedAt,
+      publishedAt: video.publishedAt?.toISOString(),
+      createdAt: video.createdAt.toISOString(),
     };
   }
 
