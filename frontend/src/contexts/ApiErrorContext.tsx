@@ -7,12 +7,15 @@ import {
   useEffect,
   useState,
   type ReactNode,
+  useRef,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ApiError,
   setGlobalApiErrorHandler,
   getApiErrorUserMessage,
 } from "@/lib/api-client";
+import { authService } from "@/lib/services";
 
 type ApiErrorContextValue = {
   error: ApiError | null;
@@ -32,14 +35,34 @@ function shouldShowGlobally(err: ApiError): boolean {
 
 export function ApiErrorProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<ApiError | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const redirectingRef = useRef(false);
 
   useEffect(() => {
     const handler = (err: ApiError) => {
+      if (err.status === 401) {
+        if (redirectingRef.current) return;
+        redirectingRef.current = true;
+        authService.logout();
+        const isAdminRoute = pathname?.startsWith("/admin");
+        const loginPath = isAdminRoute ? "/admin/login" : "/login";
+        if (pathname !== loginPath) {
+          router.replace(loginPath);
+          if (typeof window !== "undefined") {
+            window.location.assign(loginPath);
+          }
+        }
+        setTimeout(() => {
+          redirectingRef.current = false;
+        }, 1500);
+        return;
+      }
       if (shouldShowGlobally(err)) setError(err);
     };
     setGlobalApiErrorHandler(handler);
     return () => setGlobalApiErrorHandler(null);
-  }, []);
+  }, [pathname, router]);
 
   const dismiss = useCallback(() => setError(null), []);
 
