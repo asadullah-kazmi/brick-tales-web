@@ -22,13 +22,13 @@ function formatCreatedAt(iso: string): string {
 
 export default function AdminContentPage() {
   const router = useRouter();
-  const { videos, loading, error, updateVideo, refresh } = useAdminContent();
+  const { items, loading, error, publishContent, refresh } = useAdminContent();
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   async function handleTogglePublish(id: string, current: boolean) {
     setTogglingId(id);
     try {
-      await updateVideo(id, { published: !current });
+      await publishContent(id, !current);
     } finally {
       setTogglingId(null);
     }
@@ -46,7 +46,7 @@ export default function AdminContentPage() {
           </p>
         </div>
         <Link href="/admin/content/upload">
-          <Button type="button">Upload video</Button>
+          <Button type="button">Upload content</Button>
         </Link>
       </header>
 
@@ -66,14 +66,14 @@ export default function AdminContentPage() {
             Try again
           </Button>
         </div>
-      ) : videos.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12 text-center">
           <p className="text-neutral-400">
-            No content yet. Upload a video to get started.
+            No content yet. Upload content to get started.
           </p>
           <Link href="/admin/content/upload" className="mt-4 inline-block">
             <Button type="button" variant="secondary">
-              Upload video
+              Upload content
             </Button>
           </Link>
         </div>
@@ -90,6 +90,9 @@ export default function AdminContentPage() {
                     Duration
                   </th>
                   <th className="px-4 py-3 font-medium text-neutral-300">
+                    Type
+                  </th>
+                  <th className="px-4 py-3 font-medium text-neutral-300">
                     Category
                   </th>
                   <th className="px-4 py-3 font-medium text-neutral-300">
@@ -104,33 +107,34 @@ export default function AdminContentPage() {
                 </tr>
               </thead>
               <tbody>
-                {videos.map((video) => (
+                {items.map((item) => (
                   <tr
-                    key={video.id}
+                    key={item.id}
                     className="border-b border-neutral-700/50 last:border-0"
                   >
                     <td className="px-4 py-3 font-medium text-white">
-                      {video.title}
+                      {item.title}
                     </td>
                     <td className="px-4 py-3 text-neutral-400">
-                      {formatDuration(video.duration)}
+                      {item.duration ? formatDuration(item.duration) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-neutral-400">{item.type}</td>
+                    <td className="px-4 py-3 text-neutral-400">
+                      {item.category ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-neutral-400">
-                      {video.category ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-neutral-400">
-                      {formatCreatedAt(video.createdAt)}
+                      {formatCreatedAt(item.createdAt)}
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={cn(
                           "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-                          video.published
+                          item.isPublished
                             ? "bg-green-900/40 text-green-200"
                             : "bg-neutral-700 text-neutral-300",
                         )}
                       >
-                        {video.published ? "Published" : "Unpublished"}
+                        {item.isPublished ? "Published" : "Unpublished"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -140,7 +144,7 @@ export default function AdminContentPage() {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            void router.push(`/admin/content/${video.id}/edit`)
+                            void router.push(`/admin/content/${item.id}/edit`)
                           }
                         >
                           Edit
@@ -149,12 +153,12 @@ export default function AdminContentPage() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          disabled={togglingId === video.id}
+                          disabled={togglingId === item.id}
                           onClick={() =>
-                            handleTogglePublish(video.id, video.published)
+                            handleTogglePublish(item.id, item.isPublished)
                           }
                         >
-                          {video.published ? "Unpublish" : "Publish"}
+                          {item.isPublished ? "Unpublish" : "Publish"}
                         </Button>
                       </div>
                     </td>

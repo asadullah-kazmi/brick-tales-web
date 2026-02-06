@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { contentService } from "@/lib/services";
 import type { Video } from "@/types";
+import type { ContentSummaryDto } from "@/types/api";
 import { VideoCardSkeleton } from "@/components/content";
 import { Input } from "@/components/ui";
 import { Button } from "@/components/ui";
@@ -16,29 +17,17 @@ const VideoCard = dynamic(
   () => import("@/components/content").then((mod) => mod.VideoCard),
   {
     loading: () => <VideoCardSkeleton />,
-  }
+  },
 );
 
 const ALL_VALUE = "All";
 
-function dtoToVideo(dto: {
-  id: string;
-  title: string;
-  duration: string;
-  thumbnailUrl: string | null;
-  description?: string;
-  category?: string;
-  publishedAt?: string;
-  createdAt: string;
-}): Video {
+function dtoToVideo(dto: ContentSummaryDto): Video {
   return {
     id: dto.id,
     title: dto.title,
-    duration: dto.duration,
     thumbnailUrl: dto.thumbnailUrl ?? null,
-    description: dto.description,
     category: dto.category,
-    publishedAt: dto.publishedAt ?? dto.createdAt,
   };
 }
 
@@ -55,7 +44,7 @@ export default function BrowsePage() {
     setLoading(true);
     setError(null);
     Promise.all([
-      contentService.getVideosForBrowse(),
+      contentService.getContentForBrowse(),
       contentService.getCategories(),
     ])
       .then(([videos, cats]) => {
@@ -67,7 +56,7 @@ export default function BrowsePage() {
       .catch((err) => {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Failed to load videos."
+            err instanceof Error ? err.message : "Failed to load content.",
           );
           setAllVideos([]);
           setCategories([]);
@@ -101,7 +90,7 @@ export default function BrowsePage() {
           Browse
         </h1>
         <p className="mt-1 text-neutral-600 dark:text-neutral-400">
-          Discover videos and start watching.
+          Discover content and start watching.
         </p>
       </div>
 
@@ -113,7 +102,7 @@ export default function BrowsePage() {
             placeholder="Search by title or description…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search videos"
+            aria-label="Search content"
             disabled={loading}
           />
         </div>
@@ -132,7 +121,7 @@ export default function BrowsePage() {
                   "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                   selectedCategory === category
                     ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
-                    : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700",
                 )}
                 aria-pressed={selectedCategory === category}
               >
@@ -178,8 +167,8 @@ export default function BrowsePage() {
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 py-12 text-center dark:border-neutral-800 dark:bg-neutral-900/50">
           <p className="text-neutral-600 dark:text-neutral-400">
             {allVideos.length === 0
-              ? "No videos available yet. Check back later."
-              : "No videos match your search or category. Try a different filter."}
+              ? "No content available yet. Check back later."
+              : "No content matches your search or category. Try a different filter."}
           </p>
         </div>
       )}

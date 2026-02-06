@@ -9,8 +9,8 @@ import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
 import { USE_MOCK_API } from "@/lib/services/config";
 import { ApiError } from "@/lib/api-client";
-import type { VideoDto } from "@/types/api";
-import { formatDuration, formatDate, isLongForm } from "@/lib/video-utils";
+import type { ContentDetailDto } from "@/types/api";
+import { formatDuration, isLongForm } from "@/lib/video-utils";
 import {
   Loader,
   Modal,
@@ -23,24 +23,51 @@ type WatchPageClientProps = {
   params: { id: string };
 };
 
-function dtoToDisplayVideo(dto: VideoDto): {
+type DisplayContent = {
   id: string;
   title: string;
-  duration: string;
-  thumbnailUrl: string | null;
   description?: string;
+  thumbnailUrl: string | null;
   category?: string;
-  publishedAt?: string;
-} {
+  releaseYear?: number;
+  duration?: string;
+};
+
+type PlayableEpisode = {
+  id: string;
+  title: string;
+  duration?: string;
+};
+
+function toDisplayContent(dto: ContentDetailDto): DisplayContent {
   return {
     id: dto.id,
     title: dto.title,
-    duration: dto.duration,
-    thumbnailUrl: dto.thumbnailUrl ?? null,
     description: dto.description,
+    thumbnailUrl: dto.thumbnailUrl ?? null,
     category: dto.category,
-    publishedAt: dto.publishedAt ?? dto.createdAt,
+    releaseYear: dto.releaseYear,
+    duration: dto.duration,
   };
+}
+
+function pickPrimaryEpisode(content: ContentDetailDto): PlayableEpisode | null {
+  const firstEpisode = content.episodes?.[0];
+  if (firstEpisode) {
+    return {
+      id: firstEpisode.id,
+      title: firstEpisode.title,
+      duration: firstEpisode.duration,
+    };
+  }
+  if (content.trailer) {
+    return {
+      id: content.trailer.id,
+      title: content.trailer.title,
+      duration: content.trailer.duration,
+    };
+  }
+  return null;
 }
 
 export default function WatchPageClient({ params }: WatchPageClientProps) {
@@ -48,7 +75,10 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { isSubscribed, isLoading: authLoading } = useAuth();
-  const [video, setVideo] = useState<VideoDto | null>(null);
+  const [content, setContent] = useState<ContentDetailDto | null>(null);
+  const [primaryEpisode, setPrimaryEpisode] = useState<PlayableEpisode | null>(
+    null,
+  );
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   /** Set when playback permission is denied (401/403) or unavailable. */
@@ -59,16 +89,16 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   // Redirect inactive subscribers to pricing (real API only; mock allows playback via prompt).
   useEffect(() => {
     if (USE_MOCK_API || authLoading || loading) return;
-    if (video && streamUrl && !isSubscribed) {
+    if (content && streamUrl && !isSubscribed) {
       const returnUrl = pathname ?? `/watch/${id}`;
       router.replace(
-        `/subscription?returnUrl=${encodeURIComponent(returnUrl)}`
+        `/subscription?returnUrl=${encodeURIComponent(returnUrl)}`,
       );
     }
   }, [
     authLoading,
     loading,
-    video,
+    content,
     streamUrl,
     isSubscribed,
     router,
@@ -82,11 +112,15 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     (async () => {
       setLoading(true);
       try {
-        const detailRes = await contentService.getVideoById(id);
+        const detailRes = await contentService.getContentById(id);
         if (cancelled) return;
-        setVideo(detailRes?.video ?? null);
-        if (!detailRes?.video) return;
-        const playbackRes = await streamingService.getPlaybackInfo(id);
+        const contentDetail = detailRes?.content ?? null;
+        setContent(contentDetail);
+        if (!contentDetail) return;
+        const episode = pickPrimaryEpisode(contentDetail);
+        setPrimaryEpisode(episode);
+        if (!episode) return;
+        const playbackRes = await streamingService.getPlaybackInfo(episode.id);
         if (cancelled) return;
         setStreamUrl(playbackRes.url);
       } catch (err) {
@@ -109,9 +143,9 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     };
   }, [id]);
 
-  const displayVideo = video ? dtoToDisplayVideo(video) : null;
-  const title = displayVideo?.title ?? `Video ${id}`;
-  const longForm = displayVideo ? isLongForm(displayVideo) : false;
+  const displayContent = content ? toDisplayContent(content) : null;
+  const title = displayContent?.title ?? `Content ${id}`;
+  const longForm = displayContent ? isLongForm(displayContent) : false;
   const [offlineModalOpen, setOfflineModalOpen] = useState(false);
 
   if (authLoading || loading) {
@@ -122,26 +156,27 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     );
   }
 
-  if (!video) {
+  if (!content) {
     return (
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 py-12">
         <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
-          Video not found
+          Content not found
         </h2>
         <p className="text-center text-neutral-600 dark:text-neutral-400">
-          The video you’re looking for doesn’t exist or is no longer available.
+          The content you’re looking for doesn’t exist or is no longer
+          available.
         </p>
         <a
           href="/browse"
           className="inline-flex h-10 items-center justify-center rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
         >
-          Browse videos
+          Browse content
         </a>
       </main>
     );
   }
 
-  if (video && playbackError) {
+  if (content && playbackError) {
     const returnUrl = pathname ?? `/watch/${id}`;
     return (
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 py-12">
@@ -149,15 +184,15 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
           {playbackError === "unauthorized"
             ? "Sign in to watch"
             : playbackError === "forbidden"
-            ? "Active subscription required"
-            : "Playback not available"}
+              ? "Active subscription required"
+              : "Playback not available"}
         </h2>
         <p className="text-center text-neutral-600 dark:text-neutral-400">
           {playbackError === "unauthorized"
             ? "You need to sign in to stream this video."
             : playbackError === "forbidden"
-            ? "An active subscription is required to watch. Subscribe to get access."
-            : "This video cannot be played right now. Try again later."}
+              ? "An active subscription is required to watch. Subscribe to get access."
+              : "This video cannot be played right now. Try again later."}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           {playbackError === "unauthorized" && (
@@ -179,7 +214,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
           )}
           <Link href="/browse">
             <Button type="button" variant="secondary">
-              Browse videos
+              Browse content
             </Button>
           </Link>
         </div>
@@ -191,7 +226,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     return (
       <main className="flex min-h-0 flex-1 items-center justify-center px-4 py-12">
         <p className="text-neutral-600 dark:text-neutral-400">
-          Playback is not available for this video.
+          Playback is not available for this content.
         </p>
       </main>
     );
@@ -232,18 +267,24 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
 
         {/* Metadata row: duration, category, date, long-form badge */}
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-          {displayVideo?.duration && (
-            <span title={`Duration: ${displayVideo.duration}`}>
-              {formatDuration(displayVideo.duration)}
+          {(primaryEpisode?.duration ?? displayContent?.duration) && (
+            <span
+              title={`Duration: ${
+                primaryEpisode?.duration ?? displayContent?.duration
+              }`}
+            >
+              {formatDuration(
+                primaryEpisode?.duration ?? displayContent?.duration ?? "0:00",
+              )}
             </span>
           )}
-          {displayVideo?.category && (
+          {displayContent?.category && (
             <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-              {displayVideo.category}
+              {displayContent.category}
             </span>
           )}
-          {displayVideo?.publishedAt && (
-            <span>{formatDate(displayVideo.publishedAt)}</span>
+          {displayContent?.releaseYear && (
+            <span>{displayContent.releaseYear}</span>
           )}
           {longForm && (
             <span
@@ -307,9 +348,9 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
             Description
           </h2>
           <div className="max-w-none">
-            {displayVideo?.description ? (
+            {displayContent?.description ? (
               <p className="whitespace-pre-wrap text-neutral-600 leading-relaxed dark:text-neutral-400">
-                {displayVideo.description}
+                {displayContent.description}
               </p>
             ) : (
               <p className="text-neutral-500 dark:text-neutral-400">

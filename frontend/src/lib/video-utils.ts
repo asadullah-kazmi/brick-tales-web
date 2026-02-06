@@ -1,5 +1,3 @@
-import type { Video } from "@/types";
-
 /**
  * Convert duration string (MM:SS or HH:MM:SS) to ISO 8601 (e.g. PT12M34S).
  * Used for schema.org VideoObject.
@@ -42,7 +40,8 @@ export function formatDuration(duration: string): string {
 /**
  * Whether the video is considered long-form (e.g. 1+ hour).
  */
-export function isLongForm(video: Video): boolean {
+export function isLongForm(video: { duration?: string }): boolean {
+  if (!video.duration) return false;
   const parts = video.duration.trim().split(":").map(Number);
   if (parts.length === 3) return parts[0] >= 1;
   return false;

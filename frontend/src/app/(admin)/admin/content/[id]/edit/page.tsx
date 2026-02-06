@@ -13,7 +13,7 @@ import {
   Loader,
 } from "@/components/ui";
 import { adminService } from "@/lib/services";
-import type { AdminCategoryDto } from "@/types/api";
+import type { AdminCategoryDto, ContentType } from "@/types/api";
 
 function isValidDuration(value: string): boolean {
   return /^\d{1,2}:\d{2}(?::\d{2})?$/.test(value.trim());
@@ -52,6 +52,9 @@ export default function AdminEditVideoPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [published, setPublished] = useState(false);
+  const [contentType, setContentType] = useState<ContentType>("MOVIE");
+  const [releaseYear, setReleaseYear] = useState("");
+  const [ageRating, setAgeRating] = useState("NR");
 
   useEffect(() => {
     if (!videoId) return;
@@ -63,18 +66,23 @@ export default function AdminEditVideoPage() {
       .then((item) => {
         if (!active) return;
         if (!item) {
-          setError("Video not found.");
+          setError("Content not found.");
           return;
         }
         setTitle(item.title);
-        setDuration(item.duration);
+        setDuration(item.duration ?? "");
         setDescription(item.description ?? "");
         setCategory(item.category ?? "");
-        setPublished(item.published);
+        setPublished(item.isPublished);
+        setContentType(item.type as ContentType);
+        setReleaseYear(String(item.releaseYear));
+        setAgeRating(item.ageRating ?? "NR");
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load video.");
+        setError(
+          err instanceof Error ? err.message : "Failed to load content.",
+        );
       })
       .finally(() => {
         if (!active) return;
@@ -116,12 +124,20 @@ export default function AdminEditVideoPage() {
       setError("Title is required.");
       return false;
     }
-    if (!duration.trim()) {
-      setError("Duration is required (e.g. 12:34 or 1:22:10).");
+    if (duration.trim() && !isValidDuration(duration)) {
+      setError("Duration must be MM:SS or HH:MM:SS.");
       return false;
     }
-    if (!isValidDuration(duration)) {
-      setError("Duration must be MM:SS or HH:MM:SS.");
+    if (!releaseYear.trim()) {
+      setError("Release year is required.");
+      return false;
+    }
+    if (!/^\d{4}$/.test(releaseYear.trim())) {
+      setError("Release year must be a 4-digit year.");
+      return false;
+    }
+    if (!ageRating.trim()) {
+      setError("Age rating is required.");
       return false;
     }
     setError(null);
@@ -134,16 +150,21 @@ export default function AdminEditVideoPage() {
     if (!runValidation()) return;
     setSaving(true);
     try {
-      await adminService.updateVideo(videoId, {
+      await adminService.updateContent(videoId, {
         title: title.trim(),
-        duration: duration.trim(),
-        description: description.trim() || "",
-        category: category.trim(),
-        published,
+        duration: duration.trim() || undefined,
+        description: description.trim() || undefined,
+        category: category.trim() || undefined,
+        type: contentType,
+        releaseYear: Number(releaseYear),
+        ageRating: ageRating.trim(),
       });
+      await adminService.publishContent(videoId, { isPublished: published });
       router.push("/admin/content");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update video.");
+      setError(
+        err instanceof Error ? err.message : "Failed to update content.",
+      );
     } finally {
       setSaving(false);
     }
@@ -152,7 +173,7 @@ export default function AdminEditVideoPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12">
-        <Loader size="lg" label="Loading video…" />
+        <Loader size="lg" label="Loading content…" />
       </div>
     );
   }
@@ -169,7 +190,7 @@ export default function AdminEditVideoPage() {
     <>
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          Edit video
+          Edit content
         </h1>
         <p className="mt-1 text-sm text-neutral-400">
           Update metadata and publishing status.
@@ -179,7 +200,7 @@ export default function AdminEditVideoPage() {
       <Card className="max-w-lg">
         <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle>Video details</CardTitle>
+            <CardTitle>Content details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
@@ -198,6 +219,61 @@ export default function AdminEditVideoPage() {
               placeholder="Video title"
               required
             />
+            <div>
+              <label
+                htmlFor="content-type"
+                className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              >
+                Content type
+              </label>
+              <select
+                id="content-type"
+                value={contentType}
+                onChange={(e) => setContentType(e.target.value as ContentType)}
+                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+              >
+                {[
+                  "MOVIE",
+                  "DOCUMENTARY",
+                  "SERIES",
+                  "ANIMATION",
+                  "SHORT",
+                  "TRAILER",
+                ].map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              label="Release year"
+              type="text"
+              value={releaseYear}
+              onChange={(e) => setReleaseYear(e.target.value)}
+              placeholder="2024"
+              required
+            />
+            <div>
+              <label
+                htmlFor="age-rating"
+                className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              >
+                Age rating
+              </label>
+              <select
+                id="age-rating"
+                value={ageRating}
+                onChange={(e) => setAgeRating(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+              >
+                {["G", "PG", "PG-13", "R", "TV-MA", "NR"].map((rating) => (
+                  <option key={rating} value={rating}>
+                    {rating}
+                  </option>
+                ))}
+              </select>
+            </div>
             <Input
               label="Duration"
               type="text"

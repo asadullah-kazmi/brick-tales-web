@@ -17,10 +17,10 @@ export const analyticsService = {
       const stats = await adminService.getStats();
       return {
         totalUsers: stats.totalUsers,
-        totalVideos: stats.totalVideos,
+        totalVideos: stats.totalContent ?? stats.totalVideos ?? 0,
         totalSubscribers: stats.totalSubscribers,
         usersTrend: stats.usersTrend,
-        videosTrend: stats.videosTrend,
+        videosTrend: stats.contentTrend ?? stats.videosTrend,
         subscribersTrend: stats.subscribersTrend,
       };
     }
@@ -30,7 +30,7 @@ export const analyticsService = {
   async getVideosByCategory(): Promise<CategoryCountDto[]> {
     if (!USE_MOCK_API) {
       const stats = await adminService.getStats();
-      return stats.videosByCategory ?? [];
+      return stats.contentByCategory ?? stats.videosByCategory ?? [];
     }
     return getMockVideosByCategory().map((d) => ({
       label: d.category,

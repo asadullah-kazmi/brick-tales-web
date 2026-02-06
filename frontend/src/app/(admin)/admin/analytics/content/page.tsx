@@ -30,8 +30,8 @@ export default function AdminContentAnalyticsPage() {
   }, []);
 
   const maxCategory = useMemo(() => {
-    if (!data?.videosByCategory.length) return 1;
-    return Math.max(1, ...data.videosByCategory.map((c) => c.value));
+    if (!data?.contentByCategory.length) return 1;
+    return Math.max(1, ...data.contentByCategory.map((c) => c.value));
   }, [data]);
 
   if (loading) {
@@ -65,17 +65,17 @@ export default function AdminContentAnalyticsPage() {
           Content Analytics
         </h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Measure publishing activity and video engagement.
+          Measure publishing activity and content engagement.
         </p>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-neutral-500">
-            Total videos
+            Total content
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {data.totalVideos}
+            {data.totalContent}
           </p>
         </div>
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 px-4 py-4">
@@ -83,7 +83,7 @@ export default function AdminContentAnalyticsPage() {
             Published
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {data.publishedVideos}
+            {data.publishedContent}
           </p>
         </div>
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 px-4 py-4">
@@ -91,7 +91,7 @@ export default function AdminContentAnalyticsPage() {
             Unpublished
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {data.unpublishedVideos}
+            {data.unpublishedContent}
           </p>
         </div>
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 px-4 py-4">
@@ -109,25 +109,25 @@ export default function AdminContentAnalyticsPage() {
 
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-2xl border border-neutral-700/50 bg-neutral-900/60 p-6">
-          <h2 className="text-lg font-semibold text-white">Top videos</h2>
+          <h2 className="text-lg font-semibold text-white">Top episodes</h2>
           <p className="mt-1 text-sm text-neutral-400">
-            Most watched in your catalog.
+            Most watched episodes in your catalog.
           </p>
           <div className="mt-6 space-y-3">
-            {data.topVideos.length === 0 ? (
+            {data.topEpisodes.length === 0 ? (
               <p className="text-sm text-neutral-500">No view data yet.</p>
             ) : (
-              data.topVideos.map((video, index) => (
+              data.topEpisodes.map((episode, index) => (
                 <div
-                  key={video.videoId}
+                  key={episode.episodeId}
                   className="flex items-center justify-between rounded-xl border border-neutral-700/60 bg-neutral-950/60 px-4 py-3"
                 >
                   <div>
                     <p className="text-sm font-semibold text-white">
-                      {video.title}
+                      {episode.title}
                     </p>
                     <p className="text-xs text-neutral-400">
-                      {video.views} views
+                      {episode.views} views
                     </p>
                   </div>
                   <span className="text-xs text-neutral-500">#{index + 1}</span>
@@ -143,10 +143,10 @@ export default function AdminContentAnalyticsPage() {
             Distribution by category.
           </p>
           <div className="mt-6 space-y-4">
-            {data.videosByCategory.length === 0 ? (
+            {data.contentByCategory.length === 0 ? (
               <p className="text-sm text-neutral-500">No categories found.</p>
             ) : (
-              data.videosByCategory.map((item) => (
+              data.contentByCategory.map((item) => (
                 <div key={item.label} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-neutral-200">{item.label}</span>

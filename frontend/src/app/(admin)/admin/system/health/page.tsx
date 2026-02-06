@@ -88,10 +88,10 @@ export default function AdminSystemHealthPage() {
         </div>
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-neutral-500">
-            Videos
+            Content
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {data.counts.videos}
+            {data.counts.content}
           </p>
         </div>
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 px-4 py-4">

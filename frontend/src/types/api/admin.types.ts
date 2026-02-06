@@ -29,20 +29,20 @@ export interface CategoryCountDto {
   value: number;
 }
 
-export interface TopVideoDto {
-  videoId: string;
+export interface TopEpisodeDto {
+  episodeId: string;
   title: string;
   views: number;
 }
 
 export interface AdminContentAnalyticsDto {
-  totalVideos: number;
-  publishedVideos: number;
-  unpublishedVideos: number;
+  totalContent: number;
+  publishedContent: number;
+  unpublishedContent: number;
   totalViews: number;
   viewsLast30Days: number;
-  topVideos: TopVideoDto[];
-  videosByCategory: CategoryCountDto[];
+  topEpisodes: TopEpisodeDto[];
+  contentByCategory: CategoryCountDto[];
 }
 
 export interface RevenueByPlanDto {
@@ -66,7 +66,8 @@ export interface AdminSystemHealthDto {
   checkedAt: string;
   counts: {
     users: number;
-    videos: number;
+    content: number;
+    episodes: number;
     subscriptions: number;
     downloads: number;
   };
@@ -75,7 +76,7 @@ export interface AdminSystemHealthDto {
 
 export interface AdminSystemLogDto {
   id: string;
-  type: "user" | "video" | "subscription";
+  type: "user" | "content" | "subscription";
   message: string;
   createdAt: string;
 }

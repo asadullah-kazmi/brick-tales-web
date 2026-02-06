@@ -17,9 +17,9 @@ export interface QualityLevelDto {
   uri?: string;
 }
 
-/** Response for GET /streaming/playback/:videoId (playback info / signed URL). */
+/** Response for GET /episodes/:id/play (playback info / signed URL). */
 export interface PlaybackInfoResponseDto {
-  videoId: string;
+  episodeId: string;
   type: PlaybackType;
   /** Primary manifest URL (e.g. HLS .m3u8). Signed if required. */
   url: string;
@@ -35,9 +35,9 @@ export interface PlaybackInfoResponseDto {
   };
 }
 
-/** Request for POST /streaming/playback (if using body for entitlements). */
+/** Request for POST /episodes/:id/play (if using body for entitlements). */
 export interface PlaybackRequestDto {
-  videoId: string;
+  episodeId: string;
   /** Optional quality preference. */
   qualityPreference?: string;
 }

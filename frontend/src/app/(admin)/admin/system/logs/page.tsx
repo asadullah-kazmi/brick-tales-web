@@ -99,7 +99,7 @@ export default function AdminSystemLogsPage() {
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-semibold",
                     log.type === "user" && "bg-blue-900/40 text-blue-200",
-                    log.type === "video" && "bg-amber-900/40 text-amber-200",
+                    log.type === "content" && "bg-amber-900/40 text-amber-200",
                     log.type === "subscription" &&
                       "bg-emerald-900/40 text-emerald-200",
                   )}

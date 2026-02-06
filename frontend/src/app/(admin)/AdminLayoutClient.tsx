@@ -297,7 +297,7 @@ const NAV_SECTIONS = [
       { href: "/admin/categories", label: "Categories", icon: IconCategories },
       {
         href: "/admin/content/upload",
-        label: "Upload video",
+        label: "Upload content",
         icon: IconUpload,
       },
     ],

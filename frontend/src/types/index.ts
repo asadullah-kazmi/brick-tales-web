@@ -18,7 +18,7 @@ export type User = {
 export type Video = {
   id: string;
   title: string;
-  duration: string;
+  duration?: string;
   thumbnailUrl: string | null;
   description?: string;
   category?: string;

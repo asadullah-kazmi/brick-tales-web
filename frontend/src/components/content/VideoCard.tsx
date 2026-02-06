@@ -69,12 +69,14 @@ export function VideoCard({
         ) : (
           <ThumbnailPlaceholder title={video.title} />
         )}
-        <span
-          className="absolute bottom-2 right-2 rounded bg-black/75 px-2 py-0.5 text-xs font-medium text-white"
-          aria-label={`Duration: ${video.duration}`}
-        >
-          {video.duration}
-        </span>
+        {video.duration ? (
+          <span
+            className="absolute bottom-2 right-2 rounded bg-black/75 px-2 py-0.5 text-xs font-medium text-white"
+            aria-label={`Duration: ${video.duration}`}
+          >
+            {video.duration}
+          </span>
+        ) : null}
       </div>
       <div className="p-3 sm:p-4">
         <h2 className="line-clamp-2 font-semibold text-neutral-900 group-hover:text-neutral-700 dark:text-white dark:group-hover:text-neutral-200">

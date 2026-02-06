@@ -12,25 +12,25 @@ export async function generateMetadata({
   params,
 }: WatchPageProps): Promise<Metadata> {
   const { id } = params;
-  const res = await contentService.getVideoById(id);
-  const video = res?.video;
+  const res = await contentService.getContentById(id);
+  const content = res?.content;
 
-  if (!video) {
+  if (!content) {
     return {
-      title: "Video Not Found",
-      description: "The requested video could not be found.",
+      title: "Content Not Found",
+      description: "The requested content could not be found.",
       robots: { index: false, follow: true },
     };
   }
 
-  const title = video.title;
+  const title = content.title;
   const description =
-    video.description?.slice(0, 160) ??
-    `Watch ${video.title} on ${SITE_BRAND}.${
-      video.category ? ` Category: ${video.category}.` : ""
+    content.description?.slice(0, 160) ??
+    `Watch ${content.title} on ${SITE_BRAND}.${
+      content.category ? ` Category: ${content.category}.` : ""
     }`;
   const canonicalUrl = absoluteUrl(`/watch/${id}`);
-  const image = video.thumbnailUrl ?? undefined;
+  const image = content.thumbnailUrl ?? undefined;
 
   return {
     title,
@@ -63,27 +63,30 @@ export async function generateMetadata({
 }
 
 function VideoObjectJsonLd({
-  video,
+  content,
   id,
 }: {
-  video: {
+  content: {
     title: string;
     description?: string;
-    duration: string;
     thumbnailUrl: string | null;
-    publishedAt?: string;
-    createdAt: string;
+    duration?: string;
+    releaseYear?: number;
   };
   id: string;
 }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
-    name: video.title,
-    description: video.description ?? video.title,
-    thumbnailUrl: video.thumbnailUrl ?? undefined,
-    uploadDate: video.publishedAt ?? video.createdAt,
-    duration: durationToIso8601(video.duration),
+    name: content.title,
+    description: content.description ?? content.title,
+    thumbnailUrl: content.thumbnailUrl ?? undefined,
+    uploadDate: content.releaseYear
+      ? new Date(content.releaseYear, 0, 1).toISOString()
+      : undefined,
+    duration: content.duration
+      ? durationToIso8601(content.duration)
+      : undefined,
     contentUrl: undefined as string | undefined, // optional: direct video URL
     embedUrl: absoluteUrl(`/watch/${id}`),
     publisher: {
@@ -102,12 +105,12 @@ function VideoObjectJsonLd({
 
 export default async function WatchPage({ params }: WatchPageProps) {
   const { id } = params;
-  const res = await contentService.getVideoById(id);
-  const video = res?.video;
+  const res = await contentService.getContentById(id);
+  const content = res?.content;
 
   return (
     <>
-      {video && <VideoObjectJsonLd video={video} id={id} />}
+      {content && <VideoObjectJsonLd content={content} id={id} />}
       <WatchPageClient params={{ id }} />
     </>
   );

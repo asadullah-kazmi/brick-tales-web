@@ -57,7 +57,7 @@ export function SubscriptionPrompt({
       </CardHeader>
       <CardContent>
         <ul className="list-inside list-disc space-y-1 text-sm text-neutral-600 dark:text-neutral-400">
-          <li>Unlimited access to all videos</li>
+          <li>Unlimited access to all content</li>
           <li>HD and 4K streaming</li>
           <li>Watch on any device</li>
           <li>Cancel anytime</li>

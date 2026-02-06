@@ -50,8 +50,8 @@ export default function AdminPage() {
   const quickActions = [
     {
       href: "/admin/content/upload",
-      label: "Upload video",
-      desc: "Add new video + thumbnail",
+      label: "Upload content",
+      desc: "Add new content + assets",
     },
     {
       href: "/admin/content",
@@ -202,7 +202,7 @@ export default function AdminPage() {
           </p>
           <ul className="mt-6 space-y-4 text-sm text-neutral-300">
             <li className="rounded-xl border border-neutral-800/70 bg-neutral-900/60 px-4 py-3">
-              Review unpublished videos to keep the catalog fresh.
+              Review unpublished content to keep the catalog fresh.
             </li>
             <li className="rounded-xl border border-neutral-800/70 bg-neutral-900/60 px-4 py-3">
               Add more categories to balance discovery.

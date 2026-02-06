@@ -4,8 +4,14 @@ import { authService } from "@/lib/services/auth.service";
 import type {
   PresignUploadRequestDto,
   PresignUploadResponseDto,
-  CreateAdminVideoRequestDto,
-  UpdateAdminVideoRequestDto,
+  CreateAdminContentRequestDto,
+  UpdateAdminContentRequestDto,
+  CreateAdminSeasonRequestDto,
+  CreateAdminEpisodeRequestDto,
+  CreateAdminTrailerRequestDto,
+  PublishAdminContentRequestDto,
+  SeasonResponseDto,
+  EpisodeResponseDto,
   AdminCategoryDto,
   CreateAdminCategoryRequestDto,
   SitePageDto,
@@ -47,12 +53,31 @@ export interface AdminUserDto {
 export interface AdminContentItemDto {
   id: string;
   title: string;
-  duration: string;
   description?: string;
+  type: string;
+  thumbnailUrl: string;
+  posterUrl?: string;
+  releaseYear: number;
+  ageRating: string;
+  duration?: string;
+  trailerId?: string;
   category?: string;
-  published: boolean;
-  publishedAt?: string;
+  isPublished: boolean;
   createdAt: string;
+  updatedAt?: string;
+  seasons?: {
+    id: string;
+    seasonNumber: number;
+    title: string;
+    episodeCount: number;
+  }[];
+  episodes?: {
+    id: string;
+    seasonId?: string;
+    episodeNumber: number;
+    title: string;
+    duration: string;
+  }[];
 }
 
 export type {
@@ -146,26 +171,24 @@ export const adminService = {
     }
   },
 
-  async updateVideoPublish(
+  async publishContent(
     id: string,
-    published: boolean,
+    body: PublishAdminContentRequestDto,
   ): Promise<AdminContentItemDto | null> {
     try {
       return await withAuthRetry((headers) =>
-        patch<AdminContentItemDto>(
-          `admin/content/${id}`,
-          { published },
-          { headers },
-        ),
+        patch<AdminContentItemDto>(`admin/content/${id}/publish`, body, {
+          headers,
+        }),
       );
     } catch {
       return null;
     }
   },
 
-  async updateVideo(
+  async updateContent(
     id: string,
-    body: UpdateAdminVideoRequestDto,
+    body: UpdateAdminContentRequestDto,
   ): Promise<AdminContentItemDto | null> {
     try {
       return await withAuthRetry((headers) =>
@@ -186,11 +209,38 @@ export const adminService = {
     );
   },
 
-  async createVideo(
-    body: CreateAdminVideoRequestDto,
+  async createContent(
+    body: CreateAdminContentRequestDto,
   ): Promise<AdminContentItemDto> {
     return withAuthRetry((headers) =>
       post<AdminContentItemDto>("admin/content", body, { headers }),
+    );
+  },
+
+  async createTrailer(
+    contentId: string,
+    body: CreateAdminTrailerRequestDto,
+  ): Promise<AdminContentItemDto | null> {
+    try {
+      return await withAuthRetry((headers) =>
+        post<AdminContentItemDto>(`admin/content/${contentId}/trailer`, body, {
+          headers,
+        }),
+      );
+    } catch {
+      return null;
+    }
+  },
+
+  async createSeason(body: CreateAdminSeasonRequestDto) {
+    return withAuthRetry((headers) =>
+      post<SeasonResponseDto>("admin/season", body, { headers }),
+    );
+  },
+
+  async createEpisode(body: CreateAdminEpisodeRequestDto) {
+    return withAuthRetry((headers) =>
+      post<EpisodeResponseDto>("admin/episode", body, { headers }),
     );
   },
 

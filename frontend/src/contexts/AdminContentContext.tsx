@@ -9,31 +9,24 @@ import {
   type ReactNode,
 } from "react";
 import type { AdminVideo } from "@/types";
-import { contentService } from "@/lib/services";
 import { adminService, type AdminContentItemDto } from "@/lib/services";
 import { USE_MOCK_API } from "@/lib/services/config";
+import { getAdminVideos, updateAdminVideo } from "@/lib/mock-admin-content";
 
 type AdminContentContextValue = {
-  videos: AdminVideo[];
+  items: AdminContentItemDto[];
   loading: boolean;
   error: string | null;
-  addVideo: (metadata: {
-    title: string;
-    duration: string;
-    description?: string;
-    category?: string;
-    videoFile: File;
-    thumbnailFile: File;
-  }) => Promise<void>;
-  updateVideo: (
+  updateContent: (
     id: string,
     updates: Partial<
       Pick<
-        AdminVideo,
-        "published" | "title" | "duration" | "description" | "category"
+        AdminContentItemDto,
+        "title" | "description" | "duration" | "category" | "isPublished"
       >
     >,
   ) => Promise<void>;
+  publishContent: (id: string, isPublished: boolean) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -41,26 +34,30 @@ const AdminContentContext = createContext<AdminContentContextValue | null>(
   null,
 );
 
-function mapContentToAdminVideo(item: AdminContentItemDto): AdminVideo {
+function mapMockVideoToContent(item: AdminVideo): AdminContentItemDto {
   return {
     id: item.id,
     title: item.title,
-    duration: item.duration,
     description: item.description,
+    type: "MOVIE",
+    thumbnailUrl: "",
+    releaseYear: new Date().getFullYear(),
+    ageRating: "NR",
+    duration: item.duration,
     category: item.category,
-    published: item.published,
+    isPublished: item.published,
     createdAt: item.createdAt,
   };
 }
 
 export function AdminContentProvider({ children }: { children: ReactNode }) {
-  const [videos, setVideos] = useState<AdminVideo[]>([]);
+  const [items, setItems] = useState<AdminContentItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (USE_MOCK_API) {
-      setVideos(contentService.getAdminVideoList());
+      setItems(getAdminVideos().map(mapMockVideoToContent));
       setError(null);
       return;
     }
@@ -68,9 +65,9 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const list = await adminService.getContent();
-      setVideos(list.map(mapContentToAdminVideo));
+      setItems(list);
     } catch (err) {
-      setVideos([]);
+      setItems([]);
       setError(err instanceof Error ? err.message : "Failed to load content");
     } finally {
       setLoading(false);
@@ -81,87 +78,51 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const addVideo = useCallback(
-    async (metadata: {
-      title: string;
-      duration: string;
-      description?: string;
-      category?: string;
-      videoFile: File;
-      thumbnailFile: File;
-    }) => {
-      const { videoFile, thumbnailFile, ...rest } = metadata;
-
+  const updateContent = useCallback(
+    async (
+      id: string,
+      updates: Partial<
+        Pick<
+          AdminContentItemDto,
+          "title" | "description" | "duration" | "category" | "isPublished"
+        >
+      >,
+    ) => {
       if (USE_MOCK_API) {
-        await contentService.createVideo(rest);
+        updateAdminVideo(id, {
+          title: updates.title,
+          description: updates.description,
+          duration: updates.duration,
+          category: updates.category,
+          published: updates.isPublished,
+        });
         await refresh();
         return;
       }
 
-      const videoPresign = await adminService.presignUpload({
-        kind: "video",
-        fileName: videoFile.name,
-        contentType: videoFile.type,
-        sizeBytes: videoFile.size,
-      });
-
-      const thumbnailPresign = await adminService.presignUpload({
-        kind: "thumbnail",
-        fileName: thumbnailFile.name,
-        contentType: thumbnailFile.type,
-        sizeBytes: thumbnailFile.size,
-        uploadId: videoPresign.uploadId,
-      });
-
-      await Promise.all([
-        fetch(videoPresign.url, {
-          method: "PUT",
-          headers: { "Content-Type": videoFile.type },
-          body: videoFile,
-        }),
-        fetch(thumbnailPresign.url, {
-          method: "PUT",
-          headers: { "Content-Type": thumbnailFile.type },
-          body: thumbnailFile,
-        }),
-      ]).then(async (responses) => {
-        const failed = responses.find((res) => !res.ok);
-        if (failed) {
-          const message = await failed.text();
-          throw new Error(message || "Upload failed");
-        }
-      });
-
-      await adminService.createVideo({
-        ...rest,
-        videoKey: videoPresign.key,
-        thumbnailKey: thumbnailPresign.key,
-      });
+      const updated = await adminService.updateContent(id, updates);
+      if (updated) {
+        setItems((prev) =>
+          prev.map((item) => (item.id === id ? updated : item)),
+        );
+        return;
+      }
       await refresh();
     },
     [refresh],
   );
 
-  const updateVideo = useCallback(
-    async (
-      id: string,
-      updates: Partial<
-        Pick<
-          AdminVideo,
-          "published" | "title" | "duration" | "description" | "category"
-        >
-      >,
-    ) => {
+  const publishContent = useCallback(
+    async (id: string, isPublished: boolean) => {
       if (USE_MOCK_API) {
-        await contentService.updateVideo(id, updates);
+        updateAdminVideo(id, { published: isPublished });
         await refresh();
         return;
       }
-
-      const updated = await adminService.updateVideo(id, updates);
+      const updated = await adminService.publishContent(id, { isPublished });
       if (updated) {
-        setVideos((prev) =>
-          prev.map((v) => (v.id === id ? mapContentToAdminVideo(updated) : v)),
+        setItems((prev) =>
+          prev.map((item) => (item.id === id ? updated : item)),
         );
         return;
       }
@@ -171,11 +132,11 @@ export function AdminContentProvider({ children }: { children: ReactNode }) {
   );
 
   const value: AdminContentContextValue = {
-    videos,
+    items,
     loading,
     error,
-    addVideo,
-    updateVideo,
+    updateContent,
+    publishContent,
     refresh,
   };
 
