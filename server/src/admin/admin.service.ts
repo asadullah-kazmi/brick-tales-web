@@ -11,6 +11,15 @@ import type {
   AdminSubscriptionDto,
   AdminSubscriptionsResponseDto,
 } from './dto/admin-subscription.dto';
+import type { AdminPlanDto } from './dto/admin-plan.dto';
+import type {
+  AdminUsersAnalyticsDto,
+  AdminContentAnalyticsDto,
+  AdminRevenueAnalyticsDto,
+  CategoryCountDto,
+  TopVideoDto,
+} from './dto/admin-analytics.dto';
+import type { AdminSystemHealthDto, AdminSystemLogDto } from './dto/admin-system.dto';
 
 export interface DownloadsPerPlanDto {
   planId: string;
@@ -396,6 +405,255 @@ export class AdminService {
       publishedAt: video.publishedAt?.toISOString(),
       createdAt: video.createdAt.toISOString(),
     };
+  }
+
+  async getPlans(): Promise<AdminPlanDto[]> {
+    const now = new Date();
+    const [plans, activeCounts] = await Promise.all([
+      this.prisma.plan.findMany({ orderBy: { createdAt: 'desc' } }),
+      this.prisma.subscription.groupBy({
+        by: ['planId'],
+        where: { status: 'ACTIVE', endDate: { gte: now } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const activeCountMap = new Map<string, number>();
+    for (const row of activeCounts) {
+      activeCountMap.set(row.planId, row._count._all);
+    }
+
+    return plans.map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      price: formatMoney(plan.price),
+      duration: plan.duration,
+      deviceLimit: plan.deviceLimit,
+      offlineAllowed: plan.offlineAllowed,
+      maxOfflineDownloads: plan.maxOfflineDownloads,
+      stripePriceId: plan.stripePriceId ?? undefined,
+      activeSubscribers: activeCountMap.get(plan.id) ?? 0,
+      createdAt: plan.createdAt.toISOString(),
+      updatedAt: plan.updatedAt.toISOString(),
+    }));
+  }
+
+  async getUsersAnalytics(): Promise<AdminUsersAnalyticsDto> {
+    const now = new Date();
+    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const last7Days = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+    const [totalUsers, newUsersLast30, recentUsers, activeUsers] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { createdAt: { gte: last30Days } } }),
+      this.prisma.user.findMany({
+        where: { createdAt: { gte: last7Days } },
+        select: { createdAt: true },
+      }),
+      this.prisma.viewHistory
+        .findMany({
+          where: { watchedAt: { gte: last30Days } },
+          select: { userId: true },
+          distinct: ['userId'],
+        })
+        .then((rows) => rows.length),
+    ]);
+
+    const dayBuckets = new Map<string, number>();
+    for (let i = 6; i >= 0; i -= 1) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const key = date.toISOString().slice(0, 10);
+      dayBuckets.set(key, 0);
+    }
+
+    for (const user of recentUsers) {
+      const key = user.createdAt.toISOString().slice(0, 10);
+      dayBuckets.set(key, (dayBuckets.get(key) ?? 0) + 1);
+    }
+
+    const dailyNewUsers = Array.from(dayBuckets.entries()).map(([date, count]) => ({
+      date,
+      count,
+    }));
+
+    return {
+      totalUsers,
+      newUsersLast30Days: newUsersLast30,
+      activeUsersLast30Days: activeUsers,
+      dailyNewUsers,
+    };
+  }
+
+  async getContentAnalytics(): Promise<AdminContentAnalyticsDto> {
+    const now = new Date();
+    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [totalVideos, publishedVideos, totalViews, viewsLast30Days, categoryRows, topViews] =
+      await Promise.all([
+        this.prisma.video.count(),
+        this.prisma.video.count({ where: { publishedAt: { not: null } } }),
+        this.prisma.viewHistory.count(),
+        this.prisma.viewHistory.count({ where: { watchedAt: { gte: last30Days } } }),
+        this.prisma.video.findMany({
+          select: { category: { select: { name: true } } },
+        }),
+        this.prisma.viewHistory.groupBy({
+          by: ['videoId'],
+          _count: { videoId: true },
+          orderBy: { _count: { videoId: 'desc' } },
+          take: 5,
+        }),
+      ]);
+
+    const categoryCounts = new Map<string, number>();
+    for (const row of categoryRows) {
+      const name = row.category.name;
+      categoryCounts.set(name, (categoryCounts.get(name) ?? 0) + 1);
+    }
+    const videosByCategory: CategoryCountDto[] = Array.from(categoryCounts.entries())
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const topVideoIds = topViews.map((row) => row.videoId);
+    const videoTitles = await this.prisma.video.findMany({
+      where: { id: { in: topVideoIds } },
+      select: { id: true, title: true },
+    });
+    const titleMap = new Map(videoTitles.map((v) => [v.id, v.title]));
+
+    const topVideos: TopVideoDto[] = topViews.map((row) => ({
+      videoId: row.videoId,
+      title: titleMap.get(row.videoId) ?? 'Untitled',
+      views: row._count?.videoId ?? 0,
+    }));
+
+    return {
+      totalVideos,
+      publishedVideos,
+      unpublishedVideos: Math.max(0, totalVideos - publishedVideos),
+      totalViews,
+      viewsLast30Days,
+      topVideos,
+      videosByCategory,
+    };
+  }
+
+  async getRevenueAnalytics(): Promise<AdminRevenueAnalyticsDto> {
+    const now = new Date();
+    const [activeSubs, cancelledCount, expiredCount] = await Promise.all([
+      this.prisma.subscription.findMany({
+        where: { status: 'ACTIVE', endDate: { gte: now } },
+        include: { plan: true },
+      }),
+      this.prisma.subscription.count({ where: { status: 'CANCELLED' } }),
+      this.prisma.subscription.count({ where: { status: 'EXPIRED' } }),
+    ]);
+
+    const revenueByPlanMap = new Map<
+      string,
+      { planId: string; planName: string; activeCount: number; revenue: number }
+    >();
+
+    let activeRevenue = 0;
+    for (const sub of activeSubs) {
+      const price = Number(sub.plan.price);
+      const numericPrice = Number.isFinite(price) ? price : 0;
+      activeRevenue += numericPrice;
+      const current = revenueByPlanMap.get(sub.planId) ?? {
+        planId: sub.planId,
+        planName: sub.plan.name,
+        activeCount: 0,
+        revenue: 0,
+      };
+      current.activeCount += 1;
+      current.revenue += numericPrice;
+      revenueByPlanMap.set(sub.planId, current);
+    }
+
+    return {
+      activeRevenue: formatMoney(activeRevenue),
+      activeSubscriptions: activeSubs.length,
+      cancelledSubscriptions: cancelledCount,
+      expiredSubscriptions: expiredCount,
+      revenueByPlan: Array.from(revenueByPlanMap.values()).map((row) => ({
+        planId: row.planId,
+        planName: row.planName,
+        activeCount: row.activeCount,
+        revenue: formatMoney(row.revenue),
+      })),
+    };
+  }
+
+  async getSystemHealth(): Promise<AdminSystemHealthDto> {
+    const checkedAt = new Date().toISOString();
+    try {
+      const [users, videos, subscriptions, downloads] = await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.video.count(),
+        this.prisma.subscription.count(),
+        this.prisma.download.count(),
+      ]);
+      return {
+        ok: true,
+        database: true,
+        checkedAt,
+        counts: { users, videos, subscriptions, downloads },
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        database: false,
+        checkedAt,
+        counts: { users: 0, videos: 0, subscriptions: 0, downloads: 0 },
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  async getSystemLogs(): Promise<AdminSystemLogDto[]> {
+    const [users, videos, subscriptions] = await Promise.all([
+      this.prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        select: { id: true, email: true, createdAt: true },
+      }),
+      this.prisma.video.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        select: { id: true, title: true, createdAt: true },
+      }),
+      this.prisma.subscription.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        include: {
+          user: { select: { email: true } },
+          plan: { select: { name: true } },
+        },
+      }),
+    ]);
+
+    const logs: AdminSystemLogDto[] = [
+      ...users.map((user) => ({
+        id: `user-${user.id}`,
+        type: 'user' as const,
+        message: `User ${user.email} signed up.`,
+        createdAt: user.createdAt.toISOString(),
+      })),
+      ...videos.map((video) => ({
+        id: `video-${video.id}`,
+        type: 'video' as const,
+        message: `Video "${video.title}" uploaded.`,
+        createdAt: video.createdAt.toISOString(),
+      })),
+      ...subscriptions.map((sub) => ({
+        id: `subscription-${sub.id}`,
+        type: 'subscription' as const,
+        message: `Subscription ${sub.status} for ${sub.user.email} (${sub.plan.name}).`,
+        createdAt: sub.createdAt.toISOString(),
+      })),
+    ];
+
+    return logs.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 20);
   }
 
   /**

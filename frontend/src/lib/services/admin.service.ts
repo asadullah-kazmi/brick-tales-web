@@ -12,6 +12,12 @@ import type {
   SitePageSummaryDto,
   UpdateSitePageRequestDto,
   AdminSubscriptionsResponseDto,
+  AdminPlanDto,
+  AdminUsersAnalyticsDto,
+  AdminContentAnalyticsDto,
+  AdminRevenueAnalyticsDto,
+  AdminSystemHealthDto,
+  AdminSystemLogDto,
 } from "@/types/api";
 
 /** Dashboard stats from GET /admin/stats */
@@ -45,6 +51,15 @@ export interface AdminContentItemDto {
   publishedAt?: string;
   createdAt: string;
 }
+
+export type {
+  AdminPlanDto,
+  AdminUsersAnalyticsDto,
+  AdminContentAnalyticsDto,
+  AdminRevenueAnalyticsDto,
+  AdminSystemHealthDto,
+  AdminSystemLogDto,
+};
 
 function authHeaders(): Record<string, string> {
   const auth = getStoredAuth();
@@ -103,6 +118,12 @@ export const adminService = {
         params: { page: String(page), limit: String(limit) },
         headers,
       }),
+    );
+  },
+
+  async getPlans(): Promise<AdminPlanDto[]> {
+    return withAuthRetry((headers) =>
+      get<AdminPlanDto[]>("admin/plans", { headers }),
     );
   },
 
@@ -208,6 +229,36 @@ export const adminService = {
   ): Promise<SitePageDto> {
     return withAuthRetry((headers) =>
       patch<SitePageDto>(`admin/pages/${slug}`, body, { headers }),
+    );
+  },
+
+  async getUsersAnalytics(): Promise<AdminUsersAnalyticsDto> {
+    return withAuthRetry((headers) =>
+      get<AdminUsersAnalyticsDto>("admin/analytics/users", { headers }),
+    );
+  },
+
+  async getContentAnalytics(): Promise<AdminContentAnalyticsDto> {
+    return withAuthRetry((headers) =>
+      get<AdminContentAnalyticsDto>("admin/analytics/content", { headers }),
+    );
+  },
+
+  async getRevenueAnalytics(): Promise<AdminRevenueAnalyticsDto> {
+    return withAuthRetry((headers) =>
+      get<AdminRevenueAnalyticsDto>("admin/analytics/revenue", { headers }),
+    );
+  },
+
+  async getSystemHealth(): Promise<AdminSystemHealthDto> {
+    return withAuthRetry((headers) =>
+      get<AdminSystemHealthDto>("admin/system/health", { headers }),
+    );
+  },
+
+  async getSystemLogs(): Promise<AdminSystemLogDto[]> {
+    return withAuthRetry((headers) =>
+      get<AdminSystemLogDto[]>("admin/system/logs", { headers }),
     );
   },
 };

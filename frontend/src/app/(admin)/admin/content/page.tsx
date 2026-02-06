@@ -39,10 +39,10 @@ export default function AdminContentPage() {
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            Content
+            Library
           </h1>
           <p className="mt-1 text-sm text-neutral-400">
-            Manage content. Toggle publish to show or hide in the catalog.
+            Review uploads, edit metadata, and manage publish status.
           </p>
         </div>
         <Link href="/admin/content/upload">

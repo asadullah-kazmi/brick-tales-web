@@ -58,10 +58,10 @@ export default function AdminUsersPage() {
     <>
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          Users
+          User List
         </h1>
         <p className="mt-1 text-sm text-neutral-400">
-          User list and account overview. Paginated from backend.
+          All registered accounts with role and created date.
         </p>
       </header>
 

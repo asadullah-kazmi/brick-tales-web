@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { adminService } from "@/lib/services";
-import { parseBranding } from "@/lib/branding";
+import { parseBranding, type ThemeSettings } from "@/lib/branding";
 import { ApiError } from "@/lib/api-client";
 import {
   Button,
@@ -19,6 +20,13 @@ export default function AdminBrandingPage() {
   const router = useRouter();
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
+  const [theme, setTheme] = useState<ThemeSettings>({
+    background: "#0c0c0c",
+    foreground: "#fafafa",
+    offBlack: "#0c0c0c",
+    accent: "#ffe700",
+    accentForeground: "#0c0c0c",
+  });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -40,6 +48,10 @@ export default function AdminBrandingPage() {
         setBannerUrl(branding.bannerUrl ?? "");
         setLogoPreview(branding.logoUrl ?? null);
         setBannerPreview(branding.bannerUrl ?? null);
+        setTheme((prev) => ({
+          ...prev,
+          ...(branding.theme ?? {}),
+        }));
       })
       .catch((err) => {
         if (!active) return;
@@ -48,6 +60,7 @@ export default function AdminBrandingPage() {
           setBannerUrl("");
           setLogoPreview(null);
           setBannerPreview(null);
+          setTheme((prev) => ({ ...prev }));
           setError(null);
           return;
         }
@@ -126,6 +139,7 @@ export default function AdminBrandingPage() {
       const content = JSON.stringify({
         logoUrl: nextLogoUrl || undefined,
         bannerUrl: nextBannerUrl || undefined,
+        theme,
       });
       await adminService.updateSitePage("branding", {
         title: "Branding",
@@ -209,10 +223,13 @@ export default function AdminBrandingPage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
                   Logo preview
                 </p>
-                <img
+                <Image
                   src={logoPreview ?? logoUrl}
                   alt="Logo preview"
+                  width={160}
+                  height={48}
                   className="mt-3 h-12 w-auto object-contain"
+                  unoptimized
                 />
               </div>
             ) : null}
@@ -232,10 +249,13 @@ export default function AdminBrandingPage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
                   Banner preview
                 </p>
-                <img
+                <Image
                   src={bannerPreview ?? bannerUrl}
                   alt="Banner preview"
+                  width={1200}
+                  height={400}
                   className="mt-3 h-28 w-full rounded-md object-cover"
+                  unoptimized
                 />
               </div>
             ) : null}
@@ -243,6 +263,91 @@ export default function AdminBrandingPage() {
               Tip: PNG, JPG, WebP (and SVG for logo). These images are used
               across the site.
             </p>
+            <div className="pt-2">
+              <h3 className="text-sm font-semibold text-white">Color scheme</h3>
+              <p className="mt-1 text-xs text-neutral-500">
+                Update the global theme colors used across the site UI.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  { key: "background", label: "Background" },
+                  { key: "foreground", label: "Foreground" },
+                  { key: "offBlack", label: "Off-black" },
+                  { key: "accent", label: "Accent" },
+                  { key: "accentForeground", label: "Accent foreground" },
+                ] as const
+              ).map((item) => (
+                <div key={item.key} className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                    {item.label}
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={theme[item.key] ?? "#000000"}
+                      onChange={(e) =>
+                        setTheme((prev) => ({
+                          ...prev,
+                          [item.key]: e.target.value,
+                        }))
+                      }
+                      className="h-10 w-12 rounded border border-neutral-700 bg-neutral-900"
+                      aria-label={`${item.label} color`}
+                    />
+                    <input
+                      type="text"
+                      value={theme[item.key] ?? ""}
+                      onChange={(e) =>
+                        setTheme((prev) => ({
+                          ...prev,
+                          [item.key]: e.target.value,
+                        }))
+                      }
+                      className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
+                      placeholder="#000000"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-neutral-700/60 bg-neutral-900/60 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                Preview
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <div
+                  className="rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    background: theme.background,
+                    color: theme.foreground,
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  Background
+                </div>
+                <div
+                  className="rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    background: theme.offBlack,
+                    color: theme.foreground,
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  Off-black
+                </div>
+                <div
+                  className="rounded-lg px-3 py-2 text-sm font-semibold"
+                  style={{
+                    background: theme.accent,
+                    color: theme.accentForeground,
+                  }}
+                >
+                  Accent
+                </div>
+              </div>
+            </div>
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={saving}>

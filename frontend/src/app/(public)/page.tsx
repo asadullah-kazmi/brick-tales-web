@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
@@ -65,10 +66,14 @@ export default async function Home() {
         className="relative flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
         aria-label="Hero"
       >
-        <img
+        <Image
           src={bannerSrc}
           alt=""
+          fill
+          priority
           className="absolute inset-0 h-full w-full object-cover object-center"
+          sizes="100vw"
+          unoptimized
         />
         <div className="absolute inset-0 bg-black/5" aria-hidden />
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
@@ -83,10 +88,10 @@ export default async function Home() {
             />
           </div> */}
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg sm:text-4xl md:text-5xl lg:text-6xl">
-            Your Digital Home for Urban History
+            Your Digital Home for Urban Storytelling
           </h1>
           <p className="mt-4 max-w-xl text-center text-lg text-white/90 drop-shadow-md">
-            Your video streaming platform. Browse content and start watching.
+            Join Brixlore and step into stories shaped by culture
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link

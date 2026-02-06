@@ -9,85 +9,182 @@ export default function DashboardPage() {
   const displayName = user?.name ?? user?.email?.split("@")[0] ?? "there";
 
   return (
-    <>
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          Welcome back, {displayName}
-        </h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          Here’s an overview of your account and quick actions.
-        </p>
+    <div className="font-[var(--font-geist-sans)]">
+      <header className="relative overflow-hidden rounded-2xl border border-neutral-700/60 bg-neutral-900/60 p-6 sm:p-8">
+        <div
+          className="absolute -left-24 top-8 h-48 w-48 rounded-full bg-white/5 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="absolute -bottom-20 right-8 h-40 w-40 rounded-full bg-accent/25 blur-3xl"
+          aria-hidden
+        />
+        <div className="relative">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
+            Home
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            Welcome back, {displayName}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-neutral-400">
+            Your watchlist, recommendations, and playback controls live here.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/dashboard/explore">
+              <Button type="button" size="lg">
+                Start exploring
+              </Button>
+            </Link>
+            <Link href="/dashboard/continue-watching">
+              <Button type="button" variant="outline" size="lg">
+                Resume playback
+              </Button>
+            </Link>
+          </div>
+        </div>
       </header>
 
-      {/* Quick stats */}
       <section
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        aria-label="Account overview"
+        className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        aria-label="Account snapshot"
       >
-        <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5 transition-shadow hover:shadow-md border-l-4 border-l-accent">
-          <p className="text-sm font-medium text-neutral-400">Videos in library</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-white">0</p>
-          <p className="mt-1 text-xs text-neutral-500">Saved and watched</p>
+        <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
+            My list
+          </p>
+          <p className="mt-3 text-3xl font-semibold text-white">12</p>
+          <p className="mt-1 text-xs text-neutral-400">Saved for later</p>
         </div>
-        <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5 transition-shadow hover:shadow-md border-l-4 border-l-accent">
-          <p className="text-sm font-medium text-neutral-400">Watch time</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-white">0h</p>
-          <p className="mt-1 text-xs text-neutral-500">This month</p>
+        <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
+            Watch time
+          </p>
+          <p className="mt-3 text-3xl font-semibold text-white">4h 20m</p>
+          <p className="mt-1 text-xs text-neutral-400">This week</p>
         </div>
-        <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5 transition-shadow hover:shadow-md border-l-4 border-l-accent">
-          <p className="text-sm font-medium text-neutral-400">Subscription</p>
-          <p className="mt-2 text-2xl font-bold text-white">
+        <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
+            Subscription
+          </p>
+          <p className="mt-3 text-2xl font-semibold text-white">
             {isSubscribed ? "Active" : "Inactive"}
           </p>
-          <p className="mt-1 text-xs text-neutral-500">
-            {isSubscribed ? "Full access to content" : "Upgrade for full access"}
+          <p className="mt-1 text-xs text-neutral-400">
+            {isSubscribed ? "Full access" : "Upgrade to unlock everything"}
           </p>
         </div>
       </section>
 
-      {/* Quick actions */}
-      <section className="mt-8" aria-label="Quick actions">
-        <h2 className="text-lg font-semibold text-white">Quick actions</h2>
-        <p className="mt-1 text-sm text-neutral-400">
-          Jump to browse content or manage your plan.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/browse">
-            <Button type="button" size="lg">
-              Browse content
-            </Button>
-          </Link>
-          <Link href="/subscription">
-            <Button type="button" variant="outline" size="lg">
-              View plans
-            </Button>
-          </Link>
+      <section
+        className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"
+        aria-label="Home highlights"
+      >
+        <div className="rounded-2xl border border-neutral-700/50 bg-neutral-900/60 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Continue watching
+              </h2>
+              <p className="mt-1 text-sm text-neutral-400">
+                Jump back into your current sessions.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/continue-watching"
+              className="text-xs font-semibold text-neutral-400 hover:text-accent"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="mt-6 space-y-4">
+            {[
+              { title: "City of Echoes", meta: "S1 · Episode 4" },
+              { title: "Afterglow", meta: "S2 · Episode 1" },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-neutral-400">{item.meta}</p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline">
+                    Resume
+                  </Button>
+                </div>
+                <div className="mt-3 h-1.5 rounded-full bg-neutral-800">
+                  <div className="h-1.5 w-1/2 rounded-full bg-accent" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </section>
 
-      {/* Continue watching / Recent activity placeholder */}
-      <section className="mt-10 rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-6 sm:p-8" aria-label="Continue watching">
-        <h2 className="text-lg font-semibold text-white">Continue watching</h2>
-        <p className="mt-1 text-sm text-neutral-400">
-          Pick up where you left off. Watched content will appear here.
-        </p>
-        <div className="mt-6 flex flex-col items-center justify-center rounded-lg border border-dashed border-neutral-600 py-12 text-center">
-          <span className="text-4xl text-neutral-600" aria-hidden>
-            ▶
-          </span>
-          <p className="mt-3 text-sm font-medium text-neutral-400">
-            No recent activity
-          </p>
-          <p className="mt-1 text-xs text-neutral-500">
-            Start watching from Browse to see your progress here.
-          </p>
-          <Link href="/browse" className="mt-4">
-            <Button type="button" variant="outline" size="sm">
-              Go to Browse
-            </Button>
-          </Link>
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-neutral-700/50 bg-neutral-900/60 p-6">
+            <h2 className="text-lg font-semibold text-white">
+              Explore something new
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              Search creators, genres, and curated collections.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {[
+                "Live shows",
+                "Documentaries",
+                "Short films",
+                "Creator picks",
+              ].map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full border border-neutral-700/70 bg-neutral-950/60 px-3 py-1 text-xs text-neutral-300"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            <Link href="/dashboard/explore" className="mt-5 inline-flex">
+              <Button type="button" size="sm">
+                Open explore
+              </Button>
+            </Link>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-700/50 bg-neutral-900/60 p-6">
+            <h2 className="text-lg font-semibold text-white">
+              My list preview
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              Titles you saved for later.
+            </p>
+            <div className="mt-5 space-y-3">
+              {["Neon Nights", "Wildlight", "Analog Dreams"].map((title) => (
+                <div
+                  key={title}
+                  className="flex items-center justify-between rounded-xl border border-neutral-700/60 bg-neutral-950/60 px-4 py-3"
+                >
+                  <p className="text-sm font-medium text-white">{title}</p>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-neutral-400 hover:text-accent"
+                  >
+                    Play
+                  </button>
+                </div>
+              ))}
+            </div>
+            <Link href="/dashboard/my-list" className="mt-5 inline-flex">
+              <Button type="button" variant="outline" size="sm">
+                View full list
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

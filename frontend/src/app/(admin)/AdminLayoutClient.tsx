@@ -9,7 +9,6 @@ import { AdminContentProvider } from "@/contexts";
 import { useAuth } from "@/contexts";
 import { SITE_BRAND } from "@/lib/seo";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui";
 import { fetchBranding } from "@/lib/branding";
 
 function MenuIcon({ className }: { className?: string }) {
@@ -49,21 +48,7 @@ function CloseIcon({ className }: { className?: string }) {
   );
 }
 
-const NAV_ITEMS = [
-  { href: "/admin", label: "Overview", icon: IconOverview },
-  { href: "/admin/content", label: "Content", icon: IconContent },
-  { href: "/admin/content/upload", label: "Upload", icon: IconUpload },
-  { href: "/admin/categories", label: "Categories", icon: IconCategories },
-  {
-    href: "/admin/subscriptions",
-    label: "Subscriptions",
-    icon: IconSubscriptions,
-  },
-  { href: "/admin/users", label: "Users", icon: IconUsers },
-  { href: "/admin/settings", label: "Settings", icon: IconSettings },
-] as const;
-
-function IconOverview({ className }: { className?: string }) {
+function IconDashboard({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -76,12 +61,12 @@ function IconOverview({ className }: { className?: string }) {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+        d="M4 6a2 2 0 012-2h4a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v6a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h4a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zm10 3v-2"
       />
     </svg>
   );
 }
-function IconContent({ className }: { className?: string }) {
+function IconLibrary({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -94,13 +79,13 @@ function IconContent({ className }: { className?: string }) {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+        d="M4 7h16M4 12h16M4 17h16"
       />
     </svg>
   );
 }
 
-function IconSubscriptions({ className }: { className?: string }) {
+function IconPlans({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -113,11 +98,12 @@ function IconSubscriptions({ className }: { className?: string }) {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M3 8h18M3 16h18M7 4h10M7 20h10"
+        d="M3 7h18M5 11h14M5 15h8"
       />
     </svg>
   );
 }
+
 function IconUpload({ className }: { className?: string }) {
   return (
     <svg
@@ -136,6 +122,83 @@ function IconUpload({ className }: { className?: string }) {
     </svg>
   );
 }
+
+function IconTransactions({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7 7h10M7 11h10M7 15h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
+      />
+    </svg>
+  );
+}
+
+function IconAnalytics({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 20V4m4 16V10m4 10V6m4 14v-8m4 8v-4"
+      />
+    </svg>
+  );
+}
+
+function IconLogs({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5 7h14M5 12h14M5 17h10"
+      />
+    </svg>
+  );
+}
+
+function IconHealth({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 12h4l2-4 4 8 2-4h4"
+      />
+    </svg>
+  );
+}
+
 function IconUsers({ className }: { className?: string }) {
   return (
     <svg
@@ -197,6 +260,97 @@ function IconSettings({ className }: { className?: string }) {
     </svg>
   );
 }
+
+function IconLogout({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16 17l5-5-5-5M21 12H9"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M13 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h6a2 2 0 002-2v-2"
+      />
+    </svg>
+  );
+}
+
+const NAV_SECTIONS = [
+  {
+    label: null,
+    items: [{ href: "/admin", label: "Dashboard", icon: IconDashboard }],
+  },
+  {
+    label: "Content",
+    items: [
+      { href: "/admin/content", label: "Library", icon: IconLibrary },
+      { href: "/admin/categories", label: "Categories", icon: IconCategories },
+      {
+        href: "/admin/content/upload",
+        label: "Upload video",
+        icon: IconUpload,
+      },
+    ],
+  },
+  {
+    label: "Users",
+    items: [{ href: "/admin/users", label: "User List", icon: IconUsers }],
+  },
+  {
+    label: "Subscriptions",
+    items: [
+      { href: "/admin/subscriptions/plans", label: "Plans", icon: IconPlans },
+      {
+        href: "/admin/subscriptions/transactions",
+        label: "Transactions",
+        icon: IconTransactions,
+      },
+    ],
+  },
+  {
+    label: "Analytics",
+    items: [
+      { href: "/admin/analytics/users", label: "Users", icon: IconAnalytics },
+      {
+        href: "/admin/analytics/content",
+        label: "Content",
+        icon: IconAnalytics,
+      },
+      {
+        href: "/admin/analytics/revenue",
+        label: "Revenue",
+        icon: IconAnalytics,
+      },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [
+      {
+        href: "/admin/settings/app",
+        label: "App Settings",
+        icon: IconSettings,
+      },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/admin/system/logs", label: "Logs", icon: IconLogs },
+      { href: "/admin/system/health", label: "Health", icon: IconHealth },
+    ],
+  },
+] as const;
 
 /**
  * Protected admin layout with sidebar. Only renders when user is authenticated
@@ -260,10 +414,13 @@ export default function AdminLayoutClient({
           className="flex items-center gap-3 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-off-black"
         >
           {logoUrl ? (
-            <img
+            <Image
               src={logoUrl}
               alt=""
+              width={32}
+              height={32}
               className="h-8 w-8 rounded object-contain"
+              unoptimized
             />
           ) : (
             <Image
@@ -287,53 +444,69 @@ export default function AdminLayoutClient({
           <CloseIcon className="h-6 w-6" />
         </button>
       </div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          let isActive = false;
-          if (href === "/admin") {
-            isActive = pathname === "/admin";
-          } else if (href === "/admin/content") {
-            isActive =
-              pathname === "/admin/content" ||
-              (pathname.startsWith("/admin/content/") &&
-                !pathname.startsWith("/admin/content/upload"));
-          } else if (href === "/admin/content/upload") {
-            isActive = pathname.startsWith("/admin/content/upload");
-          } else {
-            isActive = pathname.startsWith(href);
-          }
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                "border-l-2",
-                isActive
-                  ? "border-accent bg-accent/10 text-white"
-                  : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
-              )}
-              aria-current={isActive ? "page" : undefined}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="border-t border-neutral-700/50 p-3 space-y-2">
-        <Button
+      <nav className="flex-1 space-y-6 overflow-y-auto p-3">
+        {NAV_SECTIONS.map((section, index) => (
+          <div
+            key={section.label ?? `section-${index}`}
+            className="space-y-0.5"
+          >
+            {section.label ? (
+              <p className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-neutral-600">
+                {section.label}
+              </p>
+            ) : null}
+            {section.items.map(({ href, label, icon: Icon }) => {
+              let isActive = false;
+              if (href === "/admin") {
+                isActive = pathname === "/admin";
+              } else if (href === "/admin/content") {
+                isActive =
+                  pathname === "/admin/content" ||
+                  pathname.startsWith("/admin/content/");
+              } else if (href === "/admin/subscriptions/transactions") {
+                isActive =
+                  pathname.startsWith("/admin/subscriptions/transactions") ||
+                  pathname === "/admin/subscriptions";
+              } else if (href === "/admin/settings/app") {
+                isActive =
+                  pathname.startsWith("/admin/settings/app") ||
+                  pathname === "/admin/settings";
+              } else {
+                isActive = pathname.startsWith(href);
+              }
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "border-l-2",
+                    isActive
+                      ? "border-accent bg-accent/10 text-white"
+                      : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
+                  )}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
+                  {label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-neutral-300"
           onClick={() => {
             logout();
             router.replace("/admin/login");
           }}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800/50 hover:text-accent"
         >
-          Sign out
-        </Button>
+          <IconLogout className="h-5 w-5 flex-shrink-0 opacity-80" />
+          Logout
+        </button>
+      </nav>
+      <div className="border-t border-neutral-700/50 p-3">
         <Link
           href="/"
           className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-accent"

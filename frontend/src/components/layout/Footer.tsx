@@ -30,10 +30,13 @@ export function Footer() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-sm text-neutral-300">
           <div className="flex items-center gap-3">
             {logoUrl ? (
-              <img
+              <Image
                 src={logoUrl}
                 alt="BRICK TALES.TV"
+                width={100}
+                height={26}
                 className="h-6 w-auto object-contain opacity-90"
+                unoptimized
               />
             ) : (
               <Image

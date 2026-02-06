@@ -8,7 +8,7 @@ import { fetchBranding } from "@/lib/branding";
 import { getLoginOrigin } from "@/lib/mock-auth";
 import { Button } from "@/components/ui";
 
-const LOGO_HEIGHT = 36;
+const LOGO_HEIGHT = 50;
 const LOGO_WIDTH = 140;
 
 function NavContent({
@@ -155,10 +155,13 @@ export function Header() {
           aria-label="BRICK TALES.TV home"
         >
           {logoUrl ? (
-            <img
+            <Image
               src={logoUrl}
               alt="BRICK TALES.TV"
+              width={LOGO_WIDTH}
+              height={LOGO_HEIGHT}
               className="h-9 w-auto object-contain"
+              unoptimized
             />
           ) : (
             <Image

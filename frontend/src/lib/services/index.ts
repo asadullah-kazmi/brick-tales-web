@@ -16,5 +16,11 @@ export type {
   DashboardStatsDto,
   AdminUserDto,
   AdminContentItemDto,
+  AdminPlanDto,
+  AdminUsersAnalyticsDto,
+  AdminContentAnalyticsDto,
+  AdminRevenueAnalyticsDto,
+  AdminSystemHealthDto,
+  AdminSystemLogDto,
 } from "./admin.service";
 export { siteService } from "./site.service";

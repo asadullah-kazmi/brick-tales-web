@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -23,6 +24,7 @@ import { useAuth } from "@/contexts";
 
 export default function SignupPage() {
   const { login } = useAuth();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +37,6 @@ export default function SignupPage() {
   }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   function runValidation(): boolean {
     const nameError = validateRequired(name, "Name");
@@ -64,42 +65,12 @@ export default function SignupPage() {
         name: response.user.name,
         role: response.user.role,
       });
-      setSuccess(true);
+      router.replace("/dashboard");
     } catch (err) {
       setSubmitError(getApiErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
-  }
-
-  if (success) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Account created</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Your account has been created. You can sign in or go to the
-            dashboard.
-          </p>
-        </CardContent>
-        <CardFooter className="flex gap-2">
-          <Link
-            href="/dashboard"
-            className="inline-flex h-8 items-center justify-center rounded-md bg-neutral-900 px-3 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex h-8 items-center justify-center rounded-md px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          >
-            Sign in
-          </Link>
-        </CardFooter>
-      </Card>
-    );
   }
 
   return (

@@ -8,7 +8,6 @@ import { ProtectedRoute } from "@/components/auth";
 import { useAuth } from "@/contexts";
 import { SITE_BRAND } from "@/lib/seo";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui";
 import { fetchBranding } from "@/lib/branding";
 
 function MenuIcon({ className }: { className?: string }) {
@@ -48,7 +47,7 @@ function CloseIcon({ className }: { className?: string }) {
   );
 }
 
-function IconOverview({ className }: { className?: string }) {
+function IconHome({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -61,12 +60,12 @@ function IconOverview({ className }: { className?: string }) {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+        d="M3 11l9-7 9 7v9a2 2 0 01-2 2h-4a2 2 0 01-2-2v-4H11v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-9z"
       />
     </svg>
   );
 }
-function IconLibrary({ className }: { className?: string }) {
+function IconSearch({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -79,7 +78,61 @@ function IconLibrary({ className }: { className?: string }) {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+        d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
+      />
+    </svg>
+  );
+}
+function IconList({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+      />
+    </svg>
+  );
+}
+function IconPlay({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 5l12 7-12 7V5z"
+      />
+    </svg>
+  );
+}
+function IconCard({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 7h18M5 11h4m-4 6h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
       />
     </svg>
   );
@@ -107,10 +160,43 @@ function IconSettings({ className }: { className?: string }) {
     </svg>
   );
 }
+function IconLogout({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16 17l5-5-5-5M21 12H9"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M13 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h6a2 2 0 002-2v-2"
+      />
+    </svg>
+  );
+}
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Overview", icon: IconOverview },
-  { href: "/dashboard/library", label: "Library", icon: IconLibrary },
+const PRIMARY_NAV_ITEMS = [
+  { href: "/dashboard", label: "Home", icon: IconHome },
+  { href: "/dashboard/explore", label: "Search / Explore", icon: IconSearch },
+  { href: "/dashboard/my-list", label: "My List", icon: IconList },
+  {
+    href: "/dashboard/continue-watching",
+    label: "Continue Watching",
+    icon: IconPlay,
+  },
+] as const;
+
+const SECONDARY_NAV_ITEMS = [
+  { href: "/dashboard/subscription", label: "Subscription", icon: IconCard },
   { href: "/dashboard/settings", label: "Settings", icon: IconSettings },
 ] as const;
 
@@ -162,10 +248,13 @@ export default function DashboardLayoutClient({
           className="flex items-center gap-3 rounded focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-off-black"
         >
           {logoUrl ? (
-            <img
+            <Image
               src={logoUrl}
               alt=""
+              width={32}
+              height={32}
               className="h-8 w-8 rounded object-contain"
+              unoptimized
             />
           ) : (
             <Image
@@ -189,44 +278,70 @@ export default function DashboardLayoutClient({
           <CloseIcon className="h-6 w-6" />
         </button>
       </div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive =
-            href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                "border-l-2",
-                isActive
-                  ? "border-accent bg-accent/10 text-white"
-                  : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
-              )}
-              aria-current={isActive ? "page" : undefined}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
-              {label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-6 overflow-y-auto p-3">
+        <div className="space-y-0.5">
+          {PRIMARY_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive =
+              href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "border-l-2",
+                  isActive
+                    ? "border-accent bg-accent/10 text-white"
+                    : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
+                )}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+        <div className="space-y-0.5">
+          <p className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-neutral-600">
+            Account
+          </p>
+          {SECONDARY_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "border-l-2",
+                  isActive
+                    ? "border-accent bg-accent/10 text-white"
+                    : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
+                )}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
+                {label}
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              router.replace("/login");
+            }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800/50 hover:text-accent"
+          >
+            <IconLogout className="h-5 w-5 flex-shrink-0 opacity-80" />
+            Logout
+          </button>
+        </div>
       </nav>
-      <div className="border-t border-neutral-700/50 p-3 space-y-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-neutral-300"
-          onClick={() => {
-            logout();
-            router.replace("/login");
-          }}
-        >
-          Sign out
-        </Button>
+      <div className="border-t border-neutral-700/50 p-3">
         <Link
           href="/"
           className="flex items-center rounded-lg px-3 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800/50 hover:text-accent"

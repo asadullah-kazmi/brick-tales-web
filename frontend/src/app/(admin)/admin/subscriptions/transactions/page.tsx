@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { adminService } from "@/lib/services";
-import type { AdminSubscriptionsResponseDto } from "@/types/api";
+import type {
+  AdminSubscriptionDto,
+  AdminSubscriptionsResponseDto,
+} from "@/types/api";
 import { Button, Loader } from "@/components/ui";
 
 function formatDate(iso: string): string {
@@ -18,7 +20,7 @@ function formatDate(iso: string): string {
   }
 }
 
-export default function AdminSubscriptionsOverviewPage() {
+export default function AdminTransactionsPage() {
   const [data, setData] = useState<AdminSubscriptionsResponseDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +29,11 @@ export default function AdminSubscriptionsOverviewPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminService.getSubscriptions(1, 10);
+      const res = await adminService.getSubscriptions(1, 50);
       setData(res);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load subscriptions.",
+        err instanceof Error ? err.message : "Failed to load transactions.",
       );
     } finally {
       setLoading(false);
@@ -45,7 +47,7 @@ export default function AdminSubscriptionsOverviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12">
-        <Loader size="lg" label="Loading subscriptions…" />
+        <Loader size="lg" label="Loading transactions…" />
       </div>
     );
   }
@@ -67,29 +69,17 @@ export default function AdminSubscriptionsOverviewPage() {
   }
 
   const summary = data?.summary;
-  const recent = data?.subscriptions ?? [];
+  const subscriptions: AdminSubscriptionDto[] = data?.subscriptions ?? [];
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            Subscriptions
-          </h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            Manage plans, billing, and recent transactions.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/admin/subscriptions/plans">
-            <Button type="button" variant="outline">
-              View plans
-            </Button>
-          </Link>
-          <Link href="/admin/subscriptions/transactions">
-            <Button type="button">View transactions</Button>
-          </Link>
-        </div>
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          Transactions
+        </h1>
+        <p className="mt-1 text-sm text-neutral-400">
+          Track subscription status changes and billing periods.
+        </p>
       </header>
 
       {summary ? (
@@ -134,17 +124,6 @@ export default function AdminSubscriptionsOverviewPage() {
       ) : null}
 
       <section className="overflow-hidden rounded-xl border border-neutral-700/50 bg-neutral-900/50">
-        <div className="flex items-center justify-between border-b border-neutral-700/50 px-4 py-3">
-          <h2 className="text-sm font-semibold text-white">
-            Recent transactions
-          </h2>
-          <Link
-            href="/admin/subscriptions/transactions"
-            className="text-xs font-semibold text-neutral-400 hover:text-accent"
-          >
-            View all
-          </Link>
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
@@ -164,14 +143,14 @@ export default function AdminSubscriptionsOverviewPage() {
               </tr>
             </thead>
             <tbody>
-              {recent.length === 0 ? (
+              {subscriptions.length === 0 ? (
                 <tr>
                   <td className="px-4 py-6 text-neutral-400" colSpan={6}>
                     No transactions yet.
                   </td>
                 </tr>
               ) : (
-                recent.map((sub) => (
+                subscriptions.map((sub) => (
                   <tr
                     key={sub.id}
                     className="border-b border-neutral-700/50 last:border-0"

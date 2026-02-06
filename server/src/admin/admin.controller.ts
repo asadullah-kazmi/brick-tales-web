@@ -28,6 +28,13 @@ import type { AdminCategoryDto } from './dto/admin-category.dto';
 import { CreateAdminCategoryDto } from './dto/create-admin-category.dto';
 import { UpdateAdminVideoDto } from './dto/update-admin-video.dto';
 import type { AdminSubscriptionsResponseDto } from './dto/admin-subscription.dto';
+import type { AdminPlanDto } from './dto/admin-plan.dto';
+import type {
+  AdminUsersAnalyticsDto,
+  AdminContentAnalyticsDto,
+  AdminRevenueAnalyticsDto,
+} from './dto/admin-analytics.dto';
+import type { AdminSystemHealthDto, AdminSystemLogDto } from './dto/admin-system.dto';
 
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/mkv']);
 const THUMBNAIL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -111,6 +118,15 @@ export class AdminController {
     const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
     return this.adminService.getSubscriptions(pageNum, limitNum);
+  }
+
+  /**
+   * List subscription plans with active subscriber counts.
+   */
+  @Get('plans')
+  async getPlans(@CurrentUser() user: User): Promise<AdminPlanDto[]> {
+    ensureAdmin(user);
+    return this.adminService.getPlans();
   }
 
   /**
@@ -275,5 +291,50 @@ export class AdminController {
   async getOfflineAnalytics(@CurrentUser() user: User): Promise<OfflineAnalyticsDto> {
     ensureAdmin(user);
     return this.adminService.getOfflineAnalytics();
+  }
+
+  /**
+   * User analytics: new users, active users, sign-up trend.
+   */
+  @Get('analytics/users')
+  async getUsersAnalytics(@CurrentUser() user: User): Promise<AdminUsersAnalyticsDto> {
+    ensureAdmin(user);
+    return this.adminService.getUsersAnalytics();
+  }
+
+  /**
+   * Content analytics: views and publishing stats.
+   */
+  @Get('analytics/content')
+  async getContentAnalytics(@CurrentUser() user: User): Promise<AdminContentAnalyticsDto> {
+    ensureAdmin(user);
+    return this.adminService.getContentAnalytics();
+  }
+
+  /**
+   * Revenue analytics: active revenue and plan breakdown.
+   */
+  @Get('analytics/revenue')
+  async getRevenueAnalytics(@CurrentUser() user: User): Promise<AdminRevenueAnalyticsDto> {
+    ensureAdmin(user);
+    return this.adminService.getRevenueAnalytics();
+  }
+
+  /**
+   * System health snapshot.
+   */
+  @Get('system/health')
+  async getSystemHealth(@CurrentUser() user: User): Promise<AdminSystemHealthDto> {
+    ensureAdmin(user);
+    return this.adminService.getSystemHealth();
+  }
+
+  /**
+   * System activity logs.
+   */
+  @Get('system/logs')
+  async getSystemLogs(@CurrentUser() user: User): Promise<AdminSystemLogDto[]> {
+    ensureAdmin(user);
+    return this.adminService.getSystemLogs();
   }
 }

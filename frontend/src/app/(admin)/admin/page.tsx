@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { analyticsService } from "@/lib/services";
-import type { MockDashboardStats } from "@/lib/mock-analytics";
+import { adminService } from "@/lib/services";
+import type { DashboardStatsDto } from "@/lib/services";
 import { Loader } from "@/components/ui";
 
 export default function AdminPage() {
-  const [stats, setStats] = useState<MockDashboardStats | null>(null);
+  const [stats, setStats] = useState<DashboardStatsDto | null>(null);
   const [videosByCategory, setVideosByCategory] = useState<
     { label: string; value: number }[]
   >([]);
@@ -16,12 +16,9 @@ export default function AdminPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [dashboardStats, categoryData] = await Promise.all([
-          analyticsService.getDashboardStats(),
-          analyticsService.getVideosByCategory(),
-        ]);
+        const dashboardStats = await adminService.getStats();
         setStats(dashboardStats);
-        setVideosByCategory(categoryData);
+        setVideosByCategory(dashboardStats.videosByCategory ?? []);
       } finally {
         setLoading(false);
       }
