@@ -1,4 +1,4 @@
-import { VideoResponseDto } from './video-response.dto';
+import { ContentSummaryDto } from './content-summary.dto';
 
 export class PaginationMetaDto {
   page: number;
@@ -9,7 +9,7 @@ export class PaginationMetaDto {
   hasPrev: boolean;
 }
 
-export class VideoListResponseDto {
-  videos: VideoResponseDto[];
+export class ContentListResponseDto {
+  items: ContentSummaryDto[];
   meta: PaginationMetaDto;
 }

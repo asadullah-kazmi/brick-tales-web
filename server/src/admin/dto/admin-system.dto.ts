@@ -4,7 +4,8 @@ export interface AdminSystemHealthDto {
   checkedAt: string;
   counts: {
     users: number;
-    videos: number;
+    content: number;
+    episodes: number;
     subscriptions: number;
     downloads: number;
   };
@@ -13,7 +14,7 @@ export interface AdminSystemHealthDto {
 
 export interface AdminSystemLogDto {
   id: string;
-  type: 'user' | 'video' | 'subscription';
+  type: 'user' | 'content' | 'subscription';
   message: string;
   createdAt: string;
 }

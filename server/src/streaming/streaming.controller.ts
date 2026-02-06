@@ -17,12 +17,14 @@ export class StreamingController {
   @Get('play-url')
   async getPlayUrl(
     @CurrentUser() user: User,
-    @Query('videoId') videoId: string,
+    @Query('episodeId') episodeId: string,
+    @Query('videoId') legacyVideoId?: string,
   ): Promise<PlayUrlResponseDto> {
-    if (!videoId?.trim()) {
-      throw new UnauthorizedException('videoId is required');
+    const resolvedId = episodeId?.trim() || legacyVideoId?.trim();
+    if (!resolvedId) {
+      throw new UnauthorizedException('episodeId is required');
     }
-    return this.streamingService.getSignedPlayUrl(videoId.trim(), user.id);
+    return this.streamingService.getSignedPlayUrl(resolvedId, user.id);
   }
 
   /**
@@ -30,9 +32,9 @@ export class StreamingController {
    * Use the URL returned from GET /streaming/play-url.
    */
   @Public()
-  @Get('play/:videoId')
+  @Get('play/:episodeId')
   async play(
-    @Param('videoId') videoId: string,
+    @Param('episodeId') episodeId: string,
     @Query('token') token: string,
     @Res() res: Response,
   ): Promise<void> {
@@ -40,12 +42,13 @@ export class StreamingController {
       res.status(401).json({ message: 'Token is required' });
       return;
     }
-    const payload = this.streamingService.verifyPlayToken(token.trim(), videoId);
+    const payload = this.streamingService.verifyPlayToken(token.trim(), episodeId);
     if (!payload) {
       res.status(403).json({ message: 'Invalid or expired play token' });
       return;
     }
-    const streamUrl = await this.streamingService.getVideoStreamUrl(videoId);
+    await this.streamingService.recordEpisodeView(payload.userId, episodeId);
+    const streamUrl = await this.streamingService.getEpisodeStreamUrl(episodeId);
     res.redirect(302, streamUrl);
   }
 }

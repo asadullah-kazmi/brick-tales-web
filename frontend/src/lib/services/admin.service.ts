@@ -23,12 +23,15 @@ import type {
 /** Dashboard stats from GET /admin/stats */
 export interface DashboardStatsDto {
   totalUsers: number;
-  totalVideos: number;
+  totalContent: number;
+  totalVideos?: number;
   totalSubscribers: number;
   usersTrend?: string;
+  contentTrend?: string;
   videosTrend?: string;
   subscribersTrend?: string;
-  videosByCategory: { label: string; value: number }[];
+  contentByCategory: { label: string; value: number }[];
+  videosByCategory?: { label: string; value: number }[];
 }
 
 /** User row from GET /admin/users */

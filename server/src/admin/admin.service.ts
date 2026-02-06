@@ -3,10 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
 import type { AdminContentItemDto } from './dto/admin-content.dto';
-import type { CreateAdminVideoDto } from './dto/create-admin-video.dto';
+import type { CreateAdminContentDto } from './dto/create-admin-content.dto';
+import type { CreateAdminSeasonDto } from './dto/create-admin-season.dto';
+import type { CreateAdminEpisodeDto } from './dto/create-admin-episode.dto';
+import type { CreateAdminTrailerDto } from './dto/create-admin-trailer.dto';
 import type { AdminCategoryDto } from './dto/admin-category.dto';
 import type { CreateAdminCategoryDto } from './dto/create-admin-category.dto';
-import type { UpdateAdminVideoDto } from './dto/update-admin-video.dto';
+import type { UpdateAdminContentDto } from './dto/update-admin-content.dto';
 import type {
   AdminSubscriptionDto,
   AdminSubscriptionsResponseDto,
@@ -17,9 +20,20 @@ import type {
   AdminContentAnalyticsDto,
   AdminRevenueAnalyticsDto,
   CategoryCountDto,
-  TopVideoDto,
+  TopEpisodeDto,
 } from './dto/admin-analytics.dto';
 import type { AdminSystemHealthDto, AdminSystemLogDto } from './dto/admin-system.dto';
+
+const ContentType = {
+  MOVIE: 'MOVIE',
+  DOCUMENTARY: 'DOCUMENTARY',
+  SERIES: 'SERIES',
+  ANIMATION: 'ANIMATION',
+  TRAILER: 'TRAILER',
+  SHORT: 'SHORT',
+} as const;
+
+type ContentType = (typeof ContentType)[keyof typeof ContentType];
 
 export interface DownloadsPerPlanDto {
   planId: string;
@@ -41,6 +55,44 @@ function formatDurationSeconds(seconds: number): string {
   const s = Math.floor(seconds % 60);
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function toAdminContentItemDto(content: any): AdminContentItemDto {
+  const duration =
+    typeof content.duration === 'number' ? formatDurationSeconds(content.duration) : undefined;
+  return {
+    id: content.id,
+    title: content.title,
+    description: content.description ?? undefined,
+    type: content.type,
+    thumbnailUrl: content.thumbnailUrl,
+    posterUrl: content.posterUrl ?? undefined,
+    releaseYear: content.releaseYear,
+    ageRating: content.ageRating,
+    duration,
+    trailerId: content.trailerId ?? undefined,
+    category: content.category?.name ?? undefined,
+    isPublished: content.isPublished,
+    createdAt: content.createdAt.toISOString(),
+    updatedAt: content.updatedAt?.toISOString(),
+    seasons: content.seasons
+      ? content.seasons.map((season: any) => ({
+          id: season.id,
+          seasonNumber: season.seasonNumber,
+          title: season.title,
+          episodeCount: season._count?.episodes ?? 0,
+        }))
+      : undefined,
+    episodes: content.episodes
+      ? content.episodes.map((episode: any) => ({
+          id: episode.id,
+          seasonId: episode.seasonId ?? undefined,
+          episodeNumber: episode.episodeNumber,
+          title: episode.title,
+          duration: formatDurationSeconds(episode.duration),
+        }))
+      : undefined,
+  };
 }
 
 function parseDurationToSeconds(duration: string): number {
@@ -96,29 +148,29 @@ export class AdminService {
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
     const now = new Date();
-    const [totalUsers, totalVideos, totalSubscribers, videos] = await Promise.all([
+    const [totalUsers, totalContent, totalSubscribers, contentRows] = await Promise.all([
       this.prisma.user.count(),
-      this.prisma.video.count(),
+      (this.prisma as any).content.count(),
       this.prisma.subscription.count({
         where: { status: 'ACTIVE', endDate: { gte: now } },
       }),
-      this.prisma.video.findMany({
+      (this.prisma as any).content.findMany({
         select: { category: { select: { name: true } } },
       }),
     ]);
     const categoryCounts = new Map<string, number>();
-    for (const v of videos) {
-      const name = v.category.name;
+    for (const row of contentRows) {
+      const name = row.category?.name ?? 'Uncategorized';
       categoryCounts.set(name, (categoryCounts.get(name) ?? 0) + 1);
     }
-    const videosByCategory = Array.from(categoryCounts.entries())
+    const contentByCategory = Array.from(categoryCounts.entries())
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => b.value - a.value);
     return {
       totalUsers,
-      totalVideos,
+      totalContent,
       totalSubscribers,
-      videosByCategory,
+      contentByCategory,
     };
   }
 
@@ -146,20 +198,15 @@ export class AdminService {
   }
 
   async getContentList(): Promise<AdminContentItemDto[]> {
-    const videos = await this.prisma.video.findMany({
-      include: { category: true },
+    const contentItems = await (this.prisma as any).content.findMany({
+      include: {
+        category: true,
+        seasons: { include: { _count: { select: { episodes: true } } } },
+        episodes: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
-    return videos.map((v) => ({
-      id: v.id,
-      title: v.title,
-      duration: formatDurationSeconds(v.duration),
-      description: v.description ?? undefined,
-      category: v.category.name,
-      published: !!v.publishedAt,
-      publishedAt: v.publishedAt?.toISOString(),
-      createdAt: v.createdAt.toISOString(),
-    }));
+    return contentItems.map((content: any) => toAdminContentItemDto(content));
   }
 
   async getSubscriptions(page = 1, limit = 20): Promise<AdminSubscriptionsResponseDto> {
@@ -223,21 +270,16 @@ export class AdminService {
   }
 
   async getContentById(id: string): Promise<AdminContentItemDto | null> {
-    const video = await this.prisma.video.findUnique({
+    const content = await (this.prisma as any).content.findUnique({
       where: { id },
-      include: { category: true },
+      include: {
+        category: true,
+        seasons: { include: { _count: { select: { episodes: true } } } },
+        episodes: true,
+      },
     });
-    if (!video) return null;
-    return {
-      id: video.id,
-      title: video.title,
-      duration: formatDurationSeconds(video.duration),
-      description: video.description ?? undefined,
-      category: video.category.name,
-      published: !!video.publishedAt,
-      publishedAt: video.publishedAt?.toISOString(),
-      createdAt: video.createdAt.toISOString(),
-    };
+    if (!content) return null;
+    return toAdminContentItemDto(content);
   }
 
   async getCategories(): Promise<AdminCategoryDto[]> {
@@ -245,6 +287,23 @@ export class AdminService {
       orderBy: { name: 'asc' },
     });
     return categories.map(toAdminCategoryDto);
+  }
+
+  private async resolveCategoryId(
+    categoryId?: string,
+    categoryName?: string,
+  ): Promise<string | null> {
+    const trimmedId = categoryId?.trim();
+    if (trimmedId) return trimmedId;
+    const name = categoryName?.trim();
+    if (!name) return null;
+    const slug = slugify(name) || 'uncategorized';
+    const existing = await this.prisma.category.findUnique({ where: { slug } });
+    if (existing) return existing.id;
+    const created = await this.prisma.category.create({
+      data: { name, slug },
+    });
+    return created.id;
   }
 
   async createCategory(dto: CreateAdminCategoryDto): Promise<AdminCategoryDto> {
@@ -264,55 +323,77 @@ export class AdminService {
   }
 
   async deleteCategory(id: string): Promise<void> {
-    const usedCount = await this.prisma.video.count({ where: { categoryId: id } });
+    const usedCount = await (this.prisma as any).content.count({ where: { categoryId: id } });
     if (usedCount > 0) {
-      throw new BadRequestException('Category has videos and cannot be deleted');
+      throw new BadRequestException('Category has content and cannot be deleted');
     }
     await this.prisma.category.delete({ where: { id } });
   }
-
-  async updateVideoPublish(id: string, published: boolean): Promise<AdminContentItemDto | null> {
-    const video = await this.prisma.video.findUnique({
+  async publishContent(id: string, isPublished: boolean): Promise<AdminContentItemDto | null> {
+    const content = await (this.prisma as any).content.findUnique({
       where: { id },
       include: { category: true },
     });
-    if (!video) return null;
-    const updated = await this.prisma.video.update({
+    if (!content) return null;
+    const updated = await (this.prisma as any).content.update({
       where: { id },
-      data: { publishedAt: published ? new Date() : null },
+      data: { isPublished },
       include: { category: true },
     });
-    return {
-      id: updated.id,
-      title: updated.title,
-      duration: formatDurationSeconds(updated.duration),
-      description: updated.description ?? undefined,
-      category: updated.category.name,
-      published: !!updated.publishedAt,
-      publishedAt: updated.publishedAt?.toISOString(),
-      createdAt: updated.createdAt.toISOString(),
-    };
+    return toAdminContentItemDto(updated);
   }
 
-  async updateVideo(id: string, dto: UpdateAdminVideoDto): Promise<AdminContentItemDto | null> {
-    const video = await this.prisma.video.findUnique({
+  async updateContent(id: string, dto: UpdateAdminContentDto): Promise<AdminContentItemDto | null> {
+    const content = await (this.prisma as any).content.findUnique({
       where: { id },
       include: { category: true },
     });
-    if (!video) return null;
+    if (!content) return null;
 
     const data: {
       title?: string;
       description?: string | null;
-      duration?: number;
-      categoryId?: string;
-      publishedAt?: Date | null;
+      type?: ContentType;
+      thumbnailUrl?: string;
+      posterUrl?: string | null;
+      releaseYear?: number;
+      ageRating?: string;
+      duration?: number | null;
+      categoryId?: string | null;
     } = {};
 
     if (typeof dto.title === 'string') {
       const title = dto.title.trim();
       if (!title) throw new BadRequestException('Title is required');
       data.title = title;
+    }
+
+    if (typeof dto.description === 'string') {
+      const desc = dto.description.trim();
+      data.description = desc ? desc : null;
+    }
+
+    if (typeof dto.type === 'string') {
+      data.type = dto.type as ContentType;
+    }
+
+    if (typeof dto.thumbnailKey === 'string') {
+      data.thumbnailUrl = dto.thumbnailKey.trim();
+    }
+
+    if (typeof dto.posterKey === 'string') {
+      const poster = dto.posterKey.trim();
+      data.posterUrl = poster ? poster : null;
+    }
+
+    if (typeof dto.releaseYear === 'number') {
+      data.releaseYear = dto.releaseYear;
+    }
+
+    if (typeof dto.ageRating === 'string') {
+      const rating = dto.ageRating.trim();
+      if (!rating) throw new BadRequestException('Age rating is required');
+      data.ageRating = rating;
     }
 
     if (typeof dto.duration === 'string') {
@@ -323,88 +404,253 @@ export class AdminService {
       data.duration = seconds;
     }
 
-    if (typeof dto.description === 'string') {
-      const desc = dto.description.trim();
-      data.description = desc ? desc : null;
+    if (typeof dto.categoryId === 'string' || typeof dto.category === 'string') {
+      data.categoryId = await this.resolveCategoryId(dto.categoryId, dto.category);
     }
 
-    if (typeof dto.category === 'string') {
-      const categoryName = dto.category.trim() || 'Uncategorized';
-      const slug = slugify(categoryName) || 'uncategorized';
-      const category = await this.prisma.category.findUnique({ where: { slug } });
-      const categoryId = category
-        ? category.id
-        : (
-            await this.prisma.category.create({
-              data: { name: categoryName, slug },
-            })
-          ).id;
-      data.categoryId = categoryId;
-    }
-
-    if (typeof dto.published === 'boolean') {
-      data.publishedAt = dto.published ? new Date() : null;
-    }
-
-    const updated = await this.prisma.video.update({
+    const updated = await (this.prisma as any).content.update({
       where: { id },
       data,
       include: { category: true },
     });
 
-    return {
-      id: updated.id,
-      title: updated.title,
-      duration: formatDurationSeconds(updated.duration),
-      description: updated.description ?? undefined,
-      category: updated.category.name,
-      published: !!updated.publishedAt,
-      publishedAt: updated.publishedAt?.toISOString(),
-      createdAt: updated.createdAt.toISOString(),
-    };
+    return toAdminContentItemDto(updated);
   }
 
-  async createVideo(dto: CreateAdminVideoDto): Promise<AdminContentItemDto> {
+  async createContent(dto: CreateAdminContentDto): Promise<AdminContentItemDto> {
+    const title = dto.title.trim();
+    if (!title) throw new BadRequestException('Title is required');
+
+    const thumbnailUrl = dto.thumbnailKey.trim();
+    if (!thumbnailUrl) throw new BadRequestException('Thumbnail is required');
+
+    const isSingle =
+      dto.type === ContentType.MOVIE ||
+      dto.type === ContentType.DOCUMENTARY ||
+      dto.type === ContentType.SHORT;
+
+    const wantsEpisode = typeof dto.videoKey === 'string' && dto.videoKey.trim().length > 0;
+    const shouldCreateEpisode = isSingle || wantsEpisode;
+
+    if (dto.type === ContentType.SERIES && wantsEpisode) {
+      throw new BadRequestException('Episodes must be created separately for series content');
+    }
+
+    const seconds = dto.duration ? parseDurationToSeconds(dto.duration) : null;
+    if (dto.duration && (!seconds || seconds <= 0)) {
+      throw new BadRequestException('Invalid duration format');
+    }
+    if (shouldCreateEpisode && (!seconds || seconds <= 0)) {
+      throw new BadRequestException('Duration is required for single-video content');
+    }
+
+    if (isSingle && !wantsEpisode) {
+      throw new BadRequestException('Video key is required for single-video content');
+    }
+
+    const resolvedCategoryId = await this.resolveCategoryId(dto.categoryId, dto.category);
+
+    const created = await this.prisma.$transaction(async (tx: any) => {
+      const content = await tx.content.create({
+        data: {
+          title,
+          description: dto.description?.trim() || null,
+          type: dto.type,
+          thumbnailUrl,
+          posterUrl: dto.posterKey?.trim() || null,
+          releaseYear: dto.releaseYear,
+          ageRating: dto.ageRating.trim(),
+          duration: seconds ?? null,
+          categoryId: resolvedCategoryId,
+          isPublished: dto.isPublished ?? false,
+        },
+      });
+
+      if (shouldCreateEpisode) {
+        await tx.episode.create({
+          data: {
+            contentId: content.id,
+            seasonId: null,
+            episodeNumber: 1,
+            title,
+            description: dto.description?.trim() || null,
+            duration: seconds ?? 0,
+            videoUrl: dto.videoKey!.trim(),
+          },
+        });
+      }
+
+      return content;
+    });
+
+    const full = await (this.prisma as any).content.findUnique({
+      where: { id: created.id },
+      include: { category: true, seasons: true, episodes: true },
+    });
+    if (!full) throw new BadRequestException('Failed to load created content');
+    return toAdminContentItemDto(full);
+  }
+
+  async createTrailer(
+    parentContentId: string,
+    dto: CreateAdminTrailerDto,
+  ): Promise<AdminContentItemDto | null> {
+    const parent = await (this.prisma as any).content.findUnique({
+      where: { id: parentContentId },
+      select: { id: true, categoryId: true },
+    });
+    if (!parent) return null;
+
     const seconds = parseDurationToSeconds(dto.duration);
     if (seconds <= 0) {
       throw new BadRequestException('Invalid duration format');
     }
 
-    const categoryName = dto.category?.trim() || 'Uncategorized';
-    const slug = slugify(categoryName) || 'uncategorized';
+    const created = await this.prisma.$transaction(async (tx: any) => {
+      const trailer = await tx.content.create({
+        data: {
+          title: dto.title.trim(),
+          description: dto.description?.trim() || null,
+          type: ContentType.TRAILER,
+          thumbnailUrl: dto.thumbnailKey.trim(),
+          posterUrl: dto.posterKey?.trim() || null,
+          releaseYear: dto.releaseYear,
+          ageRating: dto.ageRating.trim(),
+          duration: seconds,
+          categoryId: parent.categoryId ?? null,
+          isPublished: dto.isPublished ?? false,
+        },
+      });
 
-    const category = await this.prisma.category.findUnique({ where: { slug } });
-    const categoryId = category
-      ? category.id
-      : (
-          await this.prisma.category.create({
-            data: { name: categoryName, slug },
-          })
-        ).id;
+      await tx.episode.create({
+        data: {
+          contentId: trailer.id,
+          seasonId: null,
+          episodeNumber: 1,
+          title: trailer.title,
+          description: trailer.description,
+          duration: seconds,
+          videoUrl: dto.videoKey.trim(),
+        },
+      });
 
-    const video = await this.prisma.video.create({
+      await tx.content.update({
+        where: { id: parentContentId },
+        data: { trailerId: trailer.id },
+      });
+
+      return trailer;
+    });
+
+    const full = await (this.prisma as any).content.findUnique({
+      where: { id: created.id },
+      include: { category: true, seasons: true, episodes: true },
+    });
+    return full ? toAdminContentItemDto(full) : null;
+  }
+
+  async createSeason(dto: CreateAdminSeasonDto) {
+    const content = await (this.prisma as any).content.findUnique({
+      where: { id: dto.contentId },
+      select: { id: true, type: true },
+    });
+    if (!content) {
+      throw new BadRequestException('Content not found');
+    }
+    if (![ContentType.SERIES, ContentType.ANIMATION].includes(content.type)) {
+      throw new BadRequestException('Seasons are only supported for series and episodic animation');
+    }
+
+    const existing = await (this.prisma as any).season.findFirst({
+      where: { contentId: dto.contentId, seasonNumber: dto.seasonNumber },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new BadRequestException('Season number already exists for this content');
+    }
+    return (this.prisma as any).season.create({
       data: {
+        contentId: dto.contentId,
+        seasonNumber: dto.seasonNumber,
+        title: dto.title.trim(),
+        description: dto.description?.trim() || null,
+      },
+    });
+  }
+
+  async createEpisode(dto: CreateAdminEpisodeDto) {
+    const content = await (this.prisma as any).content.findUnique({
+      where: { id: dto.contentId },
+      select: { id: true, type: true },
+    });
+    if (!content) {
+      throw new BadRequestException('Content not found');
+    }
+
+    const seasonId = dto.seasonId?.trim() || null;
+    if (content.type === ContentType.SERIES && !seasonId) {
+      throw new BadRequestException('Season is required for series episodes');
+    }
+
+    if (seasonId) {
+      const season = await (this.prisma as any).season.findUnique({
+        where: { id: seasonId },
+        select: { id: true, contentId: true },
+      });
+      if (!season || season.contentId !== content.id) {
+        throw new BadRequestException('Season does not belong to the content item');
+      }
+    }
+
+    const singleTypes = [ContentType.MOVIE, ContentType.DOCUMENTARY, ContentType.SHORT];
+    if (singleTypes.includes(content.type) && seasonId) {
+      throw new BadRequestException('Single-video content cannot be assigned to a season');
+    }
+
+    if (
+      (singleTypes.includes(content.type) || content.type === ContentType.ANIMATION) &&
+      !seasonId
+    ) {
+      if (dto.episodeNumber !== 1) {
+        throw new BadRequestException('Single-video content must use episode number 1');
+      }
+      const existing = await (this.prisma as any).episode.findFirst({
+        where: { contentId: dto.contentId },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new BadRequestException('Single-video content already has an episode');
+      }
+    }
+
+    const seconds = parseDurationToSeconds(dto.duration);
+    if (seconds <= 0) {
+      throw new BadRequestException('Invalid duration format');
+    }
+
+    const existing = await (this.prisma as any).episode.findFirst({
+      where: {
+        contentId: dto.contentId,
+        seasonId,
+        episodeNumber: dto.episodeNumber,
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new BadRequestException('Episode number already exists in this season');
+    }
+
+    return (this.prisma as any).episode.create({
+      data: {
+        contentId: dto.contentId,
+        seasonId,
+        episodeNumber: dto.episodeNumber,
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
         duration: seconds,
-        categoryId,
-        streamUrl: dto.videoKey,
-        thumbnailUrl: dto.thumbnailKey,
-        publishedAt: dto.published ? new Date() : null,
+        videoUrl: dto.videoKey.trim(),
       },
-      include: { category: true },
     });
-
-    return {
-      id: video.id,
-      title: video.title,
-      duration: formatDurationSeconds(video.duration),
-      description: video.description ?? undefined,
-      category: video.category.name,
-      published: !!video.publishedAt,
-      publishedAt: video.publishedAt?.toISOString(),
-      createdAt: video.createdAt.toISOString(),
-    };
   }
 
   async getPlans(): Promise<AdminPlanDto[]> {
@@ -488,53 +734,57 @@ export class AdminService {
     const now = new Date();
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const [totalVideos, publishedVideos, totalViews, viewsLast30Days, categoryRows, topViews] =
+    const [totalContent, publishedContent, totalViews, viewsLast30Days, categoryRows, topViews] =
       await Promise.all([
-        this.prisma.video.count(),
-        this.prisma.video.count({ where: { publishedAt: { not: null } } }),
+        (this.prisma as any).content.count(),
+        (this.prisma as any).content.count({ where: { isPublished: true } }),
         this.prisma.viewHistory.count(),
         this.prisma.viewHistory.count({ where: { watchedAt: { gte: last30Days } } }),
-        this.prisma.video.findMany({
+        (this.prisma as any).content.findMany({
           select: { category: { select: { name: true } } },
         }),
-        this.prisma.viewHistory.groupBy({
-          by: ['videoId'],
-          _count: { videoId: true },
-          orderBy: { _count: { videoId: 'desc' } },
+        (this.prisma as any).viewHistory.groupBy({
+          by: ['episodeId'],
+          _count: { episodeId: true },
+          orderBy: { _count: { episodeId: 'desc' } },
           take: 5,
         }),
       ]);
 
     const categoryCounts = new Map<string, number>();
     for (const row of categoryRows) {
-      const name = row.category.name;
+      const name = row.category?.name ?? 'Uncategorized';
       categoryCounts.set(name, (categoryCounts.get(name) ?? 0) + 1);
     }
-    const videosByCategory: CategoryCountDto[] = Array.from(categoryCounts.entries())
+    const contentByCategory: CategoryCountDto[] = Array.from(categoryCounts.entries())
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => b.value - a.value);
 
-    const topVideoIds = topViews.map((row) => row.videoId);
-    const videoTitles = await this.prisma.video.findMany({
-      where: { id: { in: topVideoIds } },
+    const topEpisodeIds = topViews.map((row: { episodeId: string }) => row.episodeId);
+    const episodeTitles = await (this.prisma as any).episode.findMany({
+      where: { id: { in: topEpisodeIds } },
       select: { id: true, title: true },
     });
-    const titleMap = new Map(videoTitles.map((v) => [v.id, v.title]));
+    const titleMap = new Map(
+      episodeTitles.map((episode: { id: string; title: string }) => [episode.id, episode.title]),
+    );
 
-    const topVideos: TopVideoDto[] = topViews.map((row) => ({
-      videoId: row.videoId,
-      title: titleMap.get(row.videoId) ?? 'Untitled',
-      views: row._count?.videoId ?? 0,
-    }));
+    const topEpisodes: TopEpisodeDto[] = topViews.map(
+      (row: { episodeId: string; _count?: { episodeId?: number } }) => ({
+        episodeId: row.episodeId,
+        title: titleMap.get(row.episodeId) ?? 'Untitled',
+        views: row._count?.episodeId ?? 0,
+      }),
+    );
 
     return {
-      totalVideos,
-      publishedVideos,
-      unpublishedVideos: Math.max(0, totalVideos - publishedVideos),
+      totalContent,
+      publishedContent,
+      unpublishedContent: Math.max(0, totalContent - publishedContent),
       totalViews,
       viewsLast30Days,
-      topVideos,
-      videosByCategory,
+      topEpisodes,
+      contentByCategory,
     };
   }
 
@@ -587,9 +837,10 @@ export class AdminService {
   async getSystemHealth(): Promise<AdminSystemHealthDto> {
     const checkedAt = new Date().toISOString();
     try {
-      const [users, videos, subscriptions, downloads] = await Promise.all([
+      const [users, content, episodes, subscriptions, downloads] = await Promise.all([
         this.prisma.user.count(),
-        this.prisma.video.count(),
+        (this.prisma as any).content.count(),
+        (this.prisma as any).episode.count(),
         this.prisma.subscription.count(),
         this.prisma.download.count(),
       ]);
@@ -597,27 +848,27 @@ export class AdminService {
         ok: true,
         database: true,
         checkedAt,
-        counts: { users, videos, subscriptions, downloads },
+        counts: { users, content, episodes, subscriptions, downloads },
       };
     } catch (error) {
       return {
         ok: false,
         database: false,
         checkedAt,
-        counts: { users: 0, videos: 0, subscriptions: 0, downloads: 0 },
+        counts: { users: 0, content: 0, episodes: 0, subscriptions: 0, downloads: 0 },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
 
   async getSystemLogs(): Promise<AdminSystemLogDto[]> {
-    const [users, videos, subscriptions] = await Promise.all([
+    const [users, contentItems, subscriptions] = await Promise.all([
       this.prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
         take: 6,
         select: { id: true, email: true, createdAt: true },
       }),
-      this.prisma.video.findMany({
+      (this.prisma as any).content.findMany({
         orderBy: { createdAt: 'desc' },
         take: 6,
         select: { id: true, title: true, createdAt: true },
@@ -633,24 +884,32 @@ export class AdminService {
     ]);
 
     const logs: AdminSystemLogDto[] = [
-      ...users.map((user) => ({
+      ...users.map((user: { id: string; email: string; createdAt: Date }) => ({
         id: `user-${user.id}`,
         type: 'user' as const,
         message: `User ${user.email} signed up.`,
         createdAt: user.createdAt.toISOString(),
       })),
-      ...videos.map((video) => ({
-        id: `video-${video.id}`,
-        type: 'video' as const,
-        message: `Video "${video.title}" uploaded.`,
-        createdAt: video.createdAt.toISOString(),
+      ...contentItems.map((content: { id: string; title: string; createdAt: Date }) => ({
+        id: `content-${content.id}`,
+        type: 'content' as const,
+        message: `Content "${content.title}" created.`,
+        createdAt: content.createdAt.toISOString(),
       })),
-      ...subscriptions.map((sub) => ({
-        id: `subscription-${sub.id}`,
-        type: 'subscription' as const,
-        message: `Subscription ${sub.status} for ${sub.user.email} (${sub.plan.name}).`,
-        createdAt: sub.createdAt.toISOString(),
-      })),
+      ...subscriptions.map(
+        (sub: {
+          id: string;
+          status: string;
+          user: { email: string };
+          plan: { name: string };
+          createdAt: Date;
+        }) => ({
+          id: `subscription-${sub.id}`,
+          type: 'subscription' as const,
+          message: `Subscription ${sub.status} for ${sub.user.email} (${sub.plan.name}).`,
+          createdAt: sub.createdAt.toISOString(),
+        }),
+      ),
     ];
 
     return logs.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 20);

@@ -8,7 +8,7 @@ import { Loader } from "@/components/ui";
 
 export default function AdminPage() {
   const [stats, setStats] = useState<DashboardStatsDto | null>(null);
-  const [videosByCategory, setVideosByCategory] = useState<
+  const [contentByCategory, setContentByCategory] = useState<
     { label: string; value: number }[]
   >([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,7 @@ export default function AdminPage() {
       try {
         const dashboardStats = await adminService.getStats();
         setStats(dashboardStats);
-        setVideosByCategory(dashboardStats.videosByCategory ?? []);
+        setContentByCategory(dashboardStats.contentByCategory ?? []);
       } finally {
         setLoading(false);
       }
@@ -33,16 +33,16 @@ export default function AdminPage() {
     );
   }
 
-  const totalCategories = videosByCategory.length;
-  const topCategory = videosByCategory.reduce(
+  const totalCategories = contentByCategory.length;
+  const topCategory = contentByCategory.reduce(
     (best, current) => (current.value > best.value ? current : best),
     { label: "—", value: 0 },
   );
   const avgPerCategory =
     totalCategories > 0
-      ? (stats.totalVideos / totalCategories).toFixed(1)
+      ? (Number(stats.totalContent ?? 0) / totalCategories).toFixed(1)
       : "0";
-  const sortedCategories = [...videosByCategory].sort(
+  const sortedCategories = [...contentByCategory].sort(
     (a, b) => b.value - a.value,
   );
   const maxCategoryCount = Math.max(1, ...sortedCategories.map((c) => c.value));
@@ -63,23 +63,23 @@ export default function AdminPage() {
   const highlights = [
     {
       label: "Total users",
-      value: stats.totalUsers.toLocaleString(),
+      value: Number(stats.totalUsers ?? 0).toLocaleString(),
       hint: "All registered accounts",
     },
     {
-      label: "Total videos",
-      value: stats.totalVideos.toLocaleString(),
+      label: "Total content",
+      value: Number(stats.totalContent ?? 0).toLocaleString(),
       hint: "Catalog size",
     },
     {
       label: "Subscribers",
-      value: stats.totalSubscribers.toLocaleString(),
+      value: Number(stats.totalSubscribers ?? 0).toLocaleString(),
       hint: "Active paying users",
     },
     {
       label: "Top category",
       value: topCategory.label,
-      hint: `${topCategory.value} videos`,
+      hint: `${topCategory.value} titles`,
     },
     {
       label: "Categories",
@@ -89,7 +89,7 @@ export default function AdminPage() {
     {
       label: "Avg per category",
       value: avgPerCategory,
-      hint: "Videos/category",
+      hint: "Titles/category",
     },
   ];
 
@@ -159,7 +159,7 @@ export default function AdminPage() {
             <div>
               <h2 className="text-lg font-semibold text-white">Category mix</h2>
               <p className="mt-1 text-sm text-neutral-400">
-                Distribution of videos across categories.
+                Distribution of titles across categories.
               </p>
             </div>
             <span className="rounded-full border border-neutral-800/70 px-2 py-1 text-xs text-neutral-500">
@@ -169,7 +169,7 @@ export default function AdminPage() {
           <div className="mt-6 space-y-4">
             {sortedCategories.length === 0 ? (
               <p className="text-sm text-neutral-500">
-                No categories yet. Start by uploading a video.
+                No categories yet. Start by uploading content.
               </p>
             ) : (
               sortedCategories.map((item) => (

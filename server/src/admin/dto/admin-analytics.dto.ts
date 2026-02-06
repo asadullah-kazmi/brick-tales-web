@@ -10,8 +10,8 @@ export interface AdminUsersAnalyticsDto {
   dailyNewUsers: DailyCountDto[];
 }
 
-export interface TopVideoDto {
-  videoId: string;
+export interface TopEpisodeDto {
+  episodeId: string;
   title: string;
   views: number;
 }
@@ -22,13 +22,13 @@ export interface CategoryCountDto {
 }
 
 export interface AdminContentAnalyticsDto {
-  totalVideos: number;
-  publishedVideos: number;
-  unpublishedVideos: number;
+  totalContent: number;
+  publishedContent: number;
+  unpublishedContent: number;
   totalViews: number;
   viewsLast30Days: number;
-  topVideos: TopVideoDto[];
-  videosByCategory: CategoryCountDto[];
+  topEpisodes: TopEpisodeDto[];
+  contentByCategory: CategoryCountDto[];
 }
 
 export interface RevenueByPlanDto {

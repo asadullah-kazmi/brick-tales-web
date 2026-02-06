@@ -14,7 +14,7 @@ const DEFAULT_DOWNLOAD_TOKEN_EXPIRES_SEC = 60 * 60; // 1 hour – token to initi
 export interface DownloadTokenPayload {
   userId: string;
   deviceId: string;
-  videoId: string;
+  episodeId: string;
   exp: number;
 }
 
@@ -73,7 +73,7 @@ export class DownloadsService {
    * - user's active offline downloads count < plan.maxOfflineDownloads
    * Creates a Download record with status AUTHORIZED and expiry date.
    */
-  async authorizeDownload(userId: string, videoId: string, deviceId: string) {
+  async authorizeDownload(userId: string, episodeId: string, deviceId: string) {
     const subscription = await this.getActiveSubscriptionWithPlan(userId);
     if (!subscription?.plan) {
       throw new ForbiddenException('Active subscription required to authorize offline downloads.');
@@ -117,21 +117,21 @@ export class DownloadsService {
       );
     }
 
-    const video = await (this.prisma as any).video.findUnique({
-      where: { id: videoId },
-      select: { id: true, publishedAt: true },
+    const episode = await (this.prisma as any).episode.findUnique({
+      where: { id: episodeId },
+      select: { id: true, content: { select: { isPublished: true } } },
     });
-    if (!video) {
-      throw new NotFoundException('Video not found');
+    if (!episode) {
+      throw new NotFoundException('Episode not found');
     }
-    if (video.publishedAt && video.publishedAt > new Date()) {
-      throw new ForbiddenException('Video is not yet available for download');
+    if (!episode.content.isPublished) {
+      throw new ForbiddenException('Content is not yet available for download');
     }
 
     const existing = await (this.prisma as any).download.findFirst({
       where: {
         userId,
-        videoId,
+        episodeId,
         deviceId,
         status: { in: ['AUTHORIZED', 'DOWNLOADED'] },
         expiresAt: { gt: new Date() },
@@ -148,7 +148,7 @@ export class DownloadsService {
     const download = await (this.prisma as any).download.create({
       data: {
         userId,
-        videoId,
+        episodeId,
         deviceId,
         status: 'AUTHORIZED',
         expiresAt,
@@ -159,17 +159,17 @@ export class DownloadsService {
   }
 
   /**
-   * Create a time-limited signed download token tied to user, device, and video.
+   * Create a time-limited signed download token tied to user, device, and episode.
    * Caller must ensure the Download is already authorized (e.g. via authorizeDownload).
    */
   createDownloadToken(
     userId: string,
     deviceId: string,
-    videoId: string,
+    episodeId: string,
     expiresInSeconds: number = DEFAULT_DOWNLOAD_TOKEN_EXPIRES_SEC,
   ): { token: string; expiresAt: Date } {
     const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
-    const payload: DownloadTokenPayload = { userId, deviceId, videoId, exp };
+    const payload: DownloadTokenPayload = { userId, deviceId, episodeId, exp };
     const payloadJson = JSON.stringify(payload);
     const payloadB64 = this.base64UrlEncode(Buffer.from(payloadJson, 'utf8'));
     const secret = this.getDownloadTokenSecret();
@@ -215,17 +215,17 @@ export class DownloadsService {
   }
 
   /**
-   * Ensure an active Download exists for user+video+device; return it or null.
+   * Ensure an active Download exists for user+episode+device; return it or null.
    */
   async getActiveDownload(
     userId: string,
-    videoId: string,
+    episodeId: string,
     deviceId: string,
   ): Promise<{ id: string; expiresAt: Date } | null> {
     const download = await (this.prisma as any).download.findFirst({
       where: {
         userId,
-        videoId,
+        episodeId,
         deviceId,
         status: { in: ['AUTHORIZED', 'DOWNLOADED'] },
         expiresAt: { gt: new Date() },
@@ -236,22 +236,27 @@ export class DownloadsService {
   }
 
   /**
-   * Generate a secure download token for an offline video. Ensures authorization
+   * Generate a secure download token for an offline episode. Ensures authorization
    * (creates Download if needed), then returns a time-limited token and expiry metadata.
    */
   async getDownloadToken(
     userId: string,
-    videoId: string,
+    episodeId: string,
     deviceId: string,
   ): Promise<{ token: string; expiresAt: Date; downloadExpiresAt: Date }> {
-    const downloadRecord = await this.authorizeDownload(userId, videoId, deviceId);
+    const downloadRecord = await this.authorizeDownload(userId, episodeId, deviceId);
 
     const expiresInSec =
       typeof process.env.DOWNLOAD_TOKEN_EXPIRES === 'string'
         ? this.parseTokenExpiresToSeconds(process.env.DOWNLOAD_TOKEN_EXPIRES)
         : Number(process.env.DOWNLOAD_TOKEN_EXPIRES) || DEFAULT_DOWNLOAD_TOKEN_EXPIRES_SEC;
 
-    const { token, expiresAt } = this.createDownloadToken(userId, deviceId, videoId, expiresInSec);
+    const { token, expiresAt } = this.createDownloadToken(
+      userId,
+      deviceId,
+      episodeId,
+      expiresInSec,
+    );
 
     return {
       token,
@@ -276,7 +281,7 @@ export class DownloadsService {
 
   /**
    * Sync download status: return all downloads for the user (optionally filtered by device).
-   * Includes video and device so the app can sync local state.
+   * Includes episode and device so the app can sync local state.
    */
   async listDownloadsForSync(userId: string, deviceId?: string) {
     const where: Record<string, unknown> = { userId };
@@ -285,7 +290,14 @@ export class DownloadsService {
     const rows = await (this.prisma as any).download.findMany({
       where,
       include: {
-        video: { select: { id: true, title: true, duration: true, thumbnailUrl: true } },
+        episode: {
+          select: {
+            id: true,
+            title: true,
+            duration: true,
+            content: { select: { thumbnailUrl: true } },
+          },
+        },
         device: { select: { id: true, platform: true, deviceIdentifier: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -309,7 +321,14 @@ export class DownloadsService {
     const rows = await (this.prisma as any).download.findMany({
       where,
       include: {
-        video: { select: { id: true, title: true, duration: true, thumbnailUrl: true } },
+        episode: {
+          select: {
+            id: true,
+            title: true,
+            duration: true,
+            content: { select: { thumbnailUrl: true } },
+          },
+        },
         device: { select: { id: true, platform: true, deviceIdentifier: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -318,7 +337,7 @@ export class DownloadsService {
   }
 
   /**
-   * Redeem a download token to get the video stream URL. Enforces device-binding:
+   * Redeem a download token to get the episode stream URL. Enforces device-binding:
    * token must be valid and payload.deviceId must match the provided deviceId;
    * device must belong to the user; an active Download must exist.
    * Ensures tokens cannot be reused on a different device.
@@ -348,7 +367,7 @@ export class DownloadsService {
     const download = await (this.prisma as any).download.findFirst({
       where: {
         userId,
-        videoId: payload.videoId,
+        episodeId: payload.episodeId,
         deviceId,
         status: { in: ['AUTHORIZED', 'DOWNLOADED'] },
         expiresAt: { gt: new Date() },
@@ -356,40 +375,43 @@ export class DownloadsService {
     });
     if (!download) {
       throw new ForbiddenException(
-        'No active download authorization for this video on this device.',
+        'No active download authorization for this episode on this device.',
       );
     }
 
-    const video = await (this.prisma as any).video.findUnique({
-      where: { id: payload.videoId },
-      select: { streamUrl: true, publishedAt: true },
+    const episode = await (this.prisma as any).episode.findUnique({
+      where: { id: payload.episodeId },
+      select: { videoUrl: true, content: { select: { isPublished: true } } },
     });
-    if (!video?.streamUrl) {
-      throw new NotFoundException('Video not found or not available for download');
+    if (!episode?.videoUrl) {
+      throw new NotFoundException('Episode not found or not available for download');
     }
-    if (video.publishedAt && video.publishedAt > new Date()) {
-      throw new ForbiddenException('Video is not yet available');
+    if (!episode.content.isPublished) {
+      throw new ForbiddenException('Content is not yet available');
     }
 
-    if (/^https?:\/\//i.test(video.streamUrl)) {
-      return { downloadUrl: video.streamUrl };
+    if (/^https?:\/\//i.test(episode.videoUrl)) {
+      return { downloadUrl: episode.videoUrl };
     }
-    const signed = await this.r2Service.getSignedGetUrl(video.streamUrl);
+    const signed = await this.r2Service.getSignedGetUrl(episode.videoUrl);
     return { downloadUrl: signed };
   }
 
   private async attachSignedThumbnails(rows: any[]) {
     return Promise.all(
       rows.map(async (row) => {
-        const thumb = row?.video?.thumbnailUrl;
+        const thumb = row?.episode?.content?.thumbnailUrl;
         if (!thumb || /^https?:\/\//i.test(thumb)) return row;
         const publicUrl = this.r2Service.getPublicUrl(thumb);
         const signedUrl = publicUrl ?? (await this.r2Service.getSignedGetUrl(thumb));
         return {
           ...row,
-          video: {
-            ...row.video,
-            thumbnailUrl: signedUrl,
+          episode: {
+            ...row.episode,
+            content: {
+              ...row.episode.content,
+              thumbnailUrl: signedUrl,
+            },
           },
         };
       }),
@@ -420,7 +442,7 @@ export class DownloadsService {
       where: { id: downloadId },
       data: { status: 'DOWNLOADED' },
       include: {
-        video: { select: { id: true, title: true } },
+        episode: { select: { id: true, title: true } },
         device: { select: { id: true, platform: true } },
       },
     });

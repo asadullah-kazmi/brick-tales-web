@@ -18,7 +18,10 @@ import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
 import type { AdminContentItemDto } from './dto/admin-content.dto';
 import { PresignUploadDto } from './dto/presign-upload.dto';
-import { CreateAdminVideoDto } from './dto/create-admin-video.dto';
+import { CreateAdminContentDto } from './dto/create-admin-content.dto';
+import { CreateAdminSeasonDto } from './dto/create-admin-season.dto';
+import { CreateAdminEpisodeDto } from './dto/create-admin-episode.dto';
+import { CreateAdminTrailerDto } from './dto/create-admin-trailer.dto';
 import { R2Service } from '../storage/r2.service';
 import { randomUUID } from 'crypto';
 import { SiteService } from '../site/site.service';
@@ -26,7 +29,8 @@ import type { SitePageDto, SitePageSummaryDto } from '../site/dto/site-page.dto'
 import { UpdateSitePageDto } from '../site/dto/update-site-page.dto';
 import type { AdminCategoryDto } from './dto/admin-category.dto';
 import { CreateAdminCategoryDto } from './dto/create-admin-category.dto';
-import { UpdateAdminVideoDto } from './dto/update-admin-video.dto';
+import { UpdateAdminContentDto } from './dto/update-admin-content.dto';
+import { PublishAdminContentDto } from './dto/publish-admin-content.dto';
 import type { AdminSubscriptionsResponseDto } from './dto/admin-subscription.dto';
 import type { AdminPlanDto } from './dto/admin-plan.dto';
 import type {
@@ -82,7 +86,7 @@ export class AdminController {
   ) {}
 
   /**
-   * Dashboard stats: total users, videos, subscribers, videos by category.
+   * Dashboard stats: total users, content, subscribers, content by category.
    */
   @Get('stats')
   async getStats(@CurrentUser() user: User): Promise<DashboardStatsDto> {
@@ -130,7 +134,7 @@ export class AdminController {
   }
 
   /**
-   * List all content (videos) for admin.
+   * List all content for admin.
    */
   @Get('content')
   async getContent(@CurrentUser() user: User): Promise<AdminContentItemDto[]> {
@@ -185,16 +189,29 @@ export class AdminController {
   }
 
   /**
-   * Update video metadata or publish state.
+   * Update content metadata.
    */
   @Patch('content/:id')
   async updateContent(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() body: UpdateAdminVideoDto,
+    @Body() body: UpdateAdminContentDto,
   ): Promise<AdminContentItemDto | null> {
     ensureAdmin(user);
-    return this.adminService.updateVideo(id, body);
+    return this.adminService.updateContent(id, body);
+  }
+
+  /**
+   * Publish or unpublish content.
+   */
+  @Patch('content/:id/publish')
+  async publishContent(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: PublishAdminContentDto,
+  ): Promise<AdminContentItemDto | null> {
+    ensureAdmin(user);
+    return this.adminService.publishContent(id, body.isPublished);
   }
 
   /**
@@ -242,15 +259,46 @@ export class AdminController {
   }
 
   /**
-   * Create a video record after uploads are completed.
+   * Create a content record after uploads are completed.
    */
   @Post('content')
   async createContent(
     @CurrentUser() user: User,
-    @Body() body: CreateAdminVideoDto,
+    @Body() body: CreateAdminContentDto,
   ): Promise<AdminContentItemDto> {
     ensureAdmin(user);
-    return this.adminService.createVideo(body);
+    return this.adminService.createContent(body);
+  }
+
+  /**
+   * Create and attach a trailer for a content item.
+   */
+  @Post('content/:id/trailer')
+  async createTrailer(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: CreateAdminTrailerDto,
+  ): Promise<AdminContentItemDto | null> {
+    ensureAdmin(user);
+    return this.adminService.createTrailer(id, body);
+  }
+
+  /**
+   * Create a season for a series/episodic content item.
+   */
+  @Post('season')
+  async createSeason(@CurrentUser() user: User, @Body() body: CreateAdminSeasonDto) {
+    ensureAdmin(user);
+    return this.adminService.createSeason(body);
+  }
+
+  /**
+   * Create an episode for a content item (optionally tied to a season).
+   */
+  @Post('episode')
+  async createEpisode(@CurrentUser() user: User, @Body() body: CreateAdminEpisodeDto) {
+    ensureAdmin(user);
+    return this.adminService.createEpisode(body);
   }
 
   /**

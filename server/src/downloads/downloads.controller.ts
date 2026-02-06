@@ -16,7 +16,7 @@ export class DownloadsController {
   constructor(private readonly downloadsService: DownloadsService) {}
 
   /**
-   * Authorize an offline download for the given video on the given device.
+   * Authorize an offline download for the given episode on the given device.
    * Validates: active subscription, plan offlineAllowed, device limit, maxOfflineDownloads.
    * Returns the created (or existing) Download record with status AUTHORIZED.
    */
@@ -25,14 +25,14 @@ export class DownloadsController {
   async authorize(@CurrentUser() user: User, @Body() dto: AuthorizeDownloadDto) {
     return this.downloadsService.authorizeDownload(
       user.id,
-      dto.videoId.trim(),
+      dto.episodeId.trim(),
       dto.deviceId.trim(),
     );
   }
 
   /**
-   * Generate a secure, time-limited download token for an offline video.
-   * Token is tied to user, device, and video. Ensures authorization (creates Download if needed).
+   * Generate a secure, time-limited download token for an offline episode.
+   * Token is tied to user, device, and episode. Ensures authorization (creates Download if needed).
    * Returns token and expiry metadata. Token is device-bound and cannot be used on another device.
    */
   @Post('token')
@@ -41,11 +41,15 @@ export class DownloadsController {
     @CurrentUser() user: User,
     @Body() dto: AuthorizeDownloadDto,
   ): Promise<DownloadTokenResponseDto> {
-    return this.downloadsService.getDownloadToken(user.id, dto.videoId.trim(), dto.deviceId.trim());
+    return this.downloadsService.getDownloadToken(
+      user.id,
+      dto.episodeId.trim(),
+      dto.deviceId.trim(),
+    );
   }
 
   /**
-   * Redeem a download token to get the video stream URL. Device-bound: the token is only valid
+   * Redeem a download token to get the episode stream URL. Device-bound: the token is only valid
    * when deviceId in the request matches the device the token was issued for. Tokens cannot be
    * reused on a different device.
    */
@@ -64,7 +68,7 @@ export class DownloadsController {
 
   /**
    * Sync download status: return all downloads for the user (optionally filtered by device).
-   * Use this to sync local state with backend (status, expiresAt, video, device).
+   * Use this to sync local state with backend (status, expiresAt, episode, device).
    */
   @Get('sync')
   async sync(@CurrentUser() user: User, @Query('deviceId') deviceId?: string) {

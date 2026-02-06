@@ -34,6 +34,15 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum ContentType {
+  MOVIE
+  DOCUMENTARY
+  SERIES
+  ANIMATION
+  TRAILER
+  SHORT
+}
+
 // ---------------------------------------------------------------------------
 // User
 // ---------------------------------------------------------------------------
@@ -143,30 +152,93 @@ model Category {
 
   parent   Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children Category[] @relation("CategoryHierarchy")
-  videos   Video[]
+  contents Content[]
+  legacyVideos LegacyVideo[]
 
   @@index([slug])
   @@index([parentId])
 }
 
-model Video {
-  id          String    @id @default(cuid())
-  categoryId  String
+model Content {
+  id          String      @id @default(cuid())
+  categoryId  String?
   title       String
   description String?
-  duration    Int       // seconds
-  thumbnailUrl String?
-  streamUrl   String?
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  type        ContentType
+  thumbnailUrl String
+  posterUrl   String?
+  releaseYear Int
+  ageRating   String
+  duration    Int?
+  trailerId   String?
+  isPublished Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  downloads  Download[]
-  viewHistory ViewHistory[]
+  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  seasons    Season[]
+  episodes   Episode[]
+  trailer    Content?     @relation("ContentTrailer", fields: [trailerId], references: [id], onDelete: SetNull)
+  trailerFor Content[]    @relation("ContentTrailer")
+
+  @@index([categoryId])
+  @@index([type])
+}
+
+// Legacy table retained for migration/backfill.
+model LegacyVideo {
+  id           String   @id @default(cuid())
+  categoryId   String
+  title        String
+  description  String?
+  duration     Int
+  thumbnailUrl String?
+  streamUrl    String?
+  publishedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@index([categoryId])
   @@index([publishedAt])
+  @@map("Video")
+}
+
+model Season {
+  id           String   @id @default(cuid())
+  contentId    String
+  seasonNumber Int
+  title        String
+  description  String?
+  createdAt    DateTime @default(now())
+
+  content  Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  episodes Episode[]
+
+  @@unique([contentId, seasonNumber])
+  @@index([contentId])
+}
+
+model Episode {
+  id            String   @id @default(cuid())
+  contentId     String
+  seasonId      String?
+  episodeNumber Int
+  title         String
+  description   String?
+  duration      Int
+  videoUrl      String
+  createdAt     DateTime @default(now())
+
+  content     Content      @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  season      Season?      @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  downloads   Download[]
+  viewHistory ViewHistory[]
+
+  @@unique([contentId, seasonId, episodeNumber])
+  @@index([contentId])
+  @@index([seasonId])
 }
 
 // ---------------------------------------------------------------------------
@@ -212,19 +284,19 @@ model Device {
 model Download {
   id        String         @id @default(cuid())
   userId    String
-  videoId   String
+  episodeId String
   deviceId  String
   status    DownloadStatus @default(AUTHORIZED)
   expiresAt DateTime
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video  Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  device  Device  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([videoId])
+  @@index([episodeId])
   @@index([deviceId])
   @@index([status])
   @@index([expiresAt])
@@ -237,17 +309,17 @@ model Download {
 model ViewHistory {
   id        String   @id @default(cuid())
   userId    String
-  videoId   String
+  episodeId String
   watchedAt DateTime @default(now())
   progress  Int      @default(0) // seconds watched
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([videoId])
-  @@index([userId, videoId])
+  @@index([episodeId])
+  @@index([userId, episodeId])
 }

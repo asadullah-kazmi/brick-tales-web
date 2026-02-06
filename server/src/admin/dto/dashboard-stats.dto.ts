@@ -1,9 +1,9 @@
 export class DashboardStatsDto {
   totalUsers: number;
-  totalVideos: number;
+  totalContent: number;
   totalSubscribers: number;
   usersTrend?: string;
-  videosTrend?: string;
+  contentTrend?: string;
   subscribersTrend?: string;
-  videosByCategory: { label: string; value: number }[];
+  contentByCategory: { label: string; value: number }[];
 }

@@ -11,7 +11,7 @@ import { R2Service } from '../storage/r2.service';
 const DEFAULT_TOKEN_EXPIRES_SEC = 60 * 60; // 1 hour
 
 interface PlayTokenPayload {
-  videoId: string;
+  episodeId: string;
   userId: string;
   exp: number;
 }
@@ -60,15 +60,15 @@ export class StreamingService {
   }
 
   /**
-   * Create a signed play token for videoId + userId, valid until exp (unix seconds).
+   * Create a signed play token for episodeId + userId, valid until exp (unix seconds).
    */
   createPlayToken(
-    videoId: string,
+    episodeId: string,
     userId: string,
     expiresInSeconds: number = DEFAULT_TOKEN_EXPIRES_SEC,
   ): { token: string; expiresAt: Date } {
     const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
-    const payload: PlayTokenPayload = { videoId, userId, exp };
+    const payload: PlayTokenPayload = { episodeId, userId, exp };
     const payloadJson = JSON.stringify(payload);
     const payloadB64 = this.base64UrlEncode(Buffer.from(payloadJson, 'utf8'));
     const secret = this.getSecret();
@@ -81,14 +81,14 @@ export class StreamingService {
   /**
    * Verify play token and return payload if valid. Returns null if invalid or expired.
    */
-  verifyPlayToken(token: string, expectedVideoId: string): PlayTokenPayload | null {
+  verifyPlayToken(token: string, expectedEpisodeId: string): PlayTokenPayload | null {
     try {
       const parts = token.split('.');
       if (parts.length !== 2) return null;
       const [payloadB64, sigB64] = parts;
       const payloadJson = this.base64UrlDecode(payloadB64).toString('utf8');
       const payload = JSON.parse(payloadJson) as PlayTokenPayload;
-      if (payload.videoId !== expectedVideoId) return null;
+      if (payload.episodeId !== expectedEpisodeId) return null;
       if (payload.exp < Math.floor(Date.now() / 1000)) return null;
       const secret = this.getSecret();
       const expectedSig = createHmac('sha256', secret).update(payloadJson).digest();
@@ -103,27 +103,40 @@ export class StreamingService {
   }
 
   /**
-   * Get video by id; throw if not found or no streamUrl.
+   * Get episode by id; throw if not found or no videoUrl.
    */
-  async getVideoStreamUrl(videoId: string): Promise<string> {
-    const video = await (this.prisma as any).video.findUnique({
-      where: { id: videoId },
-      select: { streamUrl: true, publishedAt: true },
+  async getEpisodeStreamUrl(episodeId: string): Promise<string> {
+    const episode = await (this.prisma as any).episode.findUnique({
+      where: { id: episodeId },
+      select: { videoUrl: true, content: { select: { isPublished: true } } },
     });
-    if (!video) throw new NotFoundException('Video not found');
-    if (!video.streamUrl) throw new NotFoundException('Video is not available for streaming');
-    if (video.publishedAt && video.publishedAt > new Date()) {
-      throw new ForbiddenException('Video is not yet published');
+    if (!episode) throw new NotFoundException('Episode not found');
+    if (!episode.videoUrl) {
+      throw new NotFoundException('Episode is not available for streaming');
     }
-    if (/^https?:\/\//i.test(video.streamUrl)) return video.streamUrl;
-    return this.r2Service.getSignedGetUrl(video.streamUrl);
+    if (!episode.content.isPublished) {
+      throw new ForbiddenException('Content is not yet published');
+    }
+    if (/^https?:\/\//i.test(episode.videoUrl)) return episode.videoUrl;
+    return this.r2Service.getSignedGetUrl(episode.videoUrl);
+  }
+
+  async recordEpisodeView(userId: string, episodeId: string): Promise<void> {
+    await (this.prisma as any).viewHistory.create({
+      data: {
+        userId,
+        episodeId,
+        progress: 0,
+        completed: false,
+      },
+    });
   }
 
   /**
    * Generate a time-limited signed play URL for an authenticated user with active subscription.
    */
   async getSignedPlayUrl(
-    videoId: string,
+    episodeId: string,
     userId: string,
   ): Promise<{ playUrl: string; expiresAt: Date }> {
     const hasSubscription = await this.hasActiveSubscription(userId);
@@ -133,17 +146,17 @@ export class StreamingService {
       );
     }
 
-    await this.getVideoStreamUrl(videoId); // ensure video exists and is streamable
+    await this.getEpisodeStreamUrl(episodeId); // ensure episode exists and is streamable
 
     const expiresIn =
       typeof process.env.STREAMING_TOKEN_EXPIRES === 'string'
         ? this.parseExpiresToSeconds(process.env.STREAMING_TOKEN_EXPIRES)
         : Number(process.env.STREAMING_TOKEN_EXPIRES) || DEFAULT_TOKEN_EXPIRES_SEC;
 
-    const { token, expiresAt } = this.createPlayToken(videoId, userId, expiresIn);
+    const { token, expiresAt } = this.createPlayToken(episodeId, userId, expiresIn);
 
     const baseUrl = process.env.APP_URL ?? 'http://localhost:5000';
-    const playUrl = `${baseUrl.replace(/\/$/, '')}/streaming/play/${videoId}?token=${encodeURIComponent(token)}`;
+    const playUrl = `${baseUrl.replace(/\/$/, '')}/streaming/play/${episodeId}?token=${encodeURIComponent(token)}`;
 
     return { playUrl, expiresAt };
   }
