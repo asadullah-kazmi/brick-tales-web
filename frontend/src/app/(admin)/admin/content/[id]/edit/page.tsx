@@ -15,8 +15,19 @@ import {
 import { adminService } from "@/lib/services";
 import type { AdminCategoryDto, ContentType } from "@/types/api";
 
+const VIDEO_TYPES = ["video/mp4", "video/webm", "video/mkv"];
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024 * 1024;
+
 function isValidDuration(value: string): boolean {
   return /^\d{1,2}:\d{2}(?::\d{2})?$/.test(value.trim());
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${bytes} B`;
 }
 
 function getCategoryOptions(list: AdminCategoryDto[]): AdminCategoryDto[] {
@@ -46,6 +57,9 @@ export default function AdminEditVideoPage() {
   const [categories, setCategories] = useState<AdminCategoryDto[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [seasons, setSeasons] = useState<
+    { id: string; seasonNumber: number; title: string }[]
+  >([]);
 
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState("");
@@ -55,6 +69,17 @@ export default function AdminEditVideoPage() {
   const [contentType, setContentType] = useState<ContentType>("MOVIE");
   const [releaseYear, setReleaseYear] = useState("");
   const [ageRating, setAgeRating] = useState("NR");
+
+  const [seasonSelection, setSeasonSelection] = useState("new");
+  const [seasonNumber, setSeasonNumber] = useState("1");
+  const [seasonTitle, setSeasonTitle] = useState("");
+  const [episodeNumber, setEpisodeNumber] = useState("1");
+  const [episodeTitle, setEpisodeTitle] = useState("");
+  const [episodeDuration, setEpisodeDuration] = useState("");
+  const [episodeFile, setEpisodeFile] = useState<File | null>(null);
+  const [episodeSubmitting, setEpisodeSubmitting] = useState(false);
+  const [episodeError, setEpisodeError] = useState<string | null>(null);
+  const [episodeSuccess, setEpisodeSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!videoId) return;
@@ -77,6 +102,18 @@ export default function AdminEditVideoPage() {
         setContentType(item.type as ContentType);
         setReleaseYear(String(item.releaseYear));
         setAgeRating(item.ageRating ?? "NR");
+        setSeasons(
+          item.seasons?.map((season) => ({
+            id: season.id,
+            seasonNumber: season.seasonNumber,
+            title: season.title,
+          })) ?? [],
+        );
+        if (item.seasons && item.seasons.length > 0) {
+          setSeasonSelection(item.seasons[0].id);
+          setSeasonNumber(String(item.seasons[0].seasonNumber));
+          setSeasonTitle(item.seasons[0].title);
+        }
       })
       .catch((err) => {
         if (!active) return;
@@ -170,6 +207,104 @@ export default function AdminEditVideoPage() {
     }
   }
 
+  async function handleAddEpisode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!videoId) return;
+    setEpisodeError(null);
+    setEpisodeSuccess(null);
+
+    if (!episodeTitle.trim()) {
+      setEpisodeError("Episode title is required.");
+      return;
+    }
+    if (!/^\d+$/.test(episodeNumber.trim())) {
+      setEpisodeError("Episode number must be a number.");
+      return;
+    }
+    if (seasonSelection === "new" && !/^\d+$/.test(seasonNumber.trim())) {
+      setEpisodeError("Season number must be a number.");
+      return;
+    }
+    if (!episodeDuration.trim() || !isValidDuration(episodeDuration)) {
+      setEpisodeError("Episode duration must be MM:SS or HH:MM:SS.");
+      return;
+    }
+    if (!episodeFile) {
+      setEpisodeError("Please select an episode video file.");
+      return;
+    }
+    if (!VIDEO_TYPES.includes(episodeFile.type)) {
+      setEpisodeError("Episode video must be MP4, WebM, or MKV.");
+      return;
+    }
+    if (episodeFile.size > MAX_VIDEO_BYTES) {
+      setEpisodeError(`Episode video exceeds ${formatBytes(MAX_VIDEO_BYTES)}.`);
+      return;
+    }
+
+    setEpisodeSubmitting(true);
+    try {
+      const videoPresign = await adminService.presignUpload({
+        kind: "video",
+        fileName: episodeFile.name,
+        contentType: episodeFile.type,
+        sizeBytes: episodeFile.size,
+      });
+
+      const uploadRes = await fetch(videoPresign.url, {
+        method: "PUT",
+        headers: { "Content-Type": episodeFile.type },
+        body: episodeFile,
+      });
+      if (!uploadRes.ok) {
+        const message = await uploadRes.text();
+        throw new Error(message || "Upload failed");
+      }
+
+      let seasonId = seasonSelection;
+      if (seasonSelection === "new") {
+        const parsedSeason = Number(seasonNumber) || 1;
+        const createdSeason = await adminService.createSeason({
+          contentId: videoId,
+          seasonNumber: parsedSeason,
+          title: seasonTitle.trim() || `Season ${parsedSeason}`,
+        });
+        seasonId = createdSeason.id;
+      }
+
+      await adminService.createEpisode({
+        contentId: videoId,
+        seasonId: seasonId === "new" ? undefined : seasonId,
+        episodeNumber: Number(episodeNumber),
+        title: episodeTitle.trim(),
+        duration: episodeDuration.trim(),
+        videoKey: videoPresign.key,
+      });
+
+      const refreshed = await adminService.getContentItem(videoId);
+      if (refreshed?.seasons) {
+        setSeasons(
+          refreshed.seasons.map((season) => ({
+            id: season.id,
+            seasonNumber: season.seasonNumber,
+            title: season.title,
+          })),
+        );
+      }
+      setEpisodeSuccess("Episode added successfully.");
+      setEpisodeTitle("");
+      setEpisodeNumber("1");
+      setEpisodeDuration("");
+      setEpisodeFile(null);
+    } catch (err) {
+      setEpisodeError(
+        err instanceof Error ? err.message : "Failed to add episode.",
+      );
+    } finally {
+      setEpisodeSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center rounded-xl border border-neutral-700/50 bg-neutral-900/50 py-12">
@@ -197,174 +332,312 @@ export default function AdminEditVideoPage() {
         </p>
       </header>
 
-      <Card className="max-w-lg">
-        <form onSubmit={handleSubmit}>
+      <div className="space-y-6">
+        <Card className="max-w-lg">
+          <form onSubmit={handleSubmit}>
+            <CardHeader>
+              <CardTitle>Content details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {error && (
+                <p
+                  className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-400"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              )}
+              <Input
+                label="Title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Video title"
+                required
+              />
+              <div>
+                <label
+                  htmlFor="content-type"
+                  className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                >
+                  Content type
+                </label>
+                <select
+                  id="content-type"
+                  value={contentType}
+                  onChange={(e) =>
+                    setContentType(e.target.value as ContentType)
+                  }
+                  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                >
+                  {[
+                    "MOVIE",
+                    "DOCUMENTARY",
+                    "SERIES",
+                    "ANIMATION",
+                    "SHORT",
+                    "TRAILER",
+                  ].map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Input
+                label="Release year"
+                type="text"
+                value={releaseYear}
+                onChange={(e) => setReleaseYear(e.target.value)}
+                placeholder="2024"
+                required
+              />
+              <div>
+                <label
+                  htmlFor="age-rating"
+                  className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                >
+                  Age rating
+                </label>
+                <select
+                  id="age-rating"
+                  value={ageRating}
+                  onChange={(e) => setAgeRating(e.target.value)}
+                  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                >
+                  {["G", "PG", "PG-13", "R", "TV-MA", "NR"].map((rating) => (
+                    <option key={rating} value={rating}>
+                      {rating}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Input
+                label="Duration"
+                type="text"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="e.g. 12:34 or 1:22:10"
+                hint="Format: MM:SS or HH:MM:SS"
+              />
+              <div>
+                <label
+                  htmlFor="category"
+                  className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                >
+                  Category
+                </label>
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                >
+                  <option value="">Select category</option>
+                  <option value="Uncategorized">Uncategorized</option>
+                  {getCategoryOptions(categories).map((opt) => (
+                    <option key={opt.id} value={opt.name}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+                {categoriesLoading ? (
+                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    Loading categories…
+                  </p>
+                ) : categoriesError ? (
+                  <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">
+                    {categoriesError}
+                  </p>
+                ) : categories.length === 0 ? (
+                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    No categories yet. Create one in the Categories page.
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <label
+                  htmlFor="description"
+                  className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-500 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-400"
+                  placeholder="Optional description"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="published"
+                  className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                >
+                  Status
+                </label>
+                <select
+                  id="published"
+                  value={published ? "published" : "unpublished"}
+                  onChange={(e) => setPublished(e.target.value === "published")}
+                  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                >
+                  <option value="published">Published</option>
+                  <option value="unpublished">Unpublished</option>
+                </select>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push("/admin/content")}
+              >
+                Cancel
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+
+        <Card className="max-w-lg">
           <CardHeader>
-            <CardTitle>Content details</CardTitle>
+            <CardTitle>Add episode</CardTitle>
+            <p className="mt-1 text-sm text-neutral-400">
+              Upload and attach a new episode to this series.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
-              <p
-                className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-400"
-                role="alert"
-              >
-                {error}
+            {contentType !== "SERIES" && contentType !== "ANIMATION" ? (
+              <p className="text-sm text-neutral-500">
+                Episodes are available for Series or Animation content types.
               </p>
+            ) : (
+              <form onSubmit={handleAddEpisode} className="space-y-4">
+                {episodeError && (
+                  <p
+                    className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-400"
+                    role="alert"
+                  >
+                    {episodeError}
+                  </p>
+                )}
+                {episodeSuccess && (
+                  <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                    {episodeSuccess}
+                  </p>
+                )}
+                <div>
+                  <label
+                    htmlFor="season-select"
+                    className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                  >
+                    Season
+                  </label>
+                  <select
+                    id="season-select"
+                    value={seasonSelection}
+                    onChange={(e) => setSeasonSelection(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                  >
+                    <option value="new">Create new season</option>
+                    {seasons.map((season) => (
+                      <option key={season.id} value={season.id}>
+                        Season {season.seasonNumber}: {season.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {seasonSelection === "new" && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Input
+                      label="Season number"
+                      type="text"
+                      value={seasonNumber}
+                      onChange={(e) => setSeasonNumber(e.target.value)}
+                      placeholder="1"
+                    />
+                    <Input
+                      label="Season title"
+                      type="text"
+                      value={seasonTitle}
+                      onChange={(e) => setSeasonTitle(e.target.value)}
+                      placeholder="Season 1"
+                    />
+                  </div>
+                )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    label="Episode number"
+                    type="text"
+                    value={episodeNumber}
+                    onChange={(e) => setEpisodeNumber(e.target.value)}
+                    placeholder="1"
+                  />
+                  <Input
+                    label="Episode title"
+                    type="text"
+                    value={episodeTitle}
+                    onChange={(e) => setEpisodeTitle(e.target.value)}
+                    placeholder="Episode 1"
+                  />
+                </div>
+                <Input
+                  label="Episode duration"
+                  type="text"
+                  value={episodeDuration}
+                  onChange={(e) => setEpisodeDuration(e.target.value)}
+                  placeholder="e.g. 24:00"
+                  hint="Format: MM:SS or HH:MM:SS"
+                />
+                <div>
+                  <label
+                    htmlFor="episode-file"
+                    className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                  >
+                    Episode video file
+                  </label>
+                  <input
+                    id="episode-file"
+                    type="file"
+                    accept={VIDEO_TYPES.join(",")}
+                    onChange={(e) =>
+                      setEpisodeFile(e.target.files?.[0] ?? null)
+                    }
+                    className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
+                  />
+                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    MP4, WebM, or MKV. Max {formatBytes(MAX_VIDEO_BYTES)}.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="submit" disabled={episodeSubmitting}>
+                    {episodeSubmitting ? "Uploading…" : "Add episode"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEpisodeTitle("");
+                      setEpisodeDuration("");
+                      setEpisodeNumber("1");
+                      setEpisodeFile(null);
+                      setEpisodeError(null);
+                      setEpisodeSuccess(null);
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </form>
             )}
-            <Input
-              label="Title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Video title"
-              required
-            />
-            <div>
-              <label
-                htmlFor="content-type"
-                className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Content type
-              </label>
-              <select
-                id="content-type"
-                value={contentType}
-                onChange={(e) => setContentType(e.target.value as ContentType)}
-                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
-              >
-                {[
-                  "MOVIE",
-                  "DOCUMENTARY",
-                  "SERIES",
-                  "ANIMATION",
-                  "SHORT",
-                  "TRAILER",
-                ].map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Input
-              label="Release year"
-              type="text"
-              value={releaseYear}
-              onChange={(e) => setReleaseYear(e.target.value)}
-              placeholder="2024"
-              required
-            />
-            <div>
-              <label
-                htmlFor="age-rating"
-                className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Age rating
-              </label>
-              <select
-                id="age-rating"
-                value={ageRating}
-                onChange={(e) => setAgeRating(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
-              >
-                {["G", "PG", "PG-13", "R", "TV-MA", "NR"].map((rating) => (
-                  <option key={rating} value={rating}>
-                    {rating}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Input
-              label="Duration"
-              type="text"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              placeholder="e.g. 12:34 or 1:22:10"
-              hint="Format: MM:SS or HH:MM:SS"
-            />
-            <div>
-              <label
-                htmlFor="category"
-                className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Category
-              </label>
-              <select
-                id="category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
-              >
-                <option value="">Select category</option>
-                <option value="Uncategorized">Uncategorized</option>
-                {getCategoryOptions(categories).map((opt) => (
-                  <option key={opt.id} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              {categoriesLoading ? (
-                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                  Loading categories…
-                </p>
-              ) : categoriesError ? (
-                <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">
-                  {categoriesError}
-                </p>
-              ) : categories.length === 0 ? (
-                <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                  No categories yet. Create one in the Categories page.
-                </p>
-              ) : null}
-            </div>
-            <div>
-              <label
-                htmlFor="description"
-                className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Description
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-500 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-400"
-                placeholder="Optional description"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="published"
-                className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-              >
-                Status
-              </label>
-              <select
-                id="published"
-                value={published ? "published" : "unpublished"}
-                onChange={(e) => setPublished(e.target.value === "published")}
-                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
-              >
-                <option value="published">Published</option>
-                <option value="unpublished">Unpublished</option>
-              </select>
-            </div>
           </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push("/admin/content")}
-            >
-              Cancel
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+        </Card>
+      </div>
     </>
   );
 }
