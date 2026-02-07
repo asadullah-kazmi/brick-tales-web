@@ -14,12 +14,12 @@ const config: Config = {
         foreground: "var(--foreground)",
         "off-black": "var(--off-black)",
         accent: {
-          DEFAULT: "#ffe700",
-          foreground: "#0c0c0c",
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
         },
       },
       boxShadow: {
-        "accent-glow": "0 0 20px rgba(255, 231, 0, 0.35)",
+        "accent-glow": "0 0 20px rgba(229, 231, 235, 0.35)",
       },
     },
   },

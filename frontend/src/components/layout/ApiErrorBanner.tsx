@@ -16,10 +16,10 @@ export function ApiErrorBanner() {
   const isServer = error.status >= 500 || error.status === 0;
 
   const variantClass = isForbidden
-    ? "bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200"
+    ? "bg-neutral-100 text-neutral-900 dark:bg-neutral-900/80 dark:text-neutral-200"
     : isServer
-    ? "bg-red-100 text-red-900 dark:bg-red-950/80 dark:text-red-200"
-    : "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-200";
+      ? "bg-red-100 text-red-900 dark:bg-red-950/80 dark:text-red-200"
+      : "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-200";
 
   return (
     <div

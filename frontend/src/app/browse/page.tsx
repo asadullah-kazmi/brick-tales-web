@@ -87,11 +87,11 @@ const ROWS: BrowseRow[] = [
 ];
 
 const GRADIENTS = [
-  "from-slate-900 via-slate-800 to-amber-500/50",
-  "from-indigo-950 via-indigo-900 to-cyan-500/50",
-  "from-neutral-950 via-neutral-900 to-rose-500/50",
-  "from-zinc-950 via-zinc-900 to-emerald-500/50",
-  "from-slate-950 via-slate-900 to-violet-500/50",
+  "from-slate-950 via-slate-900 to-slate-500/40",
+  "from-indigo-950 via-indigo-900 to-slate-400/40",
+  "from-neutral-950 via-neutral-900 to-slate-500/40",
+  "from-zinc-950 via-zinc-900 to-slate-400/40",
+  "from-slate-950 via-slate-900 to-slate-500/40",
 ];
 
 function getGradient(index: number) {
@@ -106,10 +106,10 @@ function AccentTag({
   text: string;
 }) {
   const styles = {
-    amber: "bg-amber-400/20 text-amber-200 border-amber-300/40",
-    violet: "bg-violet-400/20 text-violet-200 border-violet-300/40",
-    cyan: "bg-cyan-400/20 text-cyan-200 border-cyan-300/40",
-    rose: "bg-rose-400/20 text-rose-200 border-rose-300/40",
+    amber: "bg-white/10 text-white/80 border-white/20",
+    violet: "bg-white/10 text-white/80 border-white/20",
+    cyan: "bg-white/10 text-white/80 border-white/20",
+    rose: "bg-white/10 text-white/80 border-white/20",
   };
   return (
     <span
@@ -157,7 +157,7 @@ function PosterCard({ item, index }: { item: BrowseItem; index: number }) {
           {item.subtitle}
         </p>
       ) : null}
-      <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-200/90">
+      <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-white/80">
         Watch now
         <span aria-hidden>→</span>
       </span>
@@ -219,7 +219,7 @@ function BrowseRowSection({ row }: { row: BrowseRow }) {
         </div>
         <Link
           href="/browse"
-          className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200/80 hover:text-amber-200"
+          className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70 hover:text-white"
         >
           See all
         </Link>
@@ -235,8 +235,8 @@ function BrowseRowSection({ row }: { row: BrowseRow }) {
 
 export default function BrowsePage() {
   return (
-    <main className="relative flex flex-1 flex-col overflow-hidden bg-[#0c0b14] text-white">
-      <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-amber-400/20 blur-[120px]" />
+    <main className="relative flex flex-1 flex-col overflow-hidden bg-[#0b0b0e] text-white">
+      <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-white/10 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-0 left-0 h-72 w-72 rounded-full bg-violet-500/20 blur-[140px]" />
 
       <section className="px-4 pt-6 sm:px-6 lg:px-10">
@@ -275,7 +275,7 @@ export default function BrowsePage() {
                   <button
                     key={chip}
                     type="button"
-                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/70 transition hover:border-amber-300/40 hover:text-amber-200"
+                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/70 transition hover:border-white/30 hover:text-white"
                   >
                     {chip}
                   </button>
@@ -298,7 +298,7 @@ export default function BrowsePage() {
               key={i}
               className={cn(
                 "h-2 w-2 rounded-full",
-                i === 4 ? "bg-amber-300" : "bg-white/20",
+                i === 4 ? "bg-white/70" : "bg-white/20",
               )}
             />
           ))}

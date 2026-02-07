@@ -156,7 +156,7 @@ export default function AdminUserSettingsPage() {
         </div>
       ) : null}
       {isReadOnly ? (
-        <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
+        <div className="rounded-xl border border-neutral-700/60 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-300">
           Read-only access: Customer Support accounts can view users but cannot
           invite or update roles.
         </div>

@@ -8,7 +8,7 @@ import { fetchBranding } from "@/lib/branding";
 import { getLoginOrigin } from "@/lib/mock-auth";
 import { Button } from "@/components/ui";
 
-const LOGO_HEIGHT = 50;
+const LOGO_HEIGHT = 80;
 const LOGO_WIDTH = 140;
 
 function NavContent({
@@ -35,8 +35,8 @@ function NavContent({
     ? "w-full rounded-md px-3 py-2 text-base text-neutral-200 transition-colors hover:bg-neutral-800/70 hover:text-white"
     : "hover:text-accent transition-colors text-neutral-300";
   const pillClass = isMobile
-    ? "w-full rounded-md bg-amber-500/90 px-3 py-2 text-base font-medium text-neutral-900 hover:bg-amber-400"
-    : "rounded-md bg-amber-500/90 px-2.5 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400";
+    ? "w-full rounded-md bg-accent/90 px-3 py-2 text-base font-medium text-accent-foreground hover:bg-accent/80"
+    : "rounded-md bg-accent/90 px-2.5 py-1 text-sm font-medium text-accent-foreground hover:bg-accent/80";
   return (
     <>
       <Link href="/browse" className={linkClass} onClick={onLinkClick}>
@@ -162,7 +162,7 @@ export function Header() {
               alt="BRICK TALES.TV"
               width={LOGO_WIDTH}
               height={LOGO_HEIGHT}
-              className="h-9 w-auto object-contain"
+              className="h-12 w-auto object-contain"
               unoptimized
             />
           ) : (

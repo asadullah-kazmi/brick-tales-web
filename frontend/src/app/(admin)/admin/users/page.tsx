@@ -126,7 +126,7 @@ export default function AdminUsersPage() {
                             user.role === "SUPER_ADMIN" ||
                             user.role === "CONTENT_MANAGER" ||
                             user.role === "CUSTOMER_SUPPORT"
-                              ? "inline-flex rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-200"
+                              ? "inline-flex rounded-full bg-neutral-800/70 px-2.5 py-0.5 text-xs font-medium text-neutral-200"
                               : "text-neutral-400"
                           }
                         >

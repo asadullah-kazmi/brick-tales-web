@@ -288,7 +288,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
           )}
           {longForm && (
             <span
-              className="rounded-full bg-amber-100 px-2.5 py-0.5 font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+              className="rounded-full bg-neutral-100 px-2.5 py-0.5 font-medium text-neutral-800 dark:bg-neutral-800/70 dark:text-neutral-200"
               aria-label="Long-form content"
             >
               Long-form

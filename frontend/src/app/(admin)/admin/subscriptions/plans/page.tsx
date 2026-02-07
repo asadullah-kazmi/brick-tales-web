@@ -346,7 +346,7 @@ export default function AdminPlansPage() {
         </div>
       ) : null}
       {isReadOnly ? (
-        <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
+        <div className="rounded-xl border border-neutral-700/60 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-300">
           Read-only access: Customer Support accounts can view plans but cannot
           create or edit them.
         </div>
@@ -599,7 +599,7 @@ export default function AdminPlansPage() {
                 key={plan.id}
                 className={`rounded-2xl border bg-neutral-900/60 p-6 ${
                   isEditing
-                    ? "border-accent/70 shadow-[0_0_0_1px_rgba(255,231,0,0.4)]"
+                    ? "border-accent/70 shadow-[0_0_0_1px_rgba(229,231,235,0.35)]"
                     : "border-neutral-700/50"
                 }`}
               >
@@ -610,7 +610,7 @@ export default function AdminPlansPage() {
                         {plan.name}
                       </h2>
                       {plan.isPopular ? (
-                        <span className="rounded-full border border-amber-400/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200">
+                        <span className="rounded-full border border-neutral-500/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-200">
                           Most popular
                         </span>
                       ) : null}
