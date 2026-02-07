@@ -67,7 +67,12 @@ function AdminLoginPageContent() {
     setIsLoading(true);
     try {
       const response = await authService.login({ email, password });
-      if (response.user.role !== "admin") {
+      const isAdminRole =
+        response.user.role === "admin" ||
+        response.user.role === "SUPER_ADMIN" ||
+        response.user.role === "CONTENT_MANAGER" ||
+        response.user.role === "CUSTOMER_SUPPORT";
+      if (!isAdminRole) {
         setSubmitError(
           "This sign-in is for administrators only. Use the customer sign-in at /login.",
         );

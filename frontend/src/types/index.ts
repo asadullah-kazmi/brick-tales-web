@@ -3,7 +3,12 @@
  * Domain types (User, Video, AdminVideo) + API contracts (see ./api).
  */
 
-export type UserRole = "user" | "admin";
+export type UserRole =
+  | "user"
+  | "admin"
+  | "SUPER_ADMIN"
+  | "CONTENT_MANAGER"
+  | "CUSTOMER_SUPPORT";
 
 export type User = {
   /** Set when user comes from API (GET /users/me). */

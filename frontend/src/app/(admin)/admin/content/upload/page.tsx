@@ -13,6 +13,7 @@ import {
 } from "@/components/ui";
 import { adminService } from "@/lib/services";
 import type { AdminCategoryDto, ContentType } from "@/types/api";
+import { useAuth } from "@/contexts";
 
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/mkv"];
 const THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -55,6 +56,8 @@ function getCategoryOptions(list: AdminCategoryDto[]): AdminCategoryDto[] {
 
 export default function AdminUploadPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isReadOnly = user?.role === "CUSTOMER_SUPPORT";
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState("");
   const [description, setDescription] = useState("");
@@ -83,6 +86,29 @@ export default function AdminUploadPage() {
   const isEpisodic =
     contentType === "SERIES" ||
     (contentType === "ANIMATION" && animationMode === "episodic");
+
+  if (isReadOnly) {
+    return (
+      <Card className="border-neutral-700/60 bg-neutral-900/50">
+        <CardHeader>
+          <CardTitle>Upload content</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-neutral-400">
+          Customer Support accounts have read-only access and cannot upload
+          content.
+        </CardContent>
+        <CardFooter>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.back()}
+          >
+            Back
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   useEffect(() => {
     let active = true;

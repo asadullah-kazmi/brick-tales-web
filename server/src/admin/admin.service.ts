@@ -1,7 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthService } from '../auth/auth.service';
 import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
+import type { InviteAdminUserDto } from './dto/invite-admin-user.dto';
 import type { AdminContentItemDto } from './dto/admin-content.dto';
 import type { CreateAdminContentDto } from './dto/create-admin-content.dto';
 import type { CreateAdminSeasonDto } from './dto/create-admin-season.dto';
@@ -15,6 +17,8 @@ import type {
   AdminSubscriptionsResponseDto,
 } from './dto/admin-subscription.dto';
 import type { AdminPlanDto } from './dto/admin-plan.dto';
+import type { CreateAdminPlanDto } from './dto/create-admin-plan.dto';
+import type { UpdateAdminPlanDto } from './dto/update-admin-plan.dto';
 import type {
   AdminUsersAnalyticsDto,
   AdminContentAnalyticsDto,
@@ -144,7 +148,10 @@ function formatMoney(value: unknown): string {
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
     const now = new Date();
@@ -194,6 +201,65 @@ export class AdminService {
         createdAt: u.createdAt.toISOString(),
       })),
       total,
+    };
+  }
+
+  async inviteAdminUser(dto: InviteAdminUserDto): Promise<{ message: string }> {
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const name = dto.name?.trim();
+
+    const allowedRoles = new Set(['SUPER_ADMIN', 'CONTENT_MANAGER', 'CUSTOMER_SUPPORT']);
+    if (!allowedRoles.has(dto.role)) {
+      throw new BadRequestException('Invalid role');
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (existing?.passwordHash) {
+      throw new BadRequestException('User already exists with a password.');
+    }
+
+    let userId = existing?.id;
+    if (!existing) {
+      const created = await this.prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          name: name ?? null,
+          role: dto.role,
+        },
+      });
+      userId = created.id;
+    } else {
+      await this.prisma.user.update({
+        where: { id: existing.id },
+        data: { role: dto.role, name: name ?? existing.name },
+      });
+      userId = existing.id;
+    }
+
+    if (!userId) {
+      throw new BadRequestException('Unable to invite user');
+    }
+
+    await this.authService.sendAdminInvite(normalizedEmail);
+    return { message: 'Invitation sent successfully.' };
+  }
+
+  async updateAdminUserRole(id: string, role: string): Promise<AdminUserDto> {
+    const allowedRoles = new Set(['SUPER_ADMIN', 'CONTENT_MANAGER', 'CUSTOMER_SUPPORT']);
+    if (!allowedRoles.has(role)) {
+      throw new BadRequestException('Invalid role');
+    }
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { role },
+    });
+    return {
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      role: updated.role,
+      createdAt: updated.createdAt.toISOString(),
     };
   }
 
@@ -682,6 +748,116 @@ export class AdminService {
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),
     }));
+  }
+
+  async createPlan(dto: CreateAdminPlanDto): Promise<AdminPlanDto> {
+    const name = dto.name.trim();
+    if (!name) throw new BadRequestException('Plan name is required');
+
+    const duration = dto.duration.trim();
+    if (!duration) throw new BadRequestException('Duration is required');
+
+    const parsedPrice = Number(dto.price);
+    if (!Number.isFinite(parsedPrice)) {
+      throw new BadRequestException('Price must be a valid number');
+    }
+
+    const stripePriceId = dto.stripePriceId?.trim();
+
+    const plan = await this.prisma.plan.create({
+      data: {
+        name,
+        price: parsedPrice,
+        duration,
+        deviceLimit: dto.deviceLimit,
+        offlineAllowed: dto.offlineAllowed,
+        maxOfflineDownloads: dto.maxOfflineDownloads,
+        stripePriceId: stripePriceId ? stripePriceId : null,
+      },
+    });
+
+    return {
+      id: plan.id,
+      name: plan.name,
+      price: formatMoney(plan.price),
+      duration: plan.duration,
+      deviceLimit: plan.deviceLimit,
+      offlineAllowed: plan.offlineAllowed,
+      maxOfflineDownloads: plan.maxOfflineDownloads,
+      stripePriceId: plan.stripePriceId ?? undefined,
+      activeSubscribers: 0,
+      createdAt: plan.createdAt.toISOString(),
+      updatedAt: plan.updatedAt.toISOString(),
+    };
+  }
+
+  async updatePlan(planId: string, dto: UpdateAdminPlanDto): Promise<AdminPlanDto> {
+    const data: Record<string, unknown> = {};
+
+    if (typeof dto.name === 'string') {
+      const name = dto.name.trim();
+      if (!name) throw new BadRequestException('Plan name is required');
+      data.name = name;
+    }
+
+    if (dto.price !== undefined) {
+      const parsedPrice = Number(dto.price);
+      if (!Number.isFinite(parsedPrice)) {
+        throw new BadRequestException('Price must be a valid number');
+      }
+      data.price = parsedPrice;
+    }
+
+    if (typeof dto.duration === 'string') {
+      const duration = dto.duration.trim();
+      if (!duration) throw new BadRequestException('Duration is required');
+      data.duration = duration;
+    }
+
+    if (dto.deviceLimit !== undefined) {
+      data.deviceLimit = dto.deviceLimit;
+    }
+
+    if (dto.offlineAllowed !== undefined) {
+      data.offlineAllowed = dto.offlineAllowed;
+    }
+
+    if (dto.maxOfflineDownloads !== undefined) {
+      data.maxOfflineDownloads = dto.maxOfflineDownloads;
+    }
+
+    if (dto.stripePriceId !== undefined) {
+      const value = dto.stripePriceId.trim();
+      data.stripePriceId = value ? value : null;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('No plan fields provided');
+    }
+
+    const plan = await this.prisma.plan.update({
+      where: { id: planId },
+      data,
+    });
+
+    const now = new Date();
+    const activeSubscribers = await this.prisma.subscription.count({
+      where: { planId, status: 'ACTIVE', endDate: { gte: now } },
+    });
+
+    return {
+      id: plan.id,
+      name: plan.name,
+      price: formatMoney(plan.price),
+      duration: plan.duration,
+      deviceLimit: plan.deviceLimit,
+      offlineAllowed: plan.offlineAllowed,
+      maxOfflineDownloads: plan.maxOfflineDownloads,
+      stripePriceId: plan.stripePriceId ?? undefined,
+      activeSubscribers,
+      createdAt: plan.createdAt.toISOString(),
+      updatedAt: plan.updatedAt.toISOString(),
+    };
   }
 
   async getUsersAnalytics(): Promise<AdminUsersAnalyticsDto> {

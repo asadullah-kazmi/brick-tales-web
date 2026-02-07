@@ -33,6 +33,10 @@ import { UpdateAdminContentDto } from './dto/update-admin-content.dto';
 import { PublishAdminContentDto } from './dto/publish-admin-content.dto';
 import type { AdminSubscriptionsResponseDto } from './dto/admin-subscription.dto';
 import type { AdminPlanDto } from './dto/admin-plan.dto';
+import { CreateAdminPlanDto } from './dto/create-admin-plan.dto';
+import { UpdateAdminPlanDto } from './dto/update-admin-plan.dto';
+import { InviteAdminUserDto } from './dto/invite-admin-user.dto';
+import { UpdateAdminUserRoleDto } from './dto/update-admin-user-role.dto';
 import type {
   AdminUsersAnalyticsDto,
   AdminContentAnalyticsDto,
@@ -72,7 +76,8 @@ function getExtensionForType(contentType: string): string {
 }
 
 function ensureAdmin(user: User): void {
-  if (user.role !== 'admin') {
+  const allowed = new Set(['admin', 'SUPER_ADMIN', 'CONTENT_MANAGER', 'CUSTOMER_SUPPORT']);
+  if (!allowed.has(user.role)) {
     throw new ForbiddenException('Admin access required');
   }
 }
@@ -110,6 +115,31 @@ export class AdminController {
   }
 
   /**
+   * Invite a new admin user by email.
+   */
+  @Post('users/invite')
+  async inviteAdminUser(
+    @CurrentUser() user: User,
+    @Body() body: InviteAdminUserDto,
+  ): Promise<{ message: string }> {
+    ensureAdmin(user);
+    return this.adminService.inviteAdminUser(body);
+  }
+
+  /**
+   * Update an admin user's role.
+   */
+  @Patch('users/:id/role')
+  async updateAdminUserRole(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: UpdateAdminUserRoleDto,
+  ): Promise<AdminUserDto> {
+    ensureAdmin(user);
+    return this.adminService.updateAdminUserRole(id, body.role);
+  }
+
+  /**
    * List subscriptions and revenue summary.
    */
   @Get('subscriptions')
@@ -131,6 +161,31 @@ export class AdminController {
   async getPlans(@CurrentUser() user: User): Promise<AdminPlanDto[]> {
     ensureAdmin(user);
     return this.adminService.getPlans();
+  }
+
+  /**
+   * Create a new subscription plan.
+   */
+  @Post('plans')
+  async createPlan(
+    @CurrentUser() user: User,
+    @Body() body: CreateAdminPlanDto,
+  ): Promise<AdminPlanDto> {
+    ensureAdmin(user);
+    return this.adminService.createPlan(body);
+  }
+
+  /**
+   * Update a subscription plan.
+   */
+  @Patch('plans/:id')
+  async updatePlan(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: UpdateAdminPlanDto,
+  ): Promise<AdminPlanDto> {
+    ensureAdmin(user);
+    return this.adminService.updatePlan(id, body);
   }
 
   /**

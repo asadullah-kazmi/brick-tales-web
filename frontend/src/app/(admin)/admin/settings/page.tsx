@@ -24,6 +24,16 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
         </Link>
+        <Link href="/admin/settings/users" className="group">
+          <Card className="h-full border-neutral-700/60 bg-neutral-900/50 transition-colors group-hover:border-accent/50">
+            <CardHeader>
+              <CardTitle>User management</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-neutral-400">
+              Assign roles for admins, content managers, and support.
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );

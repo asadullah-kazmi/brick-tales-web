@@ -50,4 +50,31 @@ export class MailService {
     console.log('[Mail] Password reset link (SMTP not configured):', resetLink);
     return true;
   }
+
+  /** Returns true if email was sent (or skipped in dev with log). */
+  async sendAdminInviteEmail(to: string, inviteLink: string): Promise<boolean> {
+    const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@example.com';
+    const subject = 'You have been invited as an admin';
+    const html = `
+      <p>You have been invited to manage the platform.</p>
+      <p>Click the button below to activate your account and set a password:</p>
+      <p><a href="${inviteLink}" style="display:inline-block;padding:10px 16px;border-radius:6px;background:#f5d90a;color:#111;text-decoration:none;">Activate account</a></p>
+      <p>If you did not expect this, you can ignore this email.</p>
+    `;
+    const text = `Activate your admin account: ${inviteLink}`;
+
+    if (this.transporter) {
+      await this.transporter.sendMail({
+        from,
+        to,
+        subject,
+        text,
+        html,
+      });
+      return true;
+    }
+
+    console.log('[Mail] Admin invite link (SMTP not configured):', inviteLink);
+    return true;
+  }
 }

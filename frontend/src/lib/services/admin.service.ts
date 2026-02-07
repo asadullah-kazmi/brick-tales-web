@@ -19,6 +19,11 @@ import type {
   UpdateSitePageRequestDto,
   AdminSubscriptionsResponseDto,
   AdminPlanDto,
+  AdminUserDto,
+  InviteAdminUserRequestDto,
+  UpdateAdminUserRoleRequestDto,
+  CreateAdminPlanRequestDto,
+  UpdateAdminPlanRequestDto,
   AdminUsersAnalyticsDto,
   AdminContentAnalyticsDto,
   AdminRevenueAnalyticsDto,
@@ -38,15 +43,6 @@ export interface DashboardStatsDto {
   subscribersTrend?: string;
   contentByCategory: { label: string; value: number }[];
   videosByCategory?: { label: string; value: number }[];
-}
-
-/** User row from GET /admin/users */
-export interface AdminUserDto {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-  createdAt: string;
 }
 
 /** Content item from GET /admin/content */
@@ -81,6 +77,7 @@ export interface AdminContentItemDto {
 }
 
 export type {
+  AdminUserDto,
   AdminPlanDto,
   AdminUsersAnalyticsDto,
   AdminContentAnalyticsDto,
@@ -137,6 +134,23 @@ export const adminService = {
     );
   },
 
+  async inviteAdminUser(
+    body: InviteAdminUserRequestDto,
+  ): Promise<{ message: string }> {
+    return withAuthRetry((headers) =>
+      post<{ message: string }>("admin/users/invite", body, { headers }),
+    );
+  },
+
+  async updateAdminUserRole(
+    id: string,
+    body: UpdateAdminUserRoleRequestDto,
+  ): Promise<AdminUserDto> {
+    return withAuthRetry((headers) =>
+      patch<AdminUserDto>(`admin/users/${id}/role`, body, { headers }),
+    );
+  },
+
   async getSubscriptions(
     page = 1,
     limit = 20,
@@ -152,6 +166,21 @@ export const adminService = {
   async getPlans(): Promise<AdminPlanDto[]> {
     return withAuthRetry((headers) =>
       get<AdminPlanDto[]>("admin/plans", { headers }),
+    );
+  },
+
+  async createPlan(body: CreateAdminPlanRequestDto): Promise<AdminPlanDto> {
+    return withAuthRetry((headers) =>
+      post<AdminPlanDto>("admin/plans", body, { headers }),
+    );
+  },
+
+  async updatePlan(
+    id: string,
+    body: UpdateAdminPlanRequestDto,
+  ): Promise<AdminPlanDto> {
+    return withAuthRetry((headers) =>
+      patch<AdminPlanDto>(`admin/plans/${id}`, body, { headers }),
     );
   },
 

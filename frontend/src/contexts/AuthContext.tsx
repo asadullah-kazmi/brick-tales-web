@@ -33,7 +33,7 @@ export type AuthState = {
   isSubscribed: boolean;
   /** True when user is set. */
   isAuthenticated: boolean;
-  /** True when user.role === "admin". */
+  /** True when user.role is any admin role. */
   isAdmin: boolean;
 };
 
@@ -65,7 +65,7 @@ function dtoToUser(dto: {
     id: dto.id,
     email: dto.email,
     name: dto.name ?? "",
-    role: dto.role === "admin" ? "admin" : "user",
+    role: dto.role as User["role"],
     createdAt: dto.createdAt,
   };
 }
@@ -158,7 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionError,
     isSubscribed,
     isAuthenticated: !!user,
-    isAdmin: user?.role === "admin",
+    isAdmin:
+      user?.role === "admin" ||
+      user?.role === "SUPER_ADMIN" ||
+      user?.role === "CONTENT_MANAGER" ||
+      user?.role === "CUSTOMER_SUPPORT",
     // Actions
     login,
     logout,

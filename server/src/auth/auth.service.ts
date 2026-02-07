@@ -115,6 +115,29 @@ export class AuthService {
     return { message };
   }
 
+  /** Admin invite: create activation token and email link. */
+  async sendAdminInvite(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRES_MS);
+
+    await this.prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash, expiresAt },
+    });
+
+    const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? 'http://localhost:3000';
+    const inviteLink = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${rawToken}&admin=1`;
+    await this.mailService.sendAdminInviteEmail(user.email, inviteLink);
+    return { message: 'Invitation sent.' };
+  }
+
   /** Reset password using token from email link. */
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     const tokenHash = this.hashToken(token);

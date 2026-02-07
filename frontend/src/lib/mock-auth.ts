@@ -17,7 +17,9 @@ export type MockLoginResult =
 
 /** Mock: admin@example.com gets role "admin", all others "user". */
 function mockRoleForEmail(email: string): UserRole {
-  return email.trim().toLowerCase() === "admin@example.com" ? "admin" : "user";
+  return email.trim().toLowerCase() === "admin@example.com"
+    ? "SUPER_ADMIN"
+    : "user";
 }
 
 export async function mockLogin(

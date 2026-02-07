@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAdminContent } from "@/contexts";
+import { useAdminContent, useAuth } from "@/contexts";
 import { Button, Loader } from "@/components/ui";
 import { formatDuration } from "@/lib/video-utils";
 import { cn } from "@/lib/utils";
@@ -22,8 +22,10 @@ function formatCreatedAt(iso: string): string {
 
 export default function AdminContentPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { items, loading, error, publishContent, refresh } = useAdminContent();
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const isReadOnly = user?.role === "CUSTOMER_SUPPORT";
 
   async function handleTogglePublish(id: string, current: boolean) {
     setTogglingId(id);
@@ -45,9 +47,15 @@ export default function AdminContentPage() {
             Review uploads, edit metadata, and manage publish status.
           </p>
         </div>
-        <Link href="/admin/content/upload">
-          <Button type="button">Upload content</Button>
-        </Link>
+        {isReadOnly ? (
+          <Button type="button" disabled>
+            Upload content
+          </Button>
+        ) : (
+          <Link href="/admin/content/upload">
+            <Button type="button">Upload content</Button>
+          </Link>
+        )}
       </header>
 
       {loading ? (
@@ -71,11 +79,17 @@ export default function AdminContentPage() {
           <p className="text-neutral-400">
             No content yet. Upload content to get started.
           </p>
-          <Link href="/admin/content/upload" className="mt-4 inline-block">
-            <Button type="button" variant="secondary">
+          {isReadOnly ? (
+            <Button type="button" variant="secondary" disabled className="mt-4">
               Upload content
             </Button>
-          </Link>
+          ) : (
+            <Link href="/admin/content/upload" className="mt-4 inline-block">
+              <Button type="button" variant="secondary">
+                Upload content
+              </Button>
+            </Link>
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-neutral-700/50 bg-neutral-900/50">
@@ -143,6 +157,7 @@ export default function AdminContentPage() {
                           type="button"
                           variant="outline"
                           size="sm"
+                          disabled={isReadOnly}
                           onClick={() =>
                             void router.push(`/admin/content/${item.id}/edit`)
                           }
@@ -153,7 +168,7 @@ export default function AdminContentPage() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          disabled={togglingId === item.id}
+                          disabled={isReadOnly || togglingId === item.id}
                           onClick={() =>
                             handleTogglePublish(item.id, item.isPublished)
                           }

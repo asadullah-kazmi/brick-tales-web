@@ -13,6 +13,7 @@ import {
   Loader,
 } from "@/components/ui";
 import { adminService } from "@/lib/services";
+import { useAuth } from "@/contexts";
 import type { AdminCategoryDto, ContentType } from "@/types/api";
 
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/mkv"];
@@ -45,6 +46,8 @@ function getCategoryOptions(list: AdminCategoryDto[]): AdminCategoryDto[] {
 
 export default function AdminEditVideoPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isReadOnly = user?.role === "CUSTOMER_SUPPORT";
   const params = useParams();
   const videoId = useMemo(() => {
     const raw = params?.id;
@@ -184,6 +187,10 @@ export default function AdminEditVideoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!videoId) return;
+    if (isReadOnly) {
+      setError("Customer Support accounts have read-only access.");
+      return;
+    }
     if (!runValidation()) return;
     setSaving(true);
     try {
@@ -210,6 +217,10 @@ export default function AdminEditVideoPage() {
   async function handleAddEpisode(e: React.FormEvent) {
     e.preventDefault();
     if (!videoId) return;
+    if (isReadOnly) {
+      setEpisodeError("Customer Support accounts have read-only access.");
+      return;
+    }
     setEpisodeError(null);
     setEpisodeSuccess(null);
 
@@ -333,6 +344,12 @@ export default function AdminEditVideoPage() {
       </header>
 
       <div className="space-y-6">
+        {isReadOnly ? (
+          <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
+            Read-only access: Customer Support accounts can view content details
+            but cannot edit or publish changes.
+          </div>
+        ) : null}
         <Card className="max-w-lg">
           <form onSubmit={handleSubmit}>
             <CardHeader>
@@ -354,6 +371,7 @@ export default function AdminEditVideoPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Video title"
                 required
+                disabled={isReadOnly || saving}
               />
               <div>
                 <label
@@ -369,6 +387,7 @@ export default function AdminEditVideoPage() {
                     setContentType(e.target.value as ContentType)
                   }
                   className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                  disabled={isReadOnly || saving}
                 >
                   {[
                     "MOVIE",
@@ -391,6 +410,7 @@ export default function AdminEditVideoPage() {
                 onChange={(e) => setReleaseYear(e.target.value)}
                 placeholder="2024"
                 required
+                disabled={isReadOnly || saving}
               />
               <div>
                 <label
@@ -404,6 +424,7 @@ export default function AdminEditVideoPage() {
                   value={ageRating}
                   onChange={(e) => setAgeRating(e.target.value)}
                   className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                  disabled={isReadOnly || saving}
                 >
                   {["G", "PG", "PG-13", "R", "TV-MA", "NR"].map((rating) => (
                     <option key={rating} value={rating}>
@@ -419,6 +440,7 @@ export default function AdminEditVideoPage() {
                 onChange={(e) => setDuration(e.target.value)}
                 placeholder="e.g. 12:34 or 1:22:10"
                 hint="Format: MM:SS or HH:MM:SS"
+                disabled={isReadOnly || saving}
               />
               <div>
                 <label
@@ -432,6 +454,7 @@ export default function AdminEditVideoPage() {
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                  disabled={isReadOnly || saving}
                 >
                   <option value="">Select category</option>
                   <option value="Uncategorized">Uncategorized</option>
@@ -469,6 +492,7 @@ export default function AdminEditVideoPage() {
                   rows={4}
                   className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-500 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-400"
                   placeholder="Optional description"
+                  disabled={isReadOnly || saving}
                 />
               </div>
               <div>
@@ -483,6 +507,7 @@ export default function AdminEditVideoPage() {
                   value={published ? "published" : "unpublished"}
                   onChange={(e) => setPublished(e.target.value === "published")}
                   className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                  disabled={isReadOnly || saving}
                 >
                   <option value="published">Published</option>
                   <option value="unpublished">Unpublished</option>
@@ -490,7 +515,7 @@ export default function AdminEditVideoPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || isReadOnly}>
                 {saving ? "Saving…" : "Save changes"}
               </Button>
               <Button
@@ -543,6 +568,7 @@ export default function AdminEditVideoPage() {
                     value={seasonSelection}
                     onChange={(e) => setSeasonSelection(e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
+                    disabled={isReadOnly || episodeSubmitting}
                   >
                     <option value="new">Create new season</option>
                     {seasons.map((season) => (
@@ -560,6 +586,7 @@ export default function AdminEditVideoPage() {
                       value={seasonNumber}
                       onChange={(e) => setSeasonNumber(e.target.value)}
                       placeholder="1"
+                      disabled={isReadOnly || episodeSubmitting}
                     />
                     <Input
                       label="Season title"
@@ -567,6 +594,7 @@ export default function AdminEditVideoPage() {
                       value={seasonTitle}
                       onChange={(e) => setSeasonTitle(e.target.value)}
                       placeholder="Season 1"
+                      disabled={isReadOnly || episodeSubmitting}
                     />
                   </div>
                 )}
@@ -577,6 +605,7 @@ export default function AdminEditVideoPage() {
                     value={episodeNumber}
                     onChange={(e) => setEpisodeNumber(e.target.value)}
                     placeholder="1"
+                    disabled={isReadOnly || episodeSubmitting}
                   />
                   <Input
                     label="Episode title"
@@ -584,6 +613,7 @@ export default function AdminEditVideoPage() {
                     value={episodeTitle}
                     onChange={(e) => setEpisodeTitle(e.target.value)}
                     placeholder="Episode 1"
+                    disabled={isReadOnly || episodeSubmitting}
                   />
                 </div>
                 <Input
@@ -593,6 +623,7 @@ export default function AdminEditVideoPage() {
                   onChange={(e) => setEpisodeDuration(e.target.value)}
                   placeholder="e.g. 24:00"
                   hint="Format: MM:SS or HH:MM:SS"
+                  disabled={isReadOnly || episodeSubmitting}
                 />
                 <div>
                   <label
@@ -609,18 +640,23 @@ export default function AdminEditVideoPage() {
                       setEpisodeFile(e.target.files?.[0] ?? null)
                     }
                     className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
+                    disabled={isReadOnly || episodeSubmitting}
                   />
                   <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
                     MP4, WebM, or MKV. Max {formatBytes(MAX_VIDEO_BYTES)}.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <Button type="submit" disabled={episodeSubmitting}>
+                  <Button
+                    type="submit"
+                    disabled={episodeSubmitting || isReadOnly}
+                  >
                     {episodeSubmitting ? "Uploading…" : "Add episode"}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
+                    disabled={isReadOnly || episodeSubmitting}
                     onClick={() => {
                       setEpisodeTitle("");
                       setEpisodeDuration("");

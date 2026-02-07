@@ -8,7 +8,12 @@ export interface UserDto {
   id: string;
   email: string;
   name: string;
-  role: "user" | "admin";
+  role:
+    | "user"
+    | "admin"
+    | "SUPER_ADMIN"
+    | "CONTENT_MANAGER"
+    | "CUSTOMER_SUPPORT";
   /** ISO date string. */
   createdAt?: string;
 }

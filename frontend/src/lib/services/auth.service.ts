@@ -51,7 +51,7 @@ function meToUserDto(me: MeResponse): UserDto {
     id: me.id,
     email: me.email,
     name: me.name ?? "",
-    role: me.role === "admin" ? "admin" : "user",
+    role: me.role as UserDto["role"],
     createdAt: me.createdAt,
   };
 }
@@ -61,7 +61,7 @@ function userToDto(user: User): UserDto {
     id: (user as User & { id?: string }).id ?? `user-${user.email}`,
     email: user.email,
     name: user.name,
-    role: user.role ?? "user",
+    role: (user.role as UserDto["role"]) ?? "user",
   };
 }
 

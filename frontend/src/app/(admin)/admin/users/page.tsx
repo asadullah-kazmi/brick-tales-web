@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminService, type AdminUserDto } from "@/lib/services";
+import { adminService } from "@/lib/services";
+import type { AdminUserDto } from "@/types/api";
 import { Loader, Button } from "@/components/ui";
 
 function formatCreatedAt(iso: string): string {
@@ -121,7 +122,10 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3">
                         <span
                           className={
-                            user.role === "admin"
+                            user.role === "admin" ||
+                            user.role === "SUPER_ADMIN" ||
+                            user.role === "CONTENT_MANAGER" ||
+                            user.role === "CUSTOMER_SUPPORT"
                               ? "inline-flex rounded-full bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-200"
                               : "text-neutral-400"
                           }

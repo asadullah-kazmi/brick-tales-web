@@ -285,51 +285,133 @@ function IconLogout({ className }: { className?: string }) {
   );
 }
 
-const NAV_SECTIONS = [
+function IconSupport({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M18 10a6 6 0 00-12 0v4a2 2 0 002 2h1v-6H8a2 2 0 00-2 2v2a6 6 0 0012 0v-2a2 2 0 00-2-2h-1v6h1a2 2 0 002-2v-4z"
+      />
+    </svg>
+  );
+}
+
+type AdminRole =
+  | "admin"
+  | "SUPER_ADMIN"
+  | "CONTENT_MANAGER"
+  | "CUSTOMER_SUPPORT";
+
+const NAV_SECTIONS: {
+  label: string | null;
+  items: {
+    href: string;
+    label: string;
+    icon: ({ className }: { className?: string }) => JSX.Element;
+    roles?: AdminRole[];
+  }[];
+}[] = [
   {
     label: null,
-    items: [{ href: "/admin", label: "Dashboard", icon: IconDashboard }],
+    items: [
+      {
+        href: "/admin",
+        label: "Dashboard",
+        icon: IconDashboard,
+        roles: ["admin", "SUPER_ADMIN", "CONTENT_MANAGER", "CUSTOMER_SUPPORT"],
+      },
+    ],
   },
   {
     label: "Content",
     items: [
-      { href: "/admin/content", label: "Library", icon: IconLibrary },
-      { href: "/admin/categories", label: "Categories", icon: IconCategories },
+      {
+        href: "/admin/content",
+        label: "Library",
+        icon: IconLibrary,
+        roles: ["admin", "SUPER_ADMIN", "CONTENT_MANAGER", "CUSTOMER_SUPPORT"],
+      },
+      {
+        href: "/admin/categories",
+        label: "Categories",
+        icon: IconCategories,
+        roles: ["admin", "SUPER_ADMIN", "CONTENT_MANAGER", "CUSTOMER_SUPPORT"],
+      },
       {
         href: "/admin/content/upload",
         label: "Upload content",
         icon: IconUpload,
+        roles: ["admin", "SUPER_ADMIN", "CONTENT_MANAGER", "CUSTOMER_SUPPORT"],
       },
     ],
   },
   {
     label: "Users",
-    items: [{ href: "/admin/users", label: "User List", icon: IconUsers }],
+    items: [
+      {
+        href: "/admin/users",
+        label: "User List",
+        icon: IconUsers,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
+      },
+    ],
   },
   {
     label: "Subscriptions",
     items: [
-      { href: "/admin/subscriptions/plans", label: "Plans", icon: IconPlans },
+      {
+        href: "/admin/subscriptions/plans",
+        label: "Plans",
+        icon: IconPlans,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
+      },
       {
         href: "/admin/subscriptions/transactions",
         label: "Transactions",
         icon: IconTransactions,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
       },
     ],
   },
   {
     label: "Analytics",
     items: [
-      { href: "/admin/analytics/users", label: "Users", icon: IconAnalytics },
+      {
+        href: "/admin/analytics/users",
+        label: "Users",
+        icon: IconAnalytics,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
+      },
       {
         href: "/admin/analytics/content",
         label: "Content",
         icon: IconAnalytics,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
       },
       {
         href: "/admin/analytics/revenue",
         label: "Revenue",
         icon: IconAnalytics,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
+      },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      {
+        href: "/admin/support",
+        label: "Customer Support",
+        icon: IconSupport,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
       },
     ],
   },
@@ -340,14 +422,31 @@ const NAV_SECTIONS = [
         href: "/admin/settings/app",
         label: "App Settings",
         icon: IconSettings,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
+      },
+      {
+        href: "/admin/settings/users",
+        label: "User Management",
+        icon: IconUsers,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
       },
     ],
   },
   {
     label: "System",
     items: [
-      { href: "/admin/system/logs", label: "Logs", icon: IconLogs },
-      { href: "/admin/system/health", label: "Health", icon: IconHealth },
+      {
+        href: "/admin/system/logs",
+        label: "Logs",
+        icon: IconLogs,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
+      },
+      {
+        href: "/admin/system/health",
+        label: "Health",
+        icon: IconHealth,
+        roles: ["admin", "SUPER_ADMIN", "CUSTOMER_SUPPORT"],
+      },
     ],
   },
 ] as const;
@@ -363,10 +462,11 @@ export default function AdminLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const isAdminLoginPage = pathname === "/admin/login";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const role = (user?.role ?? "admin") as AdminRole;
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -445,55 +545,60 @@ export default function AdminLayoutClient({
         </button>
       </div>
       <nav className="flex-1 space-y-6 overflow-y-auto p-3">
-        {NAV_SECTIONS.map((section, index) => (
-          <div
-            key={section.label ?? `section-${index}`}
-            className="space-y-0.5"
-          >
-            {section.label ? (
-              <p className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-neutral-600">
-                {section.label}
-              </p>
-            ) : null}
-            {section.items.map(({ href, label, icon: Icon }) => {
-              let isActive = false;
-              if (href === "/admin") {
-                isActive = pathname === "/admin";
-              } else if (href === "/admin/content") {
-                isActive =
-                  pathname === "/admin/content" ||
-                  pathname.startsWith("/admin/content/");
-              } else if (href === "/admin/subscriptions/transactions") {
-                isActive =
-                  pathname.startsWith("/admin/subscriptions/transactions") ||
-                  pathname === "/admin/subscriptions";
-              } else if (href === "/admin/settings/app") {
-                isActive =
-                  pathname.startsWith("/admin/settings/app") ||
-                  pathname === "/admin/settings";
-              } else {
-                isActive = pathname.startsWith(href);
-              }
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    "border-l-2",
-                    isActive
-                      ? "border-accent bg-accent/10 text-white"
-                      : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
-                  )}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
-                  {label}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+        {NAV_SECTIONS.map((section) => {
+          const visibleItems = section.items.filter((item) =>
+            item.roles ? item.roles.includes(role) : true,
+          );
+          if (visibleItems.length === 0) return null;
+          return (
+            <div key={section.label ?? "section"} className="space-y-0.5">
+              {section.label ? (
+                <p className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-neutral-600">
+                  {section.label}
+                </p>
+              ) : null}
+              {visibleItems.map(({ href, label, icon: Icon }) => {
+                let isActive = false;
+                if (href === "/admin") {
+                  isActive = pathname === "/admin";
+                } else if (href === "/admin/content") {
+                  isActive =
+                    pathname === "/admin/content" ||
+                    pathname.startsWith("/admin/content/");
+                } else if (href === "/admin/subscriptions/transactions") {
+                  isActive =
+                    pathname.startsWith("/admin/subscriptions/transactions") ||
+                    pathname === "/admin/subscriptions";
+                } else if (href === "/admin/settings/app") {
+                  isActive =
+                    pathname.startsWith("/admin/settings/app") ||
+                    pathname === "/admin/settings";
+                } else if (href === "/admin/settings/users") {
+                  isActive = pathname.startsWith("/admin/settings/users");
+                } else {
+                  isActive = pathname.startsWith(href);
+                }
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      "border-l-2",
+                      isActive
+                        ? "border-accent bg-accent/10 text-white"
+                        : "border-transparent text-neutral-300 hover:bg-neutral-800/50 hover:text-accent",
+                    )}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0 opacity-80" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
         <button
           type="button"
           onClick={() => {

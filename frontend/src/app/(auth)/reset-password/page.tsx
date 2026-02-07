@@ -20,6 +20,7 @@ import { authService } from "@/lib/services";
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const adminRedirect = searchParams.get("admin") === "1";
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<{
@@ -47,7 +48,7 @@ function ResetPasswordContent() {
     if (!runValidation()) return;
     if (!token) {
       setSubmitError(
-        "Invalid or missing reset link. Please request a new one."
+        "Invalid or missing reset link. Please request a new one.",
       );
       return;
     }
@@ -92,22 +93,26 @@ function ResetPasswordContent() {
   }
 
   if (success) {
+    const title = adminRedirect ? "Account activated" : "Password reset";
+    const body = adminRedirect
+      ? "Your administrator account is now active. You can sign in with your new password."
+      : message;
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Password reset</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {message}
+            {body}
           </p>
         </CardContent>
         <CardFooter>
           <Link
-            href="/login"
+            href={adminRedirect ? "/admin/login" : "/login"}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
           >
-            Back to sign in
+            {adminRedirect ? "Back to admin sign in" : "Back to sign in"}
           </Link>
         </CardFooter>
       </Card>
@@ -158,7 +163,7 @@ function ResetPasswordContent() {
             {isLoading ? "Resetting…" : "Reset password"}
           </Button>
           <Link
-            href="/login"
+            href={adminRedirect ? "/admin/login" : "/login"}
             className="text-center text-sm text-neutral-600 underline hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
           >
             Back to sign in

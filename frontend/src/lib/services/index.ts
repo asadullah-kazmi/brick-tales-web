@@ -14,7 +14,6 @@ export type { CategoryCountDto } from "./analytics.service";
 export { adminService } from "./admin.service";
 export type {
   DashboardStatsDto,
-  AdminUserDto,
   AdminContentItemDto,
   AdminPlanDto,
   AdminUsersAnalyticsDto,

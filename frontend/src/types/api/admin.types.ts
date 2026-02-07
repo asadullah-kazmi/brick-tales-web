@@ -12,6 +12,44 @@ export interface AdminPlanDto {
   updatedAt: string;
 }
 
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export interface InviteAdminUserRequestDto {
+  email: string;
+  name?: string;
+  role: "SUPER_ADMIN" | "CONTENT_MANAGER" | "CUSTOMER_SUPPORT";
+}
+
+export interface UpdateAdminUserRoleRequestDto {
+  role: "SUPER_ADMIN" | "CONTENT_MANAGER" | "CUSTOMER_SUPPORT";
+}
+
+export interface CreateAdminPlanRequestDto {
+  name: string;
+  price: string;
+  duration: string;
+  deviceLimit: number;
+  offlineAllowed: boolean;
+  maxOfflineDownloads: number;
+  stripePriceId?: string;
+}
+
+export interface UpdateAdminPlanRequestDto {
+  name?: string;
+  price?: string;
+  duration?: string;
+  deviceLimit?: number;
+  offlineAllowed?: boolean;
+  maxOfflineDownloads?: number;
+  stripePriceId?: string;
+}
+
 export interface DailyCountDto {
   date: string;
   count: number;
