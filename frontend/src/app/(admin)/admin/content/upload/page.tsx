@@ -87,29 +87,6 @@ export default function AdminUploadPage() {
     contentType === "SERIES" ||
     (contentType === "ANIMATION" && animationMode === "episodic");
 
-  if (isReadOnly) {
-    return (
-      <Card className="border-neutral-700/60 bg-neutral-900/50">
-        <CardHeader>
-          <CardTitle>Upload content</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-neutral-400">
-          Customer Support accounts have read-only access and cannot upload
-          content.
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => router.back()}
-          >
-            Back
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
-
   useEffect(() => {
     let active = true;
     setCategoriesLoading(true);
@@ -135,6 +112,29 @@ export default function AdminUploadPage() {
       active = false;
     };
   }, []);
+
+  if (isReadOnly) {
+    return (
+      <Card className="border-neutral-700/60 bg-neutral-900/50">
+        <CardHeader>
+          <CardTitle>Upload content</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-neutral-400">
+          Customer Support accounts have read-only access and cannot upload
+          content.
+        </CardContent>
+        <CardFooter>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => router.back()}
+          >
+            Back
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   function runValidation(): boolean {
     if (!title.trim()) {

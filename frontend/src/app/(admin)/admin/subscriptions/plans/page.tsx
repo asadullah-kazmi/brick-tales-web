@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { adminService } from "@/lib/services";
 import type { AdminPlanDto } from "@/types/api";
 import { Button, Loader } from "@/components/ui";
@@ -39,11 +39,6 @@ export default function AdminPlansPage() {
   });
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-
-  const draft = useMemo(() => {
-    if (!editingId) return null;
-    return drafts[editingId] ?? null;
-  }, [drafts, editingId]);
 
   async function load() {
     setLoading(true);
