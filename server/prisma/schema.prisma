@@ -43,6 +43,20 @@ enum ContentType {
   SHORT
 }
 
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 // ---------------------------------------------------------------------------
 // User
 // ---------------------------------------------------------------------------
@@ -63,6 +77,7 @@ model User {
   viewHistory    ViewHistory[]
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  supportReplies      SupportReply[]
 
   @@index([email])
 }
@@ -254,6 +269,43 @@ model SitePage {
   updatedAt DateTime @updatedAt
 
   @@index([slug])
+}
+
+// ---------------------------------------------------------------------------
+// Support requests (Contact Us)
+// ---------------------------------------------------------------------------
+
+model SupportRequest {
+  id        String          @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    SupportStatus   @default(OPEN)
+  priority  SupportPriority @default(MEDIUM)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  replies SupportReply[]
+
+  @@index([email])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model SupportReply {
+  id               String   @id @default(cuid())
+  supportRequestId String
+  adminUserId      String?
+  message          String
+  createdAt        DateTime @default(now())
+
+  supportRequest SupportRequest @relation(fields: [supportRequestId], references: [id], onDelete: Cascade)
+  adminUser      User?          @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([supportRequestId])
+  @@index([adminUserId])
 }
 
 // ---------------------------------------------------------------------------

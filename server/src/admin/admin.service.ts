@@ -27,6 +27,9 @@ import type {
   TopEpisodeDto,
 } from './dto/admin-analytics.dto';
 import type { AdminSystemHealthDto, AdminSystemLogDto } from './dto/admin-system.dto';
+import type { SupportRequestDto, SupportReplyDto } from './dto/admin-support.dto';
+import type { UpdateSupportRequestDto } from './dto/update-support-request.dto';
+import type { ReplySupportRequestDto } from './dto/reply-support-request.dto';
 
 const ContentType = {
   MOVIE: 'MOVIE',
@@ -38,6 +41,9 @@ const ContentType = {
 } as const;
 
 type ContentType = (typeof ContentType)[keyof typeof ContentType];
+
+const SUPPORT_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const;
+const SUPPORT_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
 
 export interface DownloadsPerPlanDto {
   planId: string;
@@ -202,6 +208,116 @@ export class AdminService {
       })),
       total,
     };
+  }
+
+  async getSupportRequests(
+    page = 1,
+    limit = 20,
+  ): Promise<{ requests: SupportRequestDto[]; total: number }> {
+    const model = this.getSupportRequestModel();
+    const skip = (page - 1) * limit;
+    const [total, items] = await Promise.all([
+      model.count(),
+      model.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          replies: {
+            orderBy: { createdAt: 'desc' },
+            include: { adminUser: true },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      requests: items.map((item: any) => this.toSupportRequestDto(item)),
+    };
+  }
+
+  async updateSupportRequest(
+    id: string,
+    body: UpdateSupportRequestDto,
+  ): Promise<SupportRequestDto> {
+    if (!body.priority && !body.status) {
+      throw new BadRequestException('No updates provided.');
+    }
+    if (body.priority && !SUPPORT_PRIORITIES.includes(body.priority as any)) {
+      throw new BadRequestException('Invalid priority.');
+    }
+    if (body.status && !SUPPORT_STATUSES.includes(body.status as any)) {
+      throw new BadRequestException('Invalid status.');
+    }
+
+    const model = this.getSupportRequestModel();
+    const updated = await model.update({
+      where: { id },
+      data: {
+        priority: body.priority,
+        status: body.status,
+      },
+      include: {
+        replies: {
+          orderBy: { createdAt: 'desc' },
+          include: { adminUser: true },
+        },
+      },
+    });
+
+    return this.toSupportRequestDto(updated);
+  }
+
+  async replySupportRequest(
+    id: string,
+    adminUserId: string,
+    body: ReplySupportRequestDto,
+  ): Promise<SupportRequestDto> {
+    if (!body.message?.trim()) {
+      throw new BadRequestException('Reply message is required.');
+    }
+    if (body.status && !SUPPORT_STATUSES.includes(body.status as any)) {
+      throw new BadRequestException('Invalid status.');
+    }
+
+    const model = this.getSupportRequestModel();
+    const request = await model.findUnique({ where: { id } });
+    if (!request) {
+      throw new BadRequestException('Support request not found.');
+    }
+
+    const nextStatus = body.status ?? (request.status === 'OPEN' ? 'IN_PROGRESS' : request.status);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const replyModel = (tx as any).supportReply;
+      const requestModel = (tx as any).supportRequest;
+      if (!replyModel || !requestModel) {
+        throw new BadRequestException(
+          'Support requests are not available. Run prisma generate and migrate to add SupportRequest.',
+        );
+      }
+      await replyModel.create({
+        data: {
+          supportRequestId: id,
+          adminUserId,
+          message: body.message.trim(),
+        },
+      });
+
+      return requestModel.update({
+        where: { id },
+        data: { status: nextStatus },
+        include: {
+          replies: {
+            orderBy: { createdAt: 'desc' },
+            include: { adminUser: true },
+          },
+        },
+      });
+    });
+
+    return this.toSupportRequestDto(updated);
   }
 
   async inviteAdminUser(dto: InviteAdminUserDto): Promise<{ message: string }> {
@@ -1167,5 +1283,43 @@ export class AdminService {
       activeOfflineUsers,
       downloadsPerPlan,
     };
+  }
+
+  private toSupportRequestDto(request: any): SupportRequestDto {
+    return {
+      id: request.id,
+      name: request.name,
+      email: request.email,
+      subject: request.subject,
+      message: request.message,
+      status: request.status,
+      priority: request.priority,
+      createdAt: request.createdAt.toISOString(),
+      updatedAt: request.updatedAt.toISOString(),
+      replies: (request.replies ?? []).map(
+        (reply: any): SupportReplyDto => ({
+          id: reply.id,
+          message: reply.message,
+          adminUserId: reply.adminUserId ?? null,
+          adminName: reply.adminUser?.name ?? null,
+          createdAt: reply.createdAt.toISOString(),
+        }),
+      ),
+    };
+  }
+
+  private getSupportRequestModel(): {
+    count: Function;
+    findMany: Function;
+    update: Function;
+    findUnique: Function;
+  } {
+    const model = (this.prisma as any).supportRequest;
+    if (!model) {
+      throw new BadRequestException(
+        'Support requests are not available. Run prisma generate and migrate to add SupportRequest.',
+      );
+    }
+    return model;
   }
 }

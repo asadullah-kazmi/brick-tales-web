@@ -118,3 +118,42 @@ export interface AdminSystemLogDto {
   message: string;
   createdAt: string;
 }
+
+export type SupportPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type SupportStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+export interface SupportReplyDto {
+  id: string;
+  message: string;
+  adminUserId?: string | null;
+  adminName?: string | null;
+  createdAt: string;
+}
+
+export interface SupportRequestDto {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: SupportStatus;
+  priority: SupportPriority;
+  createdAt: string;
+  updatedAt: string;
+  replies: SupportReplyDto[];
+}
+
+export interface SupportRequestsResponseDto {
+  requests: SupportRequestDto[];
+  total: number;
+}
+
+export interface UpdateSupportRequestDto {
+  priority?: SupportPriority;
+  status?: SupportStatus;
+}
+
+export interface ReplySupportRequestDto {
+  message: string;
+  status?: SupportStatus;
+}

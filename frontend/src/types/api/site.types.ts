@@ -17,3 +17,14 @@ export interface UpdateSitePageRequestDto {
   title?: string;
   content?: string;
 }
+
+export interface ContactSupportRequestDto {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+export interface ContactSupportResponseDto {
+  message: string;
+}

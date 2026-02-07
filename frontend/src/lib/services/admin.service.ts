@@ -29,6 +29,10 @@ import type {
   AdminRevenueAnalyticsDto,
   AdminSystemHealthDto,
   AdminSystemLogDto,
+  ReplySupportRequestDto,
+  SupportRequestDto,
+  SupportRequestsResponseDto,
+  UpdateSupportRequestDto,
 } from "@/types/api";
 
 /** Dashboard stats from GET /admin/stats */
@@ -148,6 +152,40 @@ export const adminService = {
   ): Promise<AdminUserDto> {
     return withAuthRetry((headers) =>
       patch<AdminUserDto>(`admin/users/${id}/role`, body, { headers }),
+    );
+  },
+
+  async getSupportRequests(
+    page = 1,
+    limit = 20,
+  ): Promise<SupportRequestsResponseDto> {
+    return withAuthRetry((headers) =>
+      get<SupportRequestsResponseDto>("admin/support/requests", {
+        params: { page: String(page), limit: String(limit) },
+        headers,
+      }),
+    );
+  },
+
+  async updateSupportRequest(
+    id: string,
+    body: UpdateSupportRequestDto,
+  ): Promise<SupportRequestDto> {
+    return withAuthRetry((headers) =>
+      patch<SupportRequestDto>(`admin/support/requests/${id}`, body, {
+        headers,
+      }),
+    );
+  },
+
+  async replySupportRequest(
+    id: string,
+    body: ReplySupportRequestDto,
+  ): Promise<SupportRequestDto> {
+    return withAuthRetry((headers) =>
+      post<SupportRequestDto>(`admin/support/requests/${id}/reply`, body, {
+        headers,
+      }),
     );
   },
 

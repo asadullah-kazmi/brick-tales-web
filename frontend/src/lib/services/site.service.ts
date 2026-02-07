@@ -1,5 +1,9 @@
-import { get } from "@/lib/api-client";
-import type { SitePageDto } from "@/types/api";
+import { get, post } from "@/lib/api-client";
+import type {
+  ContactSupportRequestDto,
+  ContactSupportResponseDto,
+  SitePageDto,
+} from "@/types/api";
 
 export const siteService = {
   async getPage(slug: string): Promise<SitePageDto | null> {
@@ -8,5 +12,10 @@ export const siteService = {
     } catch {
       return null;
     }
+  },
+  async submitContact(
+    body: ContactSupportRequestDto,
+  ): Promise<ContactSupportResponseDto> {
+    return post<ContactSupportResponseDto>("site/contact", body);
   },
 };

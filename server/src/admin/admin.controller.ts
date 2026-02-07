@@ -37,6 +37,9 @@ import { CreateAdminPlanDto } from './dto/create-admin-plan.dto';
 import { UpdateAdminPlanDto } from './dto/update-admin-plan.dto';
 import { InviteAdminUserDto } from './dto/invite-admin-user.dto';
 import { UpdateAdminUserRoleDto } from './dto/update-admin-user-role.dto';
+import type { SupportRequestDto } from './dto/admin-support.dto';
+import { UpdateSupportRequestDto } from './dto/update-support-request.dto';
+import { ReplySupportRequestDto } from './dto/reply-support-request.dto';
 import type {
   AdminUsersAnalyticsDto,
   AdminContentAnalyticsDto,
@@ -112,6 +115,47 @@ export class AdminController {
     const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
     return this.adminService.getUsers(pageNum, limitNum);
+  }
+
+  /**
+   * List support requests (paginated).
+   */
+  @Get('support/requests')
+  async getSupportRequests(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ requests: SupportRequestDto[]; total: number }> {
+    ensureAdmin(user);
+    const pageNum = Math.max(1, parseInt(String(page || '1'), 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit || '20'), 10) || 20));
+    return this.adminService.getSupportRequests(pageNum, limitNum);
+  }
+
+  /**
+   * Update support request status/priority.
+   */
+  @Patch('support/requests/:id')
+  async updateSupportRequest(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: UpdateSupportRequestDto,
+  ): Promise<SupportRequestDto> {
+    ensureAdmin(user);
+    return this.adminService.updateSupportRequest(id, body);
+  }
+
+  /**
+   * Reply to a support request.
+   */
+  @Post('support/requests/:id/reply')
+  async replySupportRequest(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: ReplySupportRequestDto,
+  ): Promise<SupportRequestDto> {
+    ensureAdmin(user);
+    return this.adminService.replySupportRequest(id, user.id, body);
   }
 
   /**

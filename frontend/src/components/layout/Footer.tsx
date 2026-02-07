@@ -62,6 +62,12 @@ export function Footer() {
               Browse
             </Link>
             <Link
+              href="/contact"
+              className="hover:text-accent transition-colors"
+            >
+              Contact us
+            </Link>
+            <Link
               href="/terms-of-use"
               className="hover:text-accent transition-colors"
             >

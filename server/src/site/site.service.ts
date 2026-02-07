@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SitePageDto, SitePageSummaryDto } from './dto/site-page.dto';
+import type { ContactRequestDto } from './dto/contact-request.dto';
 
 const DEFAULT_PAGES: { slug: string; title: string }[] = [
   { slug: 'privacy-policy', title: 'Privacy Policy' },
@@ -92,5 +93,30 @@ export class SiteService {
       .split('-')
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
+  }
+
+  async createSupportRequest(dto: ContactRequestDto): Promise<{ message: string }> {
+    const model = this.getSupportRequestModel();
+    await model.create({
+      data: {
+        name: dto.name.trim(),
+        email: dto.email.trim().toLowerCase(),
+        subject: dto.subject.trim(),
+        message: dto.message.trim(),
+      },
+    });
+    return { message: 'Thanks for reaching out. Our support team will reply shortly.' };
+  }
+
+  private getSupportRequestModel() {
+    const model = (this.prisma as any).supportRequest;
+    if (!model) {
+      throw new BadRequestException(
+        'Support requests are not available. Run prisma generate and migrate to add SupportRequest.',
+      );
+    }
+    return model as {
+      create: Function;
+    };
   }
 }
