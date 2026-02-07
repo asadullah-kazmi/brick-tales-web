@@ -79,18 +79,6 @@ export function Footer() {
             >
               Privacy Policy
             </Link>
-            <Link
-              href="/cookie-consent"
-              className="hover:text-accent transition-colors"
-            >
-              Cookie Consent Tool
-            </Link>
-            <Link
-              href="/do-not-sell"
-              className="hover:text-accent transition-colors"
-            >
-              Do Not Sell or Share My Personal Information
-            </Link>
           </nav>
         </div>
       </div>

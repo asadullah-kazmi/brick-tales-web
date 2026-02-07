@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SITE_BRAND, SITE_DESCRIPTION, absoluteUrl } from "@/lib/seo";
-import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
 import { cn } from "@/lib/utils";
 import { subscriptionService } from "@/lib/services";
 import type { PublicPlanDto } from "@/types/api";
@@ -62,7 +61,7 @@ function TabletIcon({ className }: { className?: string }) {
 
 export const metadata: Metadata = {
   title: "Subscription Plans",
-  description: `Compare ${SITE_BRAND} plans: Fan, Mega Fan, and Ultimate. Ad-free, multi-device, downloads, simulcasts, and more.`,
+  description: `Compare ${SITE_BRAND} plans and start your free trial.`,
   openGraph: {
     title: `Subscription Plans | ${SITE_BRAND}`,
     description: `Compare plans and start your free trial.`,
@@ -133,19 +132,78 @@ function BenefitValue({ value }: { value: boolean | string }) {
   );
 }
 
+type UiPlan = {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  period: string;
+  trialDays: number;
+  benefits: { label: string; value: boolean | string }[];
+  featured?: boolean;
+  extraPerks: string[];
+};
+
+function formatPeriod(duration: string): string {
+  const normalized = duration.trim().toLowerCase();
+  if (normalized.includes("month")) return "month";
+  if (normalized.includes("year")) return "year";
+  if (normalized.includes("week")) return "week";
+  if (normalized.includes("day")) return "day";
+  return normalized || "month";
+}
+
+function formatDeviceLimit(limit: number): string {
+  if (limit <= 1) return "1 device";
+  return `Up to ${limit} devices`;
+}
+
+function pickDescription(index: number, total: number): string {
+  if (total <= 1) return "The complete experience";
+  if (index === 0) return "Great for casual viewers";
+  if (index === total - 1) return "The complete experience";
+  return "Best for families and power viewers";
+}
+
+function buildUiPlans(plans: PublicPlanDto[]): UiPlan[] {
+  if (plans.length === 0) return [];
+  const sorted = [...plans].sort((a, b) => a.price - b.price);
+  const maxPrice = Math.max(...sorted.map((plan) => plan.price));
+  return sorted.map((plan, index) => {
+    const perks = plan.perks ?? [];
+    const primaryPerk = perks[0];
+    const extraPerks = primaryPerk ? perks.slice(1) : perks;
+    const includesSimulcasts = perks.some((perk) => /simulcast/i.test(perk));
+    const deviceValue = formatDeviceLimit(plan.deviceLimit);
+    const trialDays = index === 0 ? 7 : 14;
+    return {
+      id: plan.id,
+      name: plan.name,
+      description: pickDescription(index, sorted.length),
+      price: plan.price.toFixed(2),
+      period: formatPeriod(plan.duration),
+      trialDays,
+      featured: plan.price === maxPrice,
+      benefits: [
+        { label: "Ad-free streaming", value: true },
+        { label: "Multi-device", value: deviceValue },
+        { label: "Downloads", value: plan.offlineAllowed },
+        { label: "Simulcasts", value: includesSimulcasts },
+        {
+          label: "Perks",
+          value: primaryPerk ?? (perks.length > 0 ? true : false),
+        },
+      ],
+      extraPerks,
+    };
+  });
+}
+
 export default async function SubscriptionPage() {
   const apiPlans: PublicPlanDto[] = await subscriptionService
     .getPlans()
     .catch(() => []);
-  const apiPlanMap = new Map(
-    apiPlans.map((plan) => [plan.name.toLowerCase(), plan]),
-  );
-  const extraPlans = apiPlans.filter(
-    (plan) =>
-      !SUBSCRIPTION_PLANS.some(
-        (local) => local.name.toLowerCase() === plan.name.toLowerCase(),
-      ),
-  );
+  const uiPlans = buildUiPlans(apiPlans);
   return (
     <main
       id="main"
@@ -159,8 +217,7 @@ export default async function SubscriptionPage() {
             Choose your plan
           </h1>
           <p className="mt-2 max-w-2xl mx-auto text-neutral-600 dark:text-neutral-400">
-            {SITE_DESCRIPTION} Compare Fan, Mega Fan, and Ultimate. Start with a
-            free trial.
+            {SITE_DESCRIPTION} Compare plans and start with a free trial.
           </p>
         </header>
 
@@ -200,26 +257,26 @@ export default async function SubscriptionPage() {
             <p className="text-center text-sm font-medium text-neutral-800 dark:text-neutral-200">
               Multi-device support per tier
             </p>
-            <ul className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-neutral-600 dark:text-neutral-400 sm:gap-x-8">
-              <li>
-                <strong className="text-neutral-900 dark:text-white">
-                  Fan:
-                </strong>{" "}
-                1 device at a time
-              </li>
-              <li>
-                <strong className="text-neutral-900 dark:text-white">
-                  Mega Fan:
-                </strong>{" "}
-                Up to 4 devices
-              </li>
-              <li>
-                <strong className="text-neutral-900 dark:text-white">
-                  Ultimate:
-                </strong>{" "}
-                Up to 6 devices
-              </li>
-            </ul>
+            {uiPlans.length > 0 ? (
+              <ul className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-neutral-600 dark:text-neutral-400 sm:gap-x-8">
+                {uiPlans.map((plan) => (
+                  <li key={plan.id}>
+                    <strong className="text-neutral-900 dark:text-white">
+                      {plan.name}:
+                    </strong>{" "}
+                    {
+                      plan.benefits.find(
+                        (item) => item.label === "Multi-device",
+                      )?.value as string
+                    }
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-center text-sm text-neutral-600 dark:text-neutral-400">
+                Plans will appear here once they are published.
+              </p>
+            )}
           </div>
         </section>
 
@@ -227,145 +284,71 @@ export default async function SubscriptionPage() {
           className="mt-10 grid gap-6 sm:gap-8 lg:grid-cols-3"
           aria-label="Subscription plans"
         >
-          {SUBSCRIPTION_PLANS.map((plan) =>
-            (() => {
-              const apiPlan = apiPlanMap.get(plan.name.toLowerCase());
-              return (
-                <article
-                  key={plan.id}
-                  className={cn(
-                    "flex flex-col rounded-2xl border bg-white shadow-sm dark:bg-neutral-900/50 dark:border-neutral-700",
-                    plan.featured
-                      ? "border-2 border-accent ring-2 ring-accent/20 lg:scale-105 lg:shadow-lg dark:shadow-accent-glow"
-                      : "border-neutral-200 dark:border-neutral-700",
+          {uiPlans.length > 0 ? (
+            uiPlans.map((plan) => (
+              <article
+                key={plan.id}
+                className={cn(
+                  "flex flex-col rounded-2xl border bg-white shadow-sm dark:bg-neutral-900/50 dark:border-neutral-700",
+                  plan.featured
+                    ? "border-2 border-accent ring-2 ring-accent/20 lg:scale-105 lg:shadow-lg dark:shadow-accent-glow"
+                    : "border-neutral-200 dark:border-neutral-700",
+                )}
+                aria-labelledby={`plan-${plan.id}-title`}
+              >
+                <div className="p-6 sm:p-8">
+                  {plan.featured && (
+                    <p
+                      className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-900 dark:text-neutral-100"
+                      aria-hidden
+                    >
+                      Most popular
+                    </p>
                   )}
-                  aria-labelledby={`plan-${plan.id}-title`}
-                >
-                  <div className="p-6 sm:p-8">
-                    {plan.featured && (
-                      <p
-                        className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-900 dark:text-neutral-100"
-                        aria-hidden
-                      >
-                        Most popular
-                      </p>
-                    )}
-                    <h2
-                      id={`plan-${plan.id}-title`}
-                      className="text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl"
-                    >
-                      {plan.name}
-                    </h2>
-                    <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                      {plan.description}
-                    </p>
-                    <div className="mt-6 flex items-baseline gap-1">
-                      <span className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                        ${plan.price}
-                      </span>
-                      <span className="text-neutral-600 dark:text-neutral-400">
-                        /{plan.period}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-500">
-                      {plan.trialDays}-day free trial
-                    </p>
-
-                    <ul
-                      className="mt-6 space-y-4"
-                      aria-label={`${plan.name} benefits`}
-                    >
-                      {plan.benefits.map((item) => (
-                        <li
-                          key={item.label}
-                          className="flex items-start justify-between gap-3"
-                        >
-                          <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                            {item.label}
-                          </span>
-                          <BenefitValue value={item.value} />
-                        </li>
-                      ))}
-                    </ul>
-                    {apiPlan?.perks?.length ? (
-                      <div className="mt-6">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
-                          Extra perks
-                        </p>
-                        <ul className="mt-3 space-y-2 text-sm text-neutral-700 dark:text-neutral-300">
-                          {apiPlan.perks.map((perk) => (
-                            <li key={perk} className="flex items-start gap-2">
-                              <CheckIcon className="mt-0.5 text-green-600 dark:text-green-400" />
-                              <span>{perk}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    <div className="mt-8 flex flex-col gap-3">
-                      <Link
-                        href={`/signup?plan=${plan.id}&trial=1`}
-                        className={cn(
-                          "inline-flex h-12 items-center justify-center rounded-lg px-6 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:focus-visible:ring-offset-off-black",
-                          plan.featured
-                            ? "bg-accent text-accent-foreground shadow-accent-glow hover:bg-accent/90"
-                            : "border-2 border-accent bg-transparent text-neutral-900 hover:bg-accent/10 dark:text-accent dark:hover:bg-accent/10",
-                        )}
-                        aria-label={`Start ${plan.trialDays}-day free trial for ${plan.name}`}
-                      >
-                        Start Free Trial
-                      </Link>
-                      <Link
-                        href={`/signup?plan=${plan.id}`}
-                        className="inline-flex h-12 items-center justify-center rounded-lg bg-neutral-100 px-6 text-base font-medium text-neutral-900 hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:focus-visible:ring-accent dark:focus-visible:ring-offset-off-black"
-                        aria-label={`Subscribe to ${plan.name} now`}
-                      >
-                        Subscribe Now
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              );
-            })(),
-          )}
-        </section>
-
-        {extraPlans.length > 0 ? (
-          <section className="mt-12" aria-label="Additional plans">
-            <h2 className="text-center text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl">
-              Additional plans
-            </h2>
-            <p className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-400">
-              Extra tiers created by the team.
-            </p>
-            <div className="mt-6 grid gap-6 sm:gap-8 lg:grid-cols-3">
-              {extraPlans.map((plan) => (
-                <article
-                  key={plan.id}
-                  className="flex flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/50"
-                >
-                  <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                  <h2
+                    id={`plan-${plan.id}-title`}
+                    className="text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl"
+                  >
                     {plan.name}
-                  </h3>
+                  </h2>
                   <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                    {plan.duration}
+                    {plan.description}
                   </p>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-neutral-900 dark:text-white">
+                  <div className="mt-6 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">
                       ${plan.price}
                     </span>
                     <span className="text-neutral-600 dark:text-neutral-400">
-                      /{plan.duration.toLowerCase()}
+                      /{plan.period}
                     </span>
                   </div>
-                  {plan.perks.length > 0 ? (
-                    <div className="mt-4">
+                  <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-500">
+                    {plan.trialDays}-day free trial
+                  </p>
+
+                  <ul
+                    className="mt-6 space-y-4"
+                    aria-label={`${plan.name} benefits`}
+                  >
+                    {plan.benefits.map((item) => (
+                      <li
+                        key={item.label}
+                        className="flex items-start justify-between gap-3"
+                      >
+                        <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                          {item.label}
+                        </span>
+                        <BenefitValue value={item.value} />
+                      </li>
+                    ))}
+                  </ul>
+                  {plan.extraPerks.length > 0 ? (
+                    <div className="mt-6">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
                         Extra perks
                       </p>
                       <ul className="mt-3 space-y-2 text-sm text-neutral-700 dark:text-neutral-300">
-                        {plan.perks.map((perk) => (
+                        {plan.extraPerks.map((perk) => (
                           <li key={perk} className="flex items-start gap-2">
                             <CheckIcon className="mt-0.5 text-green-600 dark:text-green-400" />
                             <span>{perk}</span>
@@ -374,11 +357,37 @@ export default async function SubscriptionPage() {
                       </ul>
                     </div>
                   ) : null}
-                </article>
-              ))}
+
+                  <div className="mt-8 flex flex-col gap-3">
+                    <Link
+                      href={`/signup?plan=${plan.id}&trial=1`}
+                      className={cn(
+                        "inline-flex h-12 items-center justify-center rounded-lg px-6 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:focus-visible:ring-offset-off-black",
+                        plan.featured
+                          ? "bg-accent text-accent-foreground shadow-accent-glow hover:bg-accent/90"
+                          : "border-2 border-accent bg-transparent text-neutral-900 hover:bg-accent/10 dark:text-accent dark:hover:bg-accent/10",
+                      )}
+                      aria-label={`Start ${plan.trialDays}-day free trial for ${plan.name}`}
+                    >
+                      Start Free Trial
+                    </Link>
+                    <Link
+                      href={`/signup?plan=${plan.id}`}
+                      className="inline-flex h-12 items-center justify-center rounded-lg bg-neutral-100 px-6 text-base font-medium text-neutral-900 hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:focus-visible:ring-accent dark:focus-visible:ring-offset-off-black"
+                      aria-label={`Subscribe to ${plan.name} now`}
+                    >
+                      Subscribe Now
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="col-span-full rounded-2xl border border-neutral-200 bg-neutral-50 p-8 text-center text-sm text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900/40 dark:text-neutral-400">
+              No plans are available yet. Please check back soon.
             </div>
-          </section>
-        ) : null}
+          )}
+        </section>
 
         <p className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-500">
           Cancel anytime. No commitment. Terms apply.

@@ -15,6 +15,7 @@ function NavContent({
   dashboardHref,
   isAuthenticated,
   isSubscribed,
+  isAdmin,
   user,
   logout,
   onLinkClick,
@@ -23,6 +24,7 @@ function NavContent({
   dashboardHref: string;
   isAuthenticated: boolean;
   isSubscribed: boolean;
+  isAdmin: boolean;
   user: { name: string; email: string } | null;
   logout: () => void;
   onLinkClick?: () => void;
@@ -43,7 +45,7 @@ function NavContent({
       <Link href="/subscription" className={linkClass} onClick={onLinkClick}>
         Plans
       </Link>
-      {isAuthenticated && !isSubscribed && (
+      {isAuthenticated && !isSubscribed && !isAdmin && (
         <Link href="/subscription" className={pillClass} onClick={onLinkClick}>
           Upgrade
         </Link>
@@ -183,6 +185,7 @@ export function Header() {
             dashboardHref={dashboardHref}
             isAuthenticated={isAuthenticated}
             isSubscribed={isSubscribed}
+            isAdmin={isAdmin}
             user={user}
             logout={logout}
           />
