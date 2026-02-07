@@ -998,6 +998,17 @@ export class AdminService {
     };
   }
 
+  async deletePlan(planId: string): Promise<{ message: string }> {
+    const activeCount = await this.prisma.subscription.count({
+      where: { planId, status: 'ACTIVE', endDate: { gte: new Date() } },
+    });
+    if (activeCount > 0) {
+      throw new BadRequestException('Cannot delete a plan with active subscribers.');
+    }
+    await (this.prisma as any).plan.delete({ where: { id: planId } });
+    return { message: 'Plan deleted.' };
+  }
+
   private normalizePerks(perks?: string[]): string[] {
     if (!perks) return [];
     const cleaned = perks.map((perk) => perk.trim()).filter((perk) => perk.length > 0);

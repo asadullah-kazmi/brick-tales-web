@@ -222,6 +222,12 @@ export const adminService = {
     );
   },
 
+  async deletePlan(id: string): Promise<{ message: string }> {
+    return withAuthRetry((headers) =>
+      del<{ message: string }>(`admin/plans/${id}`, { headers }),
+    );
+  },
+
   async getContent(): Promise<AdminContentItemDto[]> {
     return withAuthRetry((headers) =>
       get<AdminContentItemDto[]>("admin/content", { headers }),

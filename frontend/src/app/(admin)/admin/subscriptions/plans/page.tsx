@@ -28,6 +28,7 @@ export default function AdminPlansPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<PlanDraft>({
     name: "",
@@ -232,6 +233,31 @@ export default function AdminPlansPage() {
       );
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function handleDelete(plan: AdminPlanDto) {
+    if (isReadOnly) {
+      setSaveError("Customer Support accounts have read-only access.");
+      return;
+    }
+    const ok = window.confirm(
+      `Delete plan "${plan.name}"? This cannot be undone.`,
+    );
+    if (!ok) return;
+    setDeletingId(plan.id);
+    setSaveError(null);
+    setNotice(null);
+    try {
+      const res = await adminService.deletePlan(plan.id);
+      setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+      setNotice(res.message);
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : "Failed to delete plan.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -547,6 +573,18 @@ export default function AdminPlansPage() {
                     {plan.offlineAllowed ? "Enabled" : "Not included"}
                   </p>
                   <p>Max offline downloads: {plan.maxOfflineDownloads}</p>
+                  {plan.perks.length > 0 ? (
+                    <div className="pt-1">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                        Perks
+                      </p>
+                      <ul className="mt-2 space-y-1 text-sm text-neutral-300">
+                        {plan.perks.map((perk) => (
+                          <li key={perk}>• {perk}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <Button
@@ -559,6 +597,15 @@ export default function AdminPlansPage() {
                   </Button>
                   <Button type="button" size="sm" variant="outline">
                     View subscribers
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleDelete(plan)}
+                    disabled={isReadOnly || deletingId === plan.id}
+                  >
+                    {deletingId === plan.id ? "Deleting…" : "Delete"}
                   </Button>
                 </div>
 

@@ -233,6 +233,18 @@ export class AdminController {
   }
 
   /**
+   * Delete a subscription plan.
+   */
+  @Delete('plans/:id')
+  async deletePlan(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    ensureAdmin(user);
+    return this.adminService.deletePlan(id);
+  }
+
+  /**
    * List all content for admin.
    */
   @Get('content')
