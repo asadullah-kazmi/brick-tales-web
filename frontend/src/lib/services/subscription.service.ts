@@ -17,7 +17,12 @@ import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
  */
 export const subscriptionService = {
   async getPlans(): Promise<PublicPlanDto[]> {
-    if (USE_MOCK_API) {
+    if (!USE_MOCK_API) {
+      return get<PublicPlanDto[]>("subscriptions/plans");
+    }
+    try {
+      return await get<PublicPlanDto[]>("subscriptions/plans");
+    } catch {
       return SUBSCRIPTION_PLANS.map((plan) => ({
         id: plan.id,
         name: plan.name,
@@ -48,7 +53,6 @@ export const subscriptionService = {
         updatedAt: new Date().toISOString(),
       }));
     }
-    return get<PublicPlanDto[]>("subscriptions/plans");
   },
   async getSubscription(): Promise<GetSubscriptionResponseDto> {
     if (USE_MOCK_API) {
