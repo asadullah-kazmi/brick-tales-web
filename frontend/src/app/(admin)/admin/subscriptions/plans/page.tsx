@@ -13,6 +13,7 @@ type PlanDraft = {
   deviceLimit: number;
   offlineAllowed: boolean;
   maxOfflineDownloads: number;
+  isPopular: boolean;
   perks: string[];
   stripePriceId?: string;
 };
@@ -37,6 +38,7 @@ export default function AdminPlansPage() {
     deviceLimit: 1,
     offlineAllowed: false,
     maxOfflineDownloads: 0,
+    isPopular: false,
     perks: [],
     stripePriceId: "",
   });
@@ -60,6 +62,7 @@ export default function AdminPlansPage() {
           deviceLimit: plan.deviceLimit,
           offlineAllowed: plan.offlineAllowed,
           maxOfflineDownloads: plan.maxOfflineDownloads,
+          isPopular: plan.isPopular,
           perks: plan.perks ?? [],
           stripePriceId: plan.stripePriceId,
         };
@@ -95,6 +98,7 @@ export default function AdminPlansPage() {
       deviceLimit: 1,
       offlineAllowed: false,
       maxOfflineDownloads: 0,
+      isPopular: false,
       perks: [],
       stripePriceId: "",
     });
@@ -133,23 +137,37 @@ export default function AdminPlansPage() {
         deviceLimit: createDraft.deviceLimit,
         offlineAllowed: createDraft.offlineAllowed,
         maxOfflineDownloads: createDraft.maxOfflineDownloads,
+        isPopular: createDraft.isPopular,
         perks: createDraft.perks,
         stripePriceId: createDraft.stripePriceId?.trim() || undefined,
       });
-      setPlans((prev) => [created, ...prev]);
-      setDrafts((prev) => ({
-        ...prev,
-        [created.id]: {
+      setPlans((prev) => {
+        const next = [created, ...prev];
+        if (!created.isPopular) return next;
+        return next.map((plan) =>
+          plan.id === created.id ? plan : { ...plan, isPopular: false },
+        );
+      });
+      setDrafts((prev) => {
+        const next: Record<string, PlanDraft> = { ...prev };
+        if (created.isPopular) {
+          for (const [key, value] of Object.entries(next)) {
+            next[key] = { ...value, isPopular: false };
+          }
+        }
+        next[created.id] = {
           name: created.name,
           price: created.price,
           duration: created.duration,
           deviceLimit: created.deviceLimit,
           offlineAllowed: created.offlineAllowed,
           maxOfflineDownloads: created.maxOfflineDownloads,
+          isPopular: created.isPopular,
           perks: created.perks ?? [],
           stripePriceId: created.stripePriceId,
-        },
-      }));
+        };
+        return next;
+      });
       setNotice("Plan created.");
       setCreateOpen(false);
       resetCreateForm();
@@ -221,10 +239,27 @@ export default function AdminPlansPage() {
         deviceLimit: next.deviceLimit,
         offlineAllowed: next.offlineAllowed,
         maxOfflineDownloads: next.maxOfflineDownloads,
+        isPopular: next.isPopular,
         perks: next.perks,
         stripePriceId: next.stripePriceId?.trim() || undefined,
       });
-      setPlans((prev) => prev.map((plan) => (plan.id === id ? updated : plan)));
+      setPlans((prev) =>
+        prev.map((plan) => {
+          if (plan.id === id) return updated;
+          if (updated.isPopular) return { ...plan, isPopular: false };
+          return plan;
+        }),
+      );
+      setDrafts((prev) => {
+        if (!updated.isPopular) return prev;
+        const nextDrafts: Record<string, PlanDraft> = { ...prev };
+        for (const key of Object.keys(nextDrafts)) {
+          if (key !== id) {
+            nextDrafts[key] = { ...nextDrafts[key], isPopular: false };
+          }
+        }
+        return nextDrafts;
+      });
       setNotice("Plan changes saved.");
       setEditingId(null);
     } catch (err) {
@@ -473,6 +508,27 @@ export default function AdminPlansPage() {
                 />
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <input
+                id="create-popular"
+                type="checkbox"
+                className="h-4 w-4 rounded border-neutral-700 bg-neutral-950 text-accent"
+                checked={createDraft.isPopular}
+                onChange={(e) =>
+                  setCreateDraft((prev) => ({
+                    ...prev,
+                    isPopular: e.target.checked,
+                  }))
+                }
+                disabled={isReadOnly || creating}
+              />
+              <label
+                htmlFor="create-popular"
+                className="text-sm text-neutral-300"
+              >
+                Mark as Most Popular
+              </label>
+            </div>
             <div className="space-y-3">
               <label className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
                 Extra perks
@@ -549,9 +605,16 @@ export default function AdminPlansPage() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-white">
-                      {plan.name}
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-semibold text-white">
+                        {plan.name}
+                      </h2>
+                      {plan.isPopular ? (
+                        <span className="rounded-full border border-amber-400/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200">
+                          Most popular
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-1 text-xs uppercase tracking-[0.2em] text-neutral-500">
                       {plan.duration}
                     </p>
@@ -698,6 +761,26 @@ export default function AdminPlansPage() {
                         placeholder="Stripe price ID"
                         disabled={isReadOnly || savingId === plan.id}
                       />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        id={`popular-${plan.id}`}
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-neutral-700 bg-neutral-950 text-accent"
+                        checked={current.isPopular}
+                        onChange={(e) =>
+                          updateDraft(plan.id, {
+                            isPopular: e.target.checked,
+                          })
+                        }
+                        disabled={isReadOnly || savingId === plan.id}
+                      />
+                      <label
+                        htmlFor={`popular-${plan.id}`}
+                        className="text-sm text-neutral-300"
+                      >
+                        Mark as Most Popular
+                      </label>
                     </div>
                     <div className="space-y-3">
                       <label className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">

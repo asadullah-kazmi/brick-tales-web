@@ -6,6 +6,7 @@ export interface AdminPlanDto {
   deviceLimit: number;
   offlineAllowed: boolean;
   maxOfflineDownloads: number;
+  isPopular: boolean;
   perks: string[];
   stripePriceId?: string;
   activeSubscribers: number;
@@ -38,6 +39,7 @@ export interface CreateAdminPlanRequestDto {
   deviceLimit: number;
   offlineAllowed: boolean;
   maxOfflineDownloads: number;
+  isPopular?: boolean;
   perks?: string[];
   stripePriceId?: string;
 }
@@ -49,6 +51,7 @@ export interface UpdateAdminPlanRequestDto {
   deviceLimit?: number;
   offlineAllowed?: boolean;
   maxOfflineDownloads?: number;
+  isPopular?: boolean;
   perks?: string[];
   stripePriceId?: string;
 }

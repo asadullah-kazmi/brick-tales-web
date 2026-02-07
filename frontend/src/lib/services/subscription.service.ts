@@ -39,6 +39,7 @@ export const subscriptionService = {
         )
           ? 10
           : 0,
+        isPopular: plan.featured ?? false,
         perks:
           plan.benefits
             .filter((item) => item.label === "Perks")

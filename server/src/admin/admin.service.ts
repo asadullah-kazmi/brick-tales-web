@@ -872,6 +872,7 @@ export class AdminService {
       deviceLimit: plan.deviceLimit,
       offlineAllowed: plan.offlineAllowed,
       maxOfflineDownloads: plan.maxOfflineDownloads,
+      isPopular: plan.isPopular,
       perks: plan.perks ?? [],
       stripePriceId: plan.stripePriceId ?? undefined,
       activeSubscribers: activeCountMap.get(plan.id) ?? 0,
@@ -894,18 +895,27 @@ export class AdminService {
 
     const stripePriceId = dto.stripePriceId?.trim();
     const perks = this.normalizePerks(dto.perks);
-
-    const plan = await (this.prisma as any).plan.create({
-      data: {
-        name,
-        price: parsedPrice,
-        duration,
-        deviceLimit: dto.deviceLimit,
-        offlineAllowed: dto.offlineAllowed,
-        maxOfflineDownloads: dto.maxOfflineDownloads,
-        perks,
-        stripePriceId: stripePriceId ? stripePriceId : null,
-      },
+    const isPopular = dto.isPopular === true;
+    const plan = await this.prisma.$transaction(async (tx) => {
+      if (isPopular) {
+        await (tx as any).plan.updateMany({
+          data: { isPopular: false },
+          where: { isPopular: true },
+        });
+      }
+      return (tx as any).plan.create({
+        data: {
+          name,
+          price: parsedPrice,
+          duration,
+          deviceLimit: dto.deviceLimit,
+          offlineAllowed: dto.offlineAllowed,
+          maxOfflineDownloads: dto.maxOfflineDownloads,
+          isPopular,
+          perks,
+          stripePriceId: stripePriceId ? stripePriceId : null,
+        },
+      });
     });
 
     return {
@@ -916,6 +926,7 @@ export class AdminService {
       deviceLimit: plan.deviceLimit,
       offlineAllowed: plan.offlineAllowed,
       maxOfflineDownloads: plan.maxOfflineDownloads,
+      isPopular: plan.isPopular,
       perks: plan.perks ?? [],
       stripePriceId: plan.stripePriceId ?? undefined,
       activeSubscribers: 0,
@@ -959,6 +970,10 @@ export class AdminService {
       data.maxOfflineDownloads = dto.maxOfflineDownloads;
     }
 
+    if (dto.isPopular !== undefined) {
+      data.isPopular = dto.isPopular;
+    }
+
     if (dto.perks !== undefined) {
       data.perks = this.normalizePerks(dto.perks);
     }
@@ -972,10 +987,22 @@ export class AdminService {
       throw new BadRequestException('No plan fields provided');
     }
 
-    const plan = await (this.prisma as any).plan.update({
-      where: { id: planId },
-      data,
-    });
+    const makePopular = dto.isPopular === true;
+    const plan = makePopular
+      ? await this.prisma.$transaction(async (tx) => {
+          await (tx as any).plan.updateMany({
+            data: { isPopular: false },
+            where: { isPopular: true, id: { not: planId } },
+          });
+          return (tx as any).plan.update({
+            where: { id: planId },
+            data,
+          });
+        })
+      : await (this.prisma as any).plan.update({
+          where: { id: planId },
+          data,
+        });
 
     const now = new Date();
     const activeSubscribers = await this.prisma.subscription.count({
@@ -990,6 +1017,7 @@ export class AdminService {
       deviceLimit: plan.deviceLimit,
       offlineAllowed: plan.offlineAllowed,
       maxOfflineDownloads: plan.maxOfflineDownloads,
+      isPopular: plan.isPopular,
       perks: plan.perks ?? [],
       stripePriceId: plan.stripePriceId ?? undefined,
       activeSubscribers,

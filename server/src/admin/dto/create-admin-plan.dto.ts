@@ -34,6 +34,10 @@ export class CreateAdminPlanDto {
   maxOfflineDownloads: number;
 
   @IsOptional()
+  @IsBoolean()
+  isPopular?: boolean;
+
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(12)
   @IsString({ each: true })

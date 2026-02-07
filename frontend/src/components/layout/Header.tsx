@@ -257,6 +257,7 @@ export function Header() {
             dashboardHref={dashboardHref}
             isAuthenticated={isAuthenticated}
             isSubscribed={isSubscribed}
+            isAdmin={isAdmin}
             user={user}
             logout={logout}
             onLinkClick={() => setMobileMenuOpen(false)}

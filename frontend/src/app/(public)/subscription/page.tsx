@@ -168,7 +168,6 @@ function pickDescription(index: number, total: number): string {
 function buildUiPlans(plans: PublicPlanDto[]): UiPlan[] {
   if (plans.length === 0) return [];
   const sorted = [...plans].sort((a, b) => a.price - b.price);
-  const maxPrice = Math.max(...sorted.map((plan) => plan.price));
   return sorted.map((plan, index) => {
     const perks = plan.perks ?? [];
     const primaryPerk = perks[0];
@@ -183,7 +182,7 @@ function buildUiPlans(plans: PublicPlanDto[]): UiPlan[] {
       price: plan.price.toFixed(2),
       period: formatPeriod(plan.duration),
       trialDays,
-      featured: plan.price === maxPrice,
+      featured: plan.isPopular,
       benefits: [
         { label: "Ad-free streaming", value: true },
         { label: "Multi-device", value: deviceValue },

@@ -56,6 +56,7 @@ export interface PublicPlanDto {
   deviceLimit: number;
   offlineAllowed: boolean;
   maxOfflineDownloads: number;
+  isPopular: boolean;
   perks: string[];
   createdAt: string;
   updatedAt: string;
