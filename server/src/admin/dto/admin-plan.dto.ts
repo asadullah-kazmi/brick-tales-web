@@ -6,6 +6,7 @@ export interface AdminPlanDto {
   deviceLimit: number;
   offlineAllowed: boolean;
   maxOfflineDownloads: number;
+  perks: string[];
   stripePriceId?: string;
   activeSubscribers: number;
   createdAt: string;

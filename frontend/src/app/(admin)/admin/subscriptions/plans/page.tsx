@@ -13,6 +13,7 @@ type PlanDraft = {
   deviceLimit: number;
   offlineAllowed: boolean;
   maxOfflineDownloads: number;
+  perks: string[];
   stripePriceId?: string;
 };
 
@@ -35,8 +36,11 @@ export default function AdminPlansPage() {
     deviceLimit: 1,
     offlineAllowed: false,
     maxOfflineDownloads: 0,
+    perks: [],
     stripePriceId: "",
   });
+  const [createPerkInput, setCreatePerkInput] = useState("");
+  const [perkInputs, setPerkInputs] = useState<Record<string, string>>({});
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -55,6 +59,7 @@ export default function AdminPlansPage() {
           deviceLimit: plan.deviceLimit,
           offlineAllowed: plan.offlineAllowed,
           maxOfflineDownloads: plan.maxOfflineDownloads,
+          perks: plan.perks ?? [],
           stripePriceId: plan.stripePriceId,
         };
       }
@@ -89,8 +94,10 @@ export default function AdminPlansPage() {
       deviceLimit: 1,
       offlineAllowed: false,
       maxOfflineDownloads: 0,
+      perks: [],
       stripePriceId: "",
     });
+    setCreatePerkInput("");
     setCreateError(null);
   }
 
@@ -125,6 +132,7 @@ export default function AdminPlansPage() {
         deviceLimit: createDraft.deviceLimit,
         offlineAllowed: createDraft.offlineAllowed,
         maxOfflineDownloads: createDraft.maxOfflineDownloads,
+        perks: createDraft.perks,
         stripePriceId: createDraft.stripePriceId?.trim() || undefined,
       });
       setPlans((prev) => [created, ...prev]);
@@ -137,6 +145,7 @@ export default function AdminPlansPage() {
           deviceLimit: created.deviceLimit,
           offlineAllowed: created.offlineAllowed,
           maxOfflineDownloads: created.maxOfflineDownloads,
+          perks: created.perks ?? [],
           stripePriceId: created.stripePriceId,
         },
       }));
@@ -159,6 +168,41 @@ export default function AdminPlansPage() {
     }));
   }
 
+  function addCreatePerk() {
+    const value = createPerkInput.trim();
+    if (!value) return;
+    setCreateDraft((prev) => ({
+      ...prev,
+      perks: Array.from(new Set([...(prev.perks ?? []), value])).slice(0, 12),
+    }));
+    setCreatePerkInput("");
+  }
+
+  function removeCreatePerk(perk: string) {
+    setCreateDraft((prev) => ({
+      ...prev,
+      perks: prev.perks.filter((item) => item !== perk),
+    }));
+  }
+
+  function addDraftPerk(id: string) {
+    const input = (perkInputs[id] ?? "").trim();
+    if (!input) return;
+    updateDraft(id, {
+      perks: Array.from(new Set([...(drafts[id]?.perks ?? []), input])).slice(
+        0,
+        12,
+      ),
+    });
+    setPerkInputs((prev) => ({ ...prev, [id]: "" }));
+  }
+
+  function removeDraftPerk(id: string, perk: string) {
+    updateDraft(id, {
+      perks: (drafts[id]?.perks ?? []).filter((item) => item !== perk),
+    });
+  }
+
   async function saveDraft(id: string) {
     const next = drafts[id];
     if (!next) return;
@@ -176,6 +220,7 @@ export default function AdminPlansPage() {
         deviceLimit: next.deviceLimit,
         offlineAllowed: next.offlineAllowed,
         maxOfflineDownloads: next.maxOfflineDownloads,
+        perks: next.perks,
         stripePriceId: next.stripePriceId?.trim() || undefined,
       });
       setPlans((prev) => prev.map((plan) => (plan.id === id ? updated : plan)));
@@ -402,6 +447,45 @@ export default function AdminPlansPage() {
                 />
               </div>
             </div>
+            <div className="space-y-3">
+              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                Extra perks
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                  value={createPerkInput}
+                  onChange={(e) => setCreatePerkInput(e.target.value)}
+                  placeholder="Add a perk (e.g. Early access)"
+                  disabled={isReadOnly || creating}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={addCreatePerk}
+                  disabled={isReadOnly || creating}
+                >
+                  Add perk
+                </Button>
+              </div>
+              {createDraft.perks.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {createDraft.perks.map((perk) => (
+                    <button
+                      key={perk}
+                      type="button"
+                      className="rounded-full border border-neutral-700/60 px-3 py-1 text-xs text-neutral-300 hover:border-accent hover:text-accent"
+                      onClick={() => removeCreatePerk(perk)}
+                      disabled={isReadOnly || creating}
+                    >
+                      {perk} ×
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-neutral-500">No perks added yet.</p>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button type="submit" disabled={creating || isReadOnly}>
                 {creating ? "Creating…" : "Create plan"}
@@ -567,6 +651,52 @@ export default function AdminPlansPage() {
                         placeholder="Stripe price ID"
                         disabled={isReadOnly || savingId === plan.id}
                       />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                        Extra perks
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <input
+                          className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                          value={perkInputs[plan.id] ?? ""}
+                          onChange={(e) =>
+                            setPerkInputs((prev) => ({
+                              ...prev,
+                              [plan.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Add a perk"
+                          disabled={isReadOnly || savingId === plan.id}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => addDraftPerk(plan.id)}
+                          disabled={isReadOnly || savingId === plan.id}
+                        >
+                          Add perk
+                        </Button>
+                      </div>
+                      {current.perks.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {current.perks.map((perk) => (
+                            <button
+                              key={perk}
+                              type="button"
+                              className="rounded-full border border-neutral-700/60 px-3 py-1 text-xs text-neutral-300 hover:border-accent hover:text-accent"
+                              onClick={() => removeDraftPerk(plan.id, perk)}
+                              disabled={isReadOnly || savingId === plan.id}
+                            >
+                              {perk} ×
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-neutral-500">
+                          No perks added yet.
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button

@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { MailService } from '../mail/mail.service';
 import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
 import type { InviteAdminUserDto } from './dto/invite-admin-user.dto';
@@ -157,6 +158,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly mailService: MailService,
   ) {}
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
@@ -316,6 +318,17 @@ export class AdminService {
         },
       });
     });
+
+    try {
+      await this.mailService.sendSupportReplyEmail(
+        request.email,
+        request.subject,
+        body.message.trim(),
+        request.message,
+      );
+    } catch (err) {
+      console.error('[Support] Failed to send reply email:', err);
+    }
 
     return this.toSupportRequestDto(updated);
   }
@@ -838,7 +851,7 @@ export class AdminService {
   async getPlans(): Promise<AdminPlanDto[]> {
     const now = new Date();
     const [plans, activeCounts] = await Promise.all([
-      this.prisma.plan.findMany({ orderBy: { createdAt: 'desc' } }),
+      (this.prisma as any).plan.findMany({ orderBy: { createdAt: 'desc' } }),
       this.prisma.subscription.groupBy({
         by: ['planId'],
         where: { status: 'ACTIVE', endDate: { gte: now } },
@@ -851,7 +864,7 @@ export class AdminService {
       activeCountMap.set(row.planId, row._count._all);
     }
 
-    return plans.map((plan) => ({
+    return plans.map((plan: any) => ({
       id: plan.id,
       name: plan.name,
       price: formatMoney(plan.price),
@@ -859,6 +872,7 @@ export class AdminService {
       deviceLimit: plan.deviceLimit,
       offlineAllowed: plan.offlineAllowed,
       maxOfflineDownloads: plan.maxOfflineDownloads,
+      perks: plan.perks ?? [],
       stripePriceId: plan.stripePriceId ?? undefined,
       activeSubscribers: activeCountMap.get(plan.id) ?? 0,
       createdAt: plan.createdAt.toISOString(),
@@ -879,8 +893,9 @@ export class AdminService {
     }
 
     const stripePriceId = dto.stripePriceId?.trim();
+    const perks = this.normalizePerks(dto.perks);
 
-    const plan = await this.prisma.plan.create({
+    const plan = await (this.prisma as any).plan.create({
       data: {
         name,
         price: parsedPrice,
@@ -888,6 +903,7 @@ export class AdminService {
         deviceLimit: dto.deviceLimit,
         offlineAllowed: dto.offlineAllowed,
         maxOfflineDownloads: dto.maxOfflineDownloads,
+        perks,
         stripePriceId: stripePriceId ? stripePriceId : null,
       },
     });
@@ -900,6 +916,7 @@ export class AdminService {
       deviceLimit: plan.deviceLimit,
       offlineAllowed: plan.offlineAllowed,
       maxOfflineDownloads: plan.maxOfflineDownloads,
+      perks: plan.perks ?? [],
       stripePriceId: plan.stripePriceId ?? undefined,
       activeSubscribers: 0,
       createdAt: plan.createdAt.toISOString(),
@@ -942,6 +959,10 @@ export class AdminService {
       data.maxOfflineDownloads = dto.maxOfflineDownloads;
     }
 
+    if (dto.perks !== undefined) {
+      data.perks = this.normalizePerks(dto.perks);
+    }
+
     if (dto.stripePriceId !== undefined) {
       const value = dto.stripePriceId.trim();
       data.stripePriceId = value ? value : null;
@@ -951,7 +972,7 @@ export class AdminService {
       throw new BadRequestException('No plan fields provided');
     }
 
-    const plan = await this.prisma.plan.update({
+    const plan = await (this.prisma as any).plan.update({
       where: { id: planId },
       data,
     });
@@ -969,11 +990,18 @@ export class AdminService {
       deviceLimit: plan.deviceLimit,
       offlineAllowed: plan.offlineAllowed,
       maxOfflineDownloads: plan.maxOfflineDownloads,
+      perks: plan.perks ?? [],
       stripePriceId: plan.stripePriceId ?? undefined,
       activeSubscribers,
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),
     };
+  }
+
+  private normalizePerks(perks?: string[]): string[] {
+    if (!perks) return [];
+    const cleaned = perks.map((perk) => perk.trim()).filter((perk) => perk.length > 0);
+    return Array.from(new Set(cleaned)).slice(0, 12);
   }
 
   async getUsersAnalytics(): Promise<AdminUsersAnalyticsDto> {

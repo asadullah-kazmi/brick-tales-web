@@ -40,6 +40,7 @@ function formatDateTime(value: string): string {
 export default function AdminSupportPage() {
   const [requests, setRequests] = useState<SupportRequestDto[]>([]);
   const [drafts, setDrafts] = useState<Record<string, DraftState>>({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -71,6 +72,13 @@ export default function AdminSupportPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    if (!requests.some((req) => req.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [requests, selectedId]);
 
   const hasRequests = useMemo(() => requests.length > 0, [requests.length]);
 
@@ -156,152 +164,200 @@ export default function AdminSupportPage() {
         <div className="space-y-4">
           {requests.map((req) => {
             const draft = drafts[req.id];
+            const isOpen = selectedId === req.id;
             return (
               <div
                 key={req.id}
                 className="rounded-2xl border border-neutral-700/60 bg-neutral-900/60 p-6"
               >
-                <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto]">
                   <div>
-                    <h2 className="text-lg font-semibold text-white">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                      Customer
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-200">{req.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                      Subject
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-200">
                       {req.subject}
-                    </h2>
-                    <p className="mt-1 text-sm text-neutral-400">
-                      {req.name} · {req.email}
                     </p>
                   </div>
-                  <div className="text-xs text-neutral-500">
-                    {formatDateTime(req.createdAt)}
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm text-neutral-300">{req.message}</p>
-
-                <div className="mt-5 grid gap-4 sm:grid-cols-3">
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                      Email
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-200 break-all">
+                      {req.email}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
                       Priority
-                    </label>
-                    <select
-                      className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                      value={draft?.priority ?? req.priority}
-                      onChange={(e) =>
-                        setDrafts((prev) => ({
-                          ...prev,
-                          [req.id]: {
-                            ...(prev[req.id] ?? {
-                              priority: req.priority,
-                              status: req.status,
-                              reply: "",
-                            }),
-                            priority: e.target.value as SupportPriority,
-                          },
-                        }))
-                      }
-                    >
-                      {PRIORITY_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option.replace("_", " ")}
-                        </option>
-                      ))}
-                    </select>
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-200">
+                      {req.priority}
+                    </p>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
                       Status
-                    </label>
-                    <select
-                      className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                      value={draft?.status ?? req.status}
-                      onChange={(e) =>
-                        setDrafts((prev) => ({
-                          ...prev,
-                          [req.id]: {
-                            ...(prev[req.id] ?? {
-                              priority: req.priority,
-                              status: req.status,
-                              reply: "",
-                            }),
-                            status: e.target.value as SupportStatus,
-                          },
-                        }))
-                      }
-                    >
-                      {STATUS_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option.replace("_", " ")}
-                        </option>
-                      ))}
-                    </select>
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-200">
+                      {req.status}
+                    </p>
                   </div>
-                  <div className="flex items-end">
+                  <div className="flex items-end justify-between gap-3 sm:flex-col sm:items-end">
+                    <span className="text-xs text-neutral-500">
+                      {formatDateTime(req.createdAt)}
+                    </span>
                     <Button
                       type="button"
                       size="sm"
-                      disabled={savingId === req.id}
-                      onClick={() => void handleUpdate(req.id)}
+                      onClick={() =>
+                        setSelectedId((current) =>
+                          current === req.id ? null : req.id,
+                        )
+                      }
                     >
-                      {savingId === req.id ? "Saving…" : "Save"}
+                      {isOpen ? "Hide details" : "Show details"}
                     </Button>
                   </div>
                 </div>
 
-                <div className="mt-5 space-y-3">
-                  <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
-                    Reply
-                  </label>
-                  <textarea
-                    className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                    rows={3}
-                    placeholder="Type your response to the customer..."
-                    value={draft?.reply ?? ""}
-                    onChange={(e) =>
-                      setDrafts((prev) => ({
-                        ...prev,
-                        [req.id]: {
-                          ...(prev[req.id] ?? {
-                            priority: req.priority,
-                            status: req.status,
-                            reply: "",
-                          }),
-                          reply: e.target.value,
-                        },
-                      }))
-                    }
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={replyingId === req.id}
-                    onClick={() => void handleReply(req.id)}
-                  >
-                    {replyingId === req.id ? "Sending…" : "Send reply"}
-                  </Button>
-                </div>
+                {isOpen ? (
+                  <div className="mt-6 space-y-5 border-t border-neutral-800 pt-5">
+                    <p className="text-sm text-neutral-300">{req.message}</p>
 
-                {req.replies.length > 0 ? (
-                  <div className="mt-6 border-t border-neutral-800 pt-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
-                      Replies
-                    </p>
-                    <div className="mt-3 space-y-3">
-                      {req.replies.map((reply) => (
-                        <div
-                          key={reply.id}
-                          className="rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                          Priority
+                        </label>
+                        <select
+                          className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                          value={draft?.priority ?? req.priority}
+                          onChange={(e) =>
+                            setDrafts((prev) => ({
+                              ...prev,
+                              [req.id]: {
+                                ...(prev[req.id] ?? {
+                                  priority: req.priority,
+                                  status: req.status,
+                                  reply: "",
+                                }),
+                                priority: e.target.value as SupportPriority,
+                              },
+                            }))
+                          }
                         >
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
-                            <span>
-                              {reply.adminName || "Admin"} ·{" "}
-                              {formatDateTime(reply.createdAt)}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm text-neutral-200">
-                            {reply.message}
-                          </p>
-                        </div>
-                      ))}
+                          {PRIORITY_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option.replace("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                          Status
+                        </label>
+                        <select
+                          className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                          value={draft?.status ?? req.status}
+                          onChange={(e) =>
+                            setDrafts((prev) => ({
+                              ...prev,
+                              [req.id]: {
+                                ...(prev[req.id] ?? {
+                                  priority: req.priority,
+                                  status: req.status,
+                                  reply: "",
+                                }),
+                                status: e.target.value as SupportStatus,
+                              },
+                            }))
+                          }
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option.replace("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={savingId === req.id}
+                          onClick={() => void handleUpdate(req.id)}
+                        >
+                          {savingId === req.id ? "Saving…" : "Save"}
+                        </Button>
+                      </div>
                     </div>
+
+                    <div className="space-y-3">
+                      <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                        Reply
+                      </label>
+                      <textarea
+                        className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                        rows={3}
+                        placeholder="Type your response to the customer..."
+                        value={draft?.reply ?? ""}
+                        onChange={(e) =>
+                          setDrafts((prev) => ({
+                            ...prev,
+                            [req.id]: {
+                              ...(prev[req.id] ?? {
+                                priority: req.priority,
+                                status: req.status,
+                                reply: "",
+                              }),
+                              reply: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={replyingId === req.id}
+                        onClick={() => void handleReply(req.id)}
+                      >
+                        {replyingId === req.id ? "Sending…" : "Send reply"}
+                      </Button>
+                    </div>
+
+                    {req.replies.length > 0 ? (
+                      <div className="border-t border-neutral-800 pt-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                          Replies
+                        </p>
+                        <div className="mt-3 space-y-3">
+                          {req.replies.map((reply) => (
+                            <div
+                              key={reply.id}
+                              className="rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-2"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
+                                <span>
+                                  {reply.adminName || "Admin"} ·{" "}
+                                  {formatDateTime(reply.createdAt)}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-sm text-neutral-200">
+                                {reply.message}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

@@ -6,6 +6,7 @@ export class PlanResponseDto {
   deviceLimit: number;
   offlineAllowed: boolean;
   maxOfflineDownloads: number;
+  perks: string[];
   createdAt: Date;
   updatedAt: Date;
 
@@ -17,6 +18,7 @@ export class PlanResponseDto {
     deviceLimit: number;
     offlineAllowed: boolean;
     maxOfflineDownloads: number;
+    perks?: string[];
     createdAt: Date;
     updatedAt: Date;
   }): PlanResponseDto {
@@ -28,6 +30,7 @@ export class PlanResponseDto {
       deviceLimit: plan.deviceLimit,
       offlineAllowed: plan.offlineAllowed,
       maxOfflineDownloads: plan.maxOfflineDownloads,
+      perks: plan.perks ?? [],
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
     };

@@ -77,4 +77,53 @@ export class MailService {
     console.log('[Mail] Admin invite link (SMTP not configured):', inviteLink);
     return true;
   }
+
+  /** Returns true if email was sent (or skipped in dev with log). */
+  async sendSupportReplyEmail(
+    to: string,
+    subject: string,
+    replyMessage: string,
+    originalMessage?: string,
+  ): Promise<boolean> {
+    const fromAddress = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? 'noreply@example.com';
+    const fromName = process.env.SUPPORT_FROM_NAME ?? 'Support Team';
+    const replyTo = process.env.SUPPORT_REPLY_TO;
+    const from = `${fromName} <${fromAddress}>`;
+    const mailSubject = `Re: ${subject}`;
+    const html = `
+      <p>Hi,</p>
+      <p>Thanks for contacting us. Here's our response:</p>
+      <blockquote style="border-left:3px solid #e5e7eb;padding-left:12px;color:#111;">
+        ${replyMessage.replace(/\n/g, '<br />')}
+      </blockquote>
+      ${
+        originalMessage
+          ? `<p style="margin-top:16px;color:#6b7280;"><strong>Your original message:</strong><br />${originalMessage.replace(/\n/g, '<br />')}</p>`
+          : ''
+      }
+      <p style="margin-top:16px;">If you have more questions, just reply to this email.</p>
+    `;
+    const text = `Support reply:\n\n${replyMessage}\n\n${
+      originalMessage ? `Your original message:\n${originalMessage}\n\n` : ''
+    }If you have more questions, just reply to this email.`;
+
+    if (this.transporter) {
+      await this.transporter.sendMail({
+        from,
+        to,
+        subject: mailSubject,
+        text,
+        html,
+        replyTo: replyTo || undefined,
+      });
+      return true;
+    }
+
+    console.log('[Mail] Support reply email (SMTP not configured):', {
+      to,
+      subject: mailSubject,
+      replyMessage,
+    });
+    return true;
+  }
 }

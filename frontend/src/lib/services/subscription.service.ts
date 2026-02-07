@@ -1,5 +1,6 @@
 import type {
   GetSubscriptionResponseDto,
+  PublicPlanDto,
   SubscribeRequestDto,
   SubscribeResponseDto,
   UpdateSubscriptionRequestDto,
@@ -9,11 +10,45 @@ import { get } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { getMockSubscription, setMockSubscription } from "@/lib/mock-auth";
 import { USE_MOCK_API } from "./config";
+import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
 
 /**
  * Subscription service. Uses real API (GET /subscriptions/me) when USE_MOCK_API is false.
  */
 export const subscriptionService = {
+  async getPlans(): Promise<PublicPlanDto[]> {
+    if (USE_MOCK_API) {
+      return SUBSCRIPTION_PLANS.map((plan) => ({
+        id: plan.id,
+        name: plan.name,
+        price: Number(plan.price),
+        duration: plan.period.toUpperCase(),
+        deviceLimit:
+          plan.benefits.find((item) => item.label === "Multi-device")?.value ===
+          "Up to 6 devices"
+            ? 6
+            : plan.benefits.find((item) => item.label === "Multi-device")
+                  ?.value === "Up to 4 devices"
+              ? 4
+              : 1,
+        offlineAllowed: plan.benefits.some(
+          (item) => item.label === "Downloads" && item.value === true,
+        ),
+        maxOfflineDownloads: plan.benefits.some(
+          (item) => item.label === "Downloads" && item.value === true,
+        )
+          ? 10
+          : 0,
+        perks:
+          plan.benefits
+            .filter((item) => item.label === "Perks")
+            .map((item) => String(item.value)) ?? [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+    }
+    return get<PublicPlanDto[]>("subscriptions/plans");
+  },
   async getSubscription(): Promise<GetSubscriptionResponseDto> {
     if (USE_MOCK_API) {
       const isSubscribed = getMockSubscription();
@@ -49,7 +84,7 @@ export const subscriptionService = {
   },
 
   async updateSubscription(
-    body: UpdateSubscriptionRequestDto
+    body: UpdateSubscriptionRequestDto,
   ): Promise<UpdateSubscriptionResponseDto> {
     void body; // reserved for real API
     const isSubscribed = getMockSubscription();

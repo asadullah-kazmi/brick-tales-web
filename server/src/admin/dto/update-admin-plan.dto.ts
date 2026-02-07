@@ -3,9 +3,11 @@ import {
   IsInt,
   IsNumberString,
   IsOptional,
+  IsArray,
   IsString,
   Min,
   MinLength,
+  ArrayMaxSize,
 } from 'class-validator';
 
 export class UpdateAdminPlanDto {
@@ -36,6 +38,12 @@ export class UpdateAdminPlanDto {
   @IsInt()
   @Min(0)
   maxOfflineDownloads?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  perks?: string[];
 
   @IsOptional()
   @IsString()

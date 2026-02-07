@@ -45,6 +45,23 @@ export interface UpdateSubscriptionResponseDto {
 }
 
 // ---------------------------------------------------------------------------
+// Public plans
+// ---------------------------------------------------------------------------
+
+export interface PublicPlanDto {
+  id: string;
+  name: string;
+  price: number;
+  duration: string;
+  deviceLimit: number;
+  offlineAllowed: boolean;
+  maxOfflineDownloads: number;
+  perks: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
 // Admin subscriptions
 // ---------------------------------------------------------------------------
 
