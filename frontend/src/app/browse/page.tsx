@@ -9,6 +9,7 @@ type BrowseItem = {
   subtitle?: string;
   badge?: string;
   size?: "poster" | "wide";
+  thumbnailUrl?: string | null;
 };
 
 type BrowseRow = {
@@ -46,6 +47,7 @@ function toBrowseItem(item: ContentSummaryDto): BrowseItem {
     id: item.id,
     title: item.title,
     subtitle: formatSubtitle(item),
+    thumbnailUrl: item.thumbnailUrl ?? null,
   };
 }
 
@@ -146,6 +148,14 @@ function PosterCard({ item, index }: { item: BrowseItem; index: number }) {
       )}
       aria-label={item.title}
     >
+      {item.thumbnailUrl ? (
+        <img
+          src={item.thumbnailUrl}
+          alt=""
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-center"
+          loading="lazy"
+        />
+      ) : null}
       <div
         className={cn(
           "absolute inset-0 -z-10 bg-gradient-to-br opacity-90",

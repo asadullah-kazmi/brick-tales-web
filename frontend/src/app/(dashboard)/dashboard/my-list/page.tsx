@@ -1,13 +1,32 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
-
-const SAVED_TITLES = [
-  { title: "Neon Nights", detail: "Season 1" },
-  { title: "Wildlight", detail: "Documentary" },
-  { title: "Afterglow", detail: "Season 2" },
-];
+import { contentService } from "@/lib/services";
+import type { ContentSummaryDto } from "@/types/api";
 
 export default function MyListPage() {
+  const [savedItems, setSavedItems] = useState<ContentSummaryDto[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    contentService
+      .getContentForBrowse()
+      .then((items) => {
+        if (!active) return;
+        setSavedItems(items.slice(0, 4));
+      })
+      .catch(() => {
+        if (!active) return;
+        setSavedItems([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const hasSaved = savedItems.length > 0;
   return (
     <div className="font-[var(--font-geist-sans)]">
       <header className="mb-6">
@@ -36,26 +55,43 @@ export default function MyListPage() {
           </Link>
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {SAVED_TITLES.map((item) => (
-            <div
-              key={item.title}
-              className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
-            >
-              <div className="h-24 rounded-lg bg-gradient-to-br from-neutral-800/70 via-neutral-900 to-neutral-800/50" />
-              <p className="mt-4 text-sm font-semibold text-white">
-                {item.title}
-              </p>
-              <p className="mt-1 text-xs text-neutral-400">{item.detail}</p>
-              <div className="mt-4 flex items-center gap-2">
-                <Button type="button" size="sm">
-                  Play
-                </Button>
-                <Button type="button" variant="outline" size="sm">
-                  Remove
-                </Button>
+          {hasSaved ? (
+            savedItems.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
+              >
+                <div className="relative h-24 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/70 via-neutral-900 to-neutral-800/50">
+                  {item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                </div>
+                <p className="mt-4 text-sm font-semibold text-white">
+                  {item.title}
+                </p>
+                <p className="mt-1 text-xs text-neutral-400">
+                  {item.category ?? item.type}
+                </p>
+                <div className="mt-4 flex items-center gap-2">
+                  <Button type="button" size="sm">
+                    Play
+                  </Button>
+                  <Button type="button" variant="outline" size="sm">
+                    Remove
+                  </Button>
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-950/40 p-6 text-sm text-neutral-400 sm:col-span-2">
+              Your list is empty right now.
             </div>
-          ))}
+          )}
         </div>
         <div className="mt-6 rounded-xl border border-dashed border-neutral-700/70 bg-neutral-950/40 p-6 text-center">
           <p className="text-sm font-medium text-neutral-300">

@@ -1,12 +1,67 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts";
 import { Button } from "@/components/ui";
+import { contentService, subscriptionService } from "@/lib/services";
+import type { ContentSummaryDto, PublicPlanDto } from "@/types/api";
+
+function getProgressFromId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) % 1000;
+  }
+  return 20 + (hash % 70);
+}
 
 export default function DashboardPage() {
   const { user, isSubscribed } = useAuth();
   const displayName = user?.name ?? user?.email?.split("@")[0] ?? "there";
+  const [contentItems, setContentItems] = useState<ContentSummaryDto[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [plans, setPlans] = useState<PublicPlanDto[]>([]);
+  const [planId, setPlanId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      contentService.getContentForBrowse(),
+      contentService.getCategories(),
+      subscriptionService.getPlans(),
+      subscriptionService.getSubscription(),
+    ])
+      .then(([items, cats, planList, subscription]) => {
+        if (!active) return;
+        setContentItems(items);
+        setCategories(cats);
+        setPlans(planList);
+        setPlanId(subscription.planId ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setContentItems([]);
+        setCategories([]);
+        setPlans([]);
+        setPlanId(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const activePlan = useMemo(
+    () => plans.find((plan) => plan.id === planId) ?? null,
+    [plans, planId],
+  );
+  const categoryCount = categories.filter(
+    (category) => category.toLowerCase() !== "all",
+  ).length;
+  const continueItems = contentItems.slice(0, 2);
+  const exploreTags = categories
+    .filter((category) => category.toLowerCase() !== "all")
+    .slice(0, 4);
+  const savedItems = contentItems.slice(2, 5);
 
   return (
     <div className="font-[var(--font-geist-sans)]">
@@ -50,24 +105,28 @@ export default function DashboardPage() {
       >
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
-            My list
+            Library
           </p>
-          <p className="mt-3 text-3xl font-semibold text-white">12</p>
-          <p className="mt-1 text-xs text-neutral-400">Saved for later</p>
+          <p className="mt-3 text-3xl font-semibold text-white">
+            {contentItems.length}
+          </p>
+          <p className="mt-1 text-xs text-neutral-400">Titles available</p>
         </div>
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
-            Watch time
+            Categories
           </p>
-          <p className="mt-3 text-3xl font-semibold text-white">4h 20m</p>
-          <p className="mt-1 text-xs text-neutral-400">This week</p>
+          <p className="mt-3 text-3xl font-semibold text-white">
+            {categoryCount}
+          </p>
+          <p className="mt-1 text-xs text-neutral-400">Curated collections</p>
         </div>
         <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/50 p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">
             Subscription
           </p>
           <p className="mt-3 text-2xl font-semibold text-white">
-            {isSubscribed ? "Active" : "Inactive"}
+            {isSubscribed ? (activePlan?.name ?? "Active") : "Inactive"}
           </p>
           <p className="mt-1 text-xs text-neutral-400">
             {isSubscribed ? "Full access" : "Upgrade to unlock everything"}
@@ -97,30 +156,41 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="mt-6 space-y-4">
-            {[
-              { title: "City of Echoes", meta: "S1 · Episode 4" },
-              { title: "Afterglow", meta: "S2 · Episode 1" },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      {item.title}
-                    </p>
-                    <p className="text-xs text-neutral-400">{item.meta}</p>
+            {continueItems.length > 0 ? (
+              continueItems.map((item) => {
+                const progress = getProgressFromId(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-neutral-400">
+                          {item.category ?? "In progress"}
+                        </p>
+                      </div>
+                      <Button type="button" size="sm" variant="outline">
+                        Resume
+                      </Button>
+                    </div>
+                    <div className="mt-3 h-1.5 rounded-full bg-neutral-800">
+                      <div
+                        className="h-1.5 rounded-full bg-accent"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
                   </div>
-                  <Button type="button" size="sm" variant="outline">
-                    Resume
-                  </Button>
-                </div>
-                <div className="mt-3 h-1.5 rounded-full bg-neutral-800">
-                  <div className="h-1.5 w-1/2 rounded-full bg-accent" />
-                </div>
+                );
+              })
+            ) : (
+              <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-950/40 p-4 text-sm text-neutral-400">
+                Nothing in progress yet. Start a new title to pick up here.
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -133,19 +203,20 @@ export default function DashboardPage() {
               Search creators, genres, and curated collections.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              {[
-                "Live shows",
-                "Documentaries",
-                "Short films",
-                "Creator picks",
-              ].map((label) => (
-                <span
-                  key={label}
-                  className="rounded-full border border-neutral-700/70 bg-neutral-950/60 px-3 py-1 text-xs text-neutral-300"
-                >
-                  {label}
+              {exploreTags.length > 0 ? (
+                exploreTags.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full border border-neutral-700/70 bg-neutral-950/60 px-3 py-1 text-xs text-neutral-300"
+                  >
+                    {label}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-neutral-400">
+                  No categories yet.
                 </span>
-              ))}
+              )}
             </div>
             <Link href="/dashboard/explore" className="mt-5 inline-flex">
               <Button type="button" size="sm">
@@ -162,20 +233,26 @@ export default function DashboardPage() {
               Titles you saved for later.
             </p>
             <div className="mt-5 space-y-3">
-              {["Neon Nights", "Wildlight", "Analog Dreams"].map((title) => (
-                <div
-                  key={title}
-                  className="flex items-center justify-between rounded-xl border border-neutral-700/60 bg-neutral-950/60 px-4 py-3"
-                >
-                  <p className="text-sm font-medium text-white">{title}</p>
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-neutral-400 hover:text-accent"
+              {savedItems.length > 0 ? (
+                savedItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-xl border border-neutral-700/60 bg-neutral-950/60 px-4 py-3"
                   >
-                    Play
-                  </button>
-                </div>
-              ))}
+                    <p className="text-sm font-medium text-white">
+                      {item.title}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-neutral-400 hover:text-accent"
+                    >
+                      Play
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-neutral-400">Your list is empty.</p>
+              )}
             </div>
             <Link href="/dashboard/my-list" className="mt-5 inline-flex">
               <Button type="button" variant="outline" size="sm">

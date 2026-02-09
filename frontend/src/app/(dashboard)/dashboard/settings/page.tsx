@@ -1,7 +1,48 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button, Input } from "@/components/ui";
+import { useAuth } from "@/contexts";
+import { subscriptionService } from "@/lib/services";
+import type { PublicPlanDto } from "@/types/api";
 
 export default function SettingsPage() {
+  const { user, isSubscribed } = useAuth();
+  const [plans, setPlans] = useState<PublicPlanDto[]>([]);
+  const [planId, setPlanId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      subscriptionService.getPlans(),
+      subscriptionService.getSubscription(),
+    ])
+      .then(([planList, subscription]) => {
+        if (!active) return;
+        setPlans(planList);
+        setPlanId(subscription.planId ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPlans([]);
+        setPlanId(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const planName = useMemo(
+    () => plans.find((plan) => plan.id === planId)?.name ?? null,
+    [plans, planId],
+  );
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).getFullYear()
+    : null;
+  const displayName = user?.name ?? "";
+  const email = user?.email ?? "";
+
   return (
     <div className="font-[var(--font-geist-sans)]">
       <header className="mb-6">
@@ -39,13 +80,13 @@ export default function SettingsPage() {
             </h2>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="rounded-full border border-neutral-700/70 bg-neutral-900/70 px-3 py-1 text-xs text-neutral-300">
-                Plan: Starter
+                Plan: {planName ?? (isSubscribed ? "Active" : "Free")}
               </span>
               <span className="rounded-full border border-neutral-700/70 bg-neutral-900/70 px-3 py-1 text-xs text-neutral-300">
-                Member since 2024
+                {memberSince ? `Member since ${memberSince}` : "Member profile"}
               </span>
               <span className="rounded-full border border-neutral-700/70 bg-neutral-900/70 px-3 py-1 text-xs text-neutral-300">
-                Email verified
+                {email ? "Email on file" : "Add an email"}
               </span>
             </div>
           </div>
@@ -82,11 +123,16 @@ export default function SettingsPage() {
               </span>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Input label="Display name" placeholder="Jordan Brooks" />
+              <Input
+                label="Display name"
+                placeholder="Your name"
+                defaultValue={displayName}
+              />
               <Input
                 label="Email"
                 type="email"
-                placeholder="jordan@email.com"
+                placeholder="you@email.com"
+                defaultValue={email}
               />
               <Input label="Phone" type="tel" placeholder="+1 (555) 000-1289" />
               <div className="sm:col-span-2">

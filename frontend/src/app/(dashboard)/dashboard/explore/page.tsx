@@ -1,16 +1,45 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, Input } from "@/components/ui";
-
-const TRENDING_TITLES = [
-  { title: "City of Echoes", tag: "Drama" },
-  { title: "Night Shift", tag: "Thriller" },
-  { title: "Analog Dreams", tag: "Sci-fi" },
-  { title: "Wildlight", tag: "Documentary" },
-];
-
-const MOODS = ["Chill", "High energy", "Focus", "Family", "Indie", "Live"];
+import { contentService } from "@/lib/services";
+import type { ContentSummaryDto } from "@/types/api";
 
 export default function ExplorePage() {
+  const [contentItems, setContentItems] = useState<ContentSummaryDto[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      contentService.getContentForBrowse(),
+      contentService.getCategories(),
+    ])
+      .then(([items, cats]) => {
+        if (!active) return;
+        setContentItems(items);
+        setCategories(cats);
+      })
+      .catch(() => {
+        if (!active) return;
+        setContentItems([]);
+        setCategories([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const trendingItems = contentItems.slice(0, 4);
+  const quickFilters = categories
+    .filter((category) => category.toLowerCase() !== "all")
+    .slice(0, 5);
+  const moods = categories
+    .filter((category) => category.toLowerCase() !== "all")
+    .slice(0, 6);
+  const hasTrending = trendingItems.length > 0;
+  const hasMoods = moods.length > 0;
   return (
     <div className="font-[var(--font-geist-sans)]">
       <header className="mb-6">
@@ -40,8 +69,8 @@ export default function ExplorePage() {
               Quick filters
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["Trending", "New", "Free", "Live now", "Top rated"].map(
-                (filter) => (
+              {quickFilters.length > 0 ? (
+                quickFilters.map((filter) => (
                   <button
                     key={filter}
                     type="button"
@@ -49,7 +78,11 @@ export default function ExplorePage() {
                   >
                     {filter}
                   </button>
-                ),
+                ))
+              ) : (
+                <span className="text-xs text-neutral-400">
+                  Filters appear when content is available.
+                </span>
               )}
             </div>
           </div>
@@ -67,49 +100,72 @@ export default function ExplorePage() {
           </Link>
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {TRENDING_TITLES.map((item) => (
-            <div
-              key={item.title}
-              className="rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-4"
-            >
-              <div className="h-24 rounded-lg bg-gradient-to-br from-neutral-800/80 via-neutral-900 to-neutral-800/60" />
-              <p className="mt-4 text-sm font-semibold text-white">
-                {item.title}
-              </p>
-              <p className="mt-1 text-xs text-neutral-400">{item.tag}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-4 w-full"
+          {hasTrending ? (
+            trendingItems.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-4"
               >
-                View details
-              </Button>
+                <div className="relative h-24 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/80 via-neutral-900 to-neutral-800/60">
+                  {item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                </div>
+                <p className="mt-4 text-sm font-semibold text-white">
+                  {item.title}
+                </p>
+                <p className="mt-1 text-xs text-neutral-400">
+                  {item.category ?? item.type}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full"
+                >
+                  View details
+                </Button>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-900/40 p-6 text-sm text-neutral-400 sm:col-span-2 lg:col-span-4">
+              Trending content will appear once titles are available.
             </div>
-          ))}
+          )}
         </div>
       </section>
 
       <section className="mt-8" aria-label="Browse by mood">
         <h2 className="text-lg font-semibold text-white">Browse by mood</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {MOODS.map((mood) => (
-            <div
-              key={mood}
-              className="flex items-center justify-between rounded-xl border border-neutral-700/60 bg-neutral-900/60 px-4 py-3"
-            >
-              <div>
-                <p className="text-sm font-semibold text-white">{mood}</p>
-                <p className="text-xs text-neutral-400">Curated playlists</p>
-              </div>
-              <button
-                type="button"
-                className="text-xs font-semibold text-neutral-400 hover:text-accent"
+          {hasMoods ? (
+            moods.map((mood) => (
+              <div
+                key={mood}
+                className="flex items-center justify-between rounded-xl border border-neutral-700/60 bg-neutral-900/60 px-4 py-3"
               >
-                Explore
-              </button>
+                <div>
+                  <p className="text-sm font-semibold text-white">{mood}</p>
+                  <p className="text-xs text-neutral-400">Curated playlists</p>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-neutral-400 hover:text-accent"
+                >
+                  Explore
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-900/40 p-4 text-sm text-neutral-400 sm:col-span-2 lg:col-span-3">
+              Mood collections will show once categories are available.
             </div>
-          ))}
+          )}
         </div>
       </section>
     </div>

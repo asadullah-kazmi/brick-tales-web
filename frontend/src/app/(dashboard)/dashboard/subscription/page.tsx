@@ -1,13 +1,48 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
-
-const INVOICES = [
-  { id: "INV-1043", date: "Jan 18, 2026", amount: "$12.00" },
-  { id: "INV-1039", date: "Dec 18, 2025", amount: "$12.00" },
-  { id: "INV-1031", date: "Nov 18, 2025", amount: "$12.00" },
-];
+import { subscriptionService } from "@/lib/services";
+import type { GetSubscriptionResponseDto, PublicPlanDto } from "@/types/api";
 
 export default function SubscriptionPage() {
+  const [plans, setPlans] = useState<PublicPlanDto[]>([]);
+  const [subscription, setSubscription] =
+    useState<GetSubscriptionResponseDto | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      subscriptionService.getPlans(),
+      subscriptionService.getSubscription(),
+    ])
+      .then(([planList, sub]) => {
+        if (!active) return;
+        setPlans(planList);
+        setSubscription(sub ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPlans([]);
+        setSubscription(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const activePlan = useMemo(() => {
+    if (!subscription?.planId) return null;
+    return plans.find((plan) => plan.id === subscription.planId) ?? null;
+  }, [plans, subscription]);
+  const nextCharge = subscription?.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+    : "Not available";
+  const priceLabel = activePlan
+    ? `$${activePlan.price.toFixed(2)} / ${activePlan.duration.toLowerCase()}`
+    : "--";
+
   return (
     <div className="font-[var(--font-geist-sans)]">
       <header className="mb-6">
@@ -30,15 +65,21 @@ export default function SubscriptionPage() {
             </p>
             <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-semibold text-white">Starter</h2>
+                <h2 className="text-2xl font-semibold text-white">
+                  {activePlan?.name ??
+                    (subscription?.isSubscribed ? "Active plan" : "Free")}
+                </h2>
                 <p className="mt-1 text-sm text-neutral-400">
-                  Full access on all devices with HD streaming.
+                  {activePlan?.perks?.[0] ??
+                    (subscription?.isSubscribed
+                      ? "Subscription benefits are active."
+                      : "Choose a plan to unlock premium access.")}
                 </p>
               </div>
               <div className="rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3 text-right">
                 <p className="text-xs text-neutral-500">Next charge</p>
-                <p className="text-sm font-semibold text-white">Feb 18, 2026</p>
-                <p className="text-xs text-neutral-500">$12.00 / month</p>
+                <p className="text-sm font-semibold text-white">{nextCharge}</p>
+                <p className="text-xs text-neutral-500">{priceLabel}</p>
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -81,30 +122,9 @@ export default function SubscriptionPage() {
               Recent invoices for your records.
             </p>
             <div className="mt-5 space-y-3">
-              {INVOICES.map((invoice) => (
-                <div
-                  key={invoice.id}
-                  className="flex items-center justify-between rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      {invoice.id}
-                    </p>
-                    <p className="text-xs text-neutral-400">{invoice.date}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-white">
-                      {invoice.amount}
-                    </p>
-                    <button
-                      type="button"
-                      className="text-xs font-semibold text-neutral-400 hover:text-accent"
-                    >
-                      Download
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <div className="rounded-xl border border-dashed border-neutral-700/70 bg-neutral-950/40 px-4 py-3 text-sm text-neutral-400">
+                Billing history will appear once invoices are generated.
+              </div>
             </div>
           </div>
 

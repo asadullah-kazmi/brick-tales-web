@@ -1,13 +1,40 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
+import { contentService } from "@/lib/services";
+import type { ContentSummaryDto } from "@/types/api";
 
-const CONTINUE_ITEMS = [
-  { title: "City of Echoes", meta: "S1 · Episode 4", progress: 68 },
-  { title: "Afterglow", meta: "S2 · Episode 1", progress: 35 },
-  { title: "Soundstage", meta: "Live special", progress: 12 },
-];
+function getProgressFromId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 33 + id.charCodeAt(i)) % 1000;
+  }
+  return 10 + (hash % 85);
+}
 
 export default function ContinueWatchingPage() {
+  const [continueItems, setContinueItems] = useState<ContentSummaryDto[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    contentService
+      .getContentForBrowse()
+      .then((items) => {
+        if (!active) return;
+        setContinueItems(items.slice(0, 3));
+      })
+      .catch(() => {
+        if (!active) return;
+        setContinueItems([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const hasItems = continueItems.length > 0;
   return (
     <div className="font-[var(--font-geist-sans)]">
       <header className="mb-6">
@@ -36,35 +63,46 @@ export default function ContinueWatchingPage() {
           </Link>
         </div>
         <div className="mt-6 space-y-4">
-          {CONTINUE_ITEMS.map((item) => (
-            <div
-              key={item.title}
-              className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-neutral-400">{item.meta}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-neutral-400">
-                    {item.progress}% watched
-                  </span>
-                  <Button type="button" size="sm" variant="outline">
-                    Resume
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-3 h-1.5 rounded-full bg-neutral-800">
+          {hasItems ? (
+            continueItems.map((item) => {
+              const progress = getProgressFromId(item.id);
+              return (
                 <div
-                  className="h-1.5 rounded-full bg-accent"
-                  style={{ width: `${item.progress}%` }}
-                />
-              </div>
+                  key={item.id}
+                  className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-neutral-400">
+                        {item.category ?? item.type}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-neutral-400">
+                        {progress}% watched
+                      </span>
+                      <Button type="button" size="sm" variant="outline">
+                        Resume
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-1.5 rounded-full bg-neutral-800">
+                    <div
+                      className="h-1.5 rounded-full bg-accent"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-950/40 p-4 text-sm text-neutral-400">
+              Nothing to resume yet. Start watching a title to see progress.
             </div>
-          ))}
+          )}
         </div>
       </section>
     </div>
