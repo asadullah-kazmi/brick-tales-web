@@ -2,6 +2,7 @@ import type {
   LoginRequestDto,
   LoginResponseDto,
   RegisterRequestDto,
+  RegisterWithSubscriptionRequestDto,
   RegisterResponseDto,
   ForgotPasswordRequestDto,
   ForgotPasswordResponseDto,
@@ -26,6 +27,7 @@ import {
   setMockSession,
   clearMockSession,
   getMockSubscription,
+  setMockSubscription,
 } from "@/lib/mock-auth";
 
 const MOCK_TOKEN = "mock-jwt-token";
@@ -166,6 +168,40 @@ export const authService = {
       password: body.password,
       name: body.name,
     });
+    setStoredAuth({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: Date.now() + tokens.expiresIn * 1000,
+    });
+    const user = await getMe();
+    return {
+      user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+    };
+  },
+
+  async registerWithSubscription(
+    body: RegisterWithSubscriptionRequestDto,
+  ): Promise<RegisterResponseDto> {
+    if (USE_MOCK_API) {
+      const result = await mockSignup(body.name, body.email, body.password);
+      if (!result.success)
+        throw new Error(result.error ?? "Registration failed");
+      persistMockSession(result.user);
+      setMockSubscription(true);
+      return {
+        user: userToDto(result.user),
+        accessToken: MOCK_TOKEN,
+        expiresIn: 3600,
+      };
+    }
+
+    const tokens = await post<TokensResponse>(
+      "auth/signup-with-subscription",
+      body,
+    );
     setStoredAuth({
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

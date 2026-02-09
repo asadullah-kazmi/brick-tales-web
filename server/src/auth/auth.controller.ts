@@ -6,6 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { SignUpWithSubscriptionDto } from './dto/sign-up-with-subscription.dto';
 import { TokensResponseDto } from './dto/tokens-response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -19,6 +20,18 @@ export class AuthController {
   @Post('signup')
   async signUp(@Body() dto: SignUpDto): Promise<TokensResponseDto> {
     return this.authService.signUp(dto.email, dto.password, dto.name);
+  }
+
+  @Public()
+  @Post('signup-with-subscription')
+  async signUpWithSubscription(@Body() dto: SignUpWithSubscriptionDto): Promise<TokensResponseDto> {
+    return this.authService.signUpWithSubscription(
+      dto.email,
+      dto.password,
+      dto.name,
+      dto.planId,
+      dto.paymentMethodId,
+    );
   }
 
   @Public()

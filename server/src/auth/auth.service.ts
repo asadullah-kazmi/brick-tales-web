@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { StripeService } from '../subscriptions/stripe.service';
 import type { User } from '@prisma/client';
 
 const SALT_ROUNDS = 10;
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly stripeService: StripeService,
   ) {}
 
   async signUp(email: string, password: string, name?: string) {
@@ -41,6 +43,64 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { email: normalizedEmail, passwordHash, name },
     });
+    return this.issueTokens(user);
+  }
+
+  async signUpWithSubscription(
+    email: string,
+    password: string,
+    name: string,
+    planId: string,
+    paymentMethodId: string,
+  ) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const { customerId, subscription } = await this.stripeService.createSubscriptionForSignup({
+      planId,
+      customerEmail: normalizedEmail,
+      customerName: name,
+      paymentMethodId,
+    });
+
+    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+    if (!isActive) {
+      throw new BadRequestException('Payment was not successful. Please try again.');
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    let user: User | null = null;
+    try {
+      user = await this.prisma.user.create({
+        data: { email: normalizedEmail, passwordHash, name, stripeCustomerId: customerId },
+      });
+
+      const startDate = new Date(subscription.current_period_start * 1000);
+      const endDate = new Date(subscription.current_period_end * 1000);
+
+      await this.prisma.subscription.create({
+        data: {
+          userId: user.id,
+          planId,
+          stripeSubscriptionId: subscription.id,
+          status: 'ACTIVE',
+          startDate,
+          endDate,
+        },
+      });
+    } catch (err) {
+      // Best-effort cleanup if user creation fails after payment.
+      try {
+        await this.stripeService.cancelSubscription(subscription.id);
+      } catch {
+        // ignore cleanup errors
+      }
+      throw err;
+    }
+
     return this.issueTokens(user);
   }
 

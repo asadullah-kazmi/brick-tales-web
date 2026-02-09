@@ -27,6 +27,56 @@ export class StripeService {
   }
 
   /**
+   * Create a Stripe customer + subscription for signup using a PaymentMethod ID.
+   * Uses payment_behavior=error_if_incomplete to ensure payment succeeds.
+   */
+  async createSubscriptionForSignup(params: {
+    planId: string;
+    customerEmail: string;
+    customerName?: string | null;
+    paymentMethodId: string;
+  }): Promise<{
+    customerId: string;
+    subscription: StripeSubscription;
+  }> {
+    const { planId, customerEmail, customerName, paymentMethodId } = params;
+    const plan = await (this.prisma as any).plan.findUnique({ where: { id: planId } });
+    if (!plan) throw new NotFoundException('Plan not found');
+    if (!plan.stripePriceId) {
+      throw new BadRequestException(
+        `Plan "${plan.name}" is not linked to a Stripe Price. Add stripePriceId in the database.`,
+      );
+    }
+
+    const stripe = this.getStripe();
+    const customer = await stripe.customers.create({
+      email: customerEmail,
+      name: customerName ?? undefined,
+    });
+
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customer.id,
+    });
+    await stripe.customers.update(customer.id, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    const subscription = (await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: plan.stripePriceId, quantity: 1 }],
+      payment_behavior: 'error_if_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+    })) as StripeSubscription;
+
+    return { customerId: customer.id, subscription };
+  }
+
+  async cancelSubscription(subscriptionId: string): Promise<void> {
+    const stripe = this.getStripe();
+    await stripe.subscriptions.del(subscriptionId);
+  }
+
+  /**
    * Get or create Stripe customer for user.
    */
   async getOrCreateStripeCustomer(

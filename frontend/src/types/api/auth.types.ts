@@ -41,6 +41,12 @@ export interface RegisterRequestDto {
   password: string;
 }
 
+/** Request body for POST /auth/signup-with-subscription */
+export interface RegisterWithSubscriptionRequestDto extends RegisterRequestDto {
+  planId: string;
+  paymentMethodId: string;
+}
+
 /** Response for POST /auth/register (same shape as login). */
 export type RegisterResponseDto = LoginResponseDto;
 

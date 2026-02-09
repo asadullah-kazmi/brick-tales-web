@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Elements,
+  CardElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import {
   Card,
   CardContent,
@@ -19,16 +26,29 @@ import {
   validatePasswordMatch,
 } from "@/lib/validation";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { authService } from "@/lib/services";
+import { authService, subscriptionService } from "@/lib/services";
 import { useAuth } from "@/contexts";
+import type { PublicPlanDto } from "@/types/api";
 
-export default function SignupPage() {
-  const { login } = useAuth();
+const stripePublishableKey =
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+const stripePromise = stripePublishableKey
+  ? loadStripe(stripePublishableKey)
+  : null;
+
+function SignupFormInner() {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const { login, setSubscribed } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [plans, setPlans] = useState<PublicPlanDto[]>([]);
+  const [plansError, setPlansError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
@@ -37,6 +57,37 @@ export default function SignupPage() {
   }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
+  const stripeReady = Boolean(stripe);
+  const hasStripeKey = stripePublishableKey.length > 0;
+
+  const selectedPlanId = searchParams.get("plan")?.trim() ?? "";
+  const trialSelected = searchParams.get("trial") === "1";
+
+  useEffect(() => {
+    let active = true;
+    subscriptionService
+      .getPlans()
+      .then((planList) => {
+        if (!active) return;
+        setPlans(planList);
+        setPlansError(null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPlans([]);
+        setPlansError("Unable to load plans. Please try again.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
+    [plans, selectedPlanId],
+  );
+  const hasPlan = Boolean(selectedPlan);
 
   function runValidation(): boolean {
     const nameError = validateRequired(name, "Name");
@@ -55,11 +106,55 @@ export default function SignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError(null);
+    setCardError(null);
+    if (!hasPlan) {
+      setSubmitError("Please choose a plan before creating your account.");
+      return;
+    }
+    const plan = selectedPlan;
+    if (!plan) {
+      setSubmitError("Please choose a plan before creating your account.");
+      return;
+    }
     if (!runValidation()) return;
+    if (!stripe || !elements) {
+      setSubmitError("Payment system is still loading. Please try again.");
+      return;
+    }
+
+    const card = elements.getElement(CardElement);
+    if (!card) {
+      setSubmitError("Payment form is not ready. Please try again.");
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const response = await authService.register({ name, email, password });
+      const paymentMethodResult = await stripe.createPaymentMethod({
+        type: "card",
+        card,
+        billing_details: {
+          name,
+          email,
+        },
+      });
+
+      if (paymentMethodResult.error || !paymentMethodResult.paymentMethod) {
+        setCardError(
+          paymentMethodResult.error?.message ??
+            "Unable to process payment details.",
+        );
+        return;
+      }
+
+      const response = await authService.registerWithSubscription({
+        name,
+        email,
+        password,
+        planId: plan.id,
+        paymentMethodId: paymentMethodResult.paymentMethod.id,
+      });
+      setSubscribed(true);
       login({
         email: response.user.email,
         name: response.user.name,
@@ -80,6 +175,30 @@ export default function SignupPage() {
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
           Enter your details to create a new account.
         </p>
+        <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300">
+          {plansError ? (
+            <span>{plansError}</span>
+          ) : hasPlan ? (
+            <span>
+              Selected plan: <strong>{selectedPlan?.name}</strong>
+              {trialSelected ? " (trial)" : ""}
+            </span>
+          ) : (
+            <span>
+              No plan selected. Choose a plan on the{" "}
+              <Link href="/subscription" className="underline">
+                subscription page
+              </Link>
+              .
+            </span>
+          )}
+        </div>
+        {!hasStripeKey ? (
+          <p className="mt-3 text-xs text-red-600 dark:text-red-400">
+            Stripe publishable key is missing. Add
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to your env.
+          </p>
+        ) : null}
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -132,9 +251,36 @@ export default function SignupPage() {
             disabled={isLoading}
             placeholder="Repeat password"
           />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              Card details
+            </label>
+            <div className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100">
+              <CardElement
+                options={{
+                  style: {
+                    base: {
+                      fontSize: "14px",
+                      color: "#f5f7fb",
+                      "::placeholder": { color: "#6b7280" },
+                    },
+                  },
+                }}
+              />
+            </div>
+            {cardError ? (
+              <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                {cardError}
+              </p>
+            ) : null}
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" fullWidth disabled={isLoading}>
+          <Button
+            type="submit"
+            fullWidth
+            disabled={isLoading || !hasPlan || !stripeReady || !hasStripeKey}
+          >
             {isLoading ? "Creating account…" : "Create account"}
           </Button>
           <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
@@ -149,5 +295,38 @@ export default function SignupPage() {
         </CardFooter>
       </form>
     </Card>
+  );
+}
+
+export default function SignupPage() {
+  if (!stripePromise) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Create account</CardTitle>
+          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            Enter your details to create a new account.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-400">
+            Stripe publishable key is missing. Add
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to your env to enable payments.
+          </p>
+          <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+            Once configured, return to this page after selecting a plan on the{" "}
+            <Link href="/subscription" className="underline">
+              subscription page
+            </Link>
+            .
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <Elements stripe={stripePromise}>
+      <SignupFormInner />
+    </Elements>
   );
 }
