@@ -47,6 +47,28 @@ export interface RegisterWithSubscriptionRequestDto extends RegisterRequestDto {
   paymentMethodId: string;
 }
 
+/** Request body for POST /auth/signup-subscription-intent */
+export interface SignupSubscriptionIntentRequestDto {
+  name: string;
+  email: string;
+  planId: string;
+  paymentMethodId: string;
+}
+
+/** Response for POST /auth/signup-subscription-intent */
+export interface SignupSubscriptionIntentResponseDto {
+  customerId: string;
+  subscriptionId: string;
+  clientSecret: string | null;
+}
+
+/** Request body for POST /auth/signup-subscription-finalize */
+export interface SignupSubscriptionFinalizeRequestDto extends RegisterRequestDto {
+  planId: string;
+  subscriptionId: string;
+  customerId: string;
+}
+
 /** Response for POST /auth/register (same shape as login). */
 export type RegisterResponseDto = LoginResponseDto;
 

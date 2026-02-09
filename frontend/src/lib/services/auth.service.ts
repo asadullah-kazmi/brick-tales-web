@@ -4,6 +4,9 @@ import type {
   RegisterRequestDto,
   RegisterWithSubscriptionRequestDto,
   RegisterResponseDto,
+  SignupSubscriptionIntentRequestDto,
+  SignupSubscriptionIntentResponseDto,
+  SignupSubscriptionFinalizeRequestDto,
   ForgotPasswordRequestDto,
   ForgotPasswordResponseDto,
   ResetPasswordRequestDto,
@@ -200,6 +203,36 @@ export const authService = {
 
     const tokens = await post<TokensResponse>(
       "auth/signup-with-subscription",
+      body,
+    );
+    setStoredAuth({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: Date.now() + tokens.expiresIn * 1000,
+    });
+    const user = await getMe();
+    return {
+      user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+    };
+  },
+
+  async createSignupSubscriptionIntent(
+    body: SignupSubscriptionIntentRequestDto,
+  ): Promise<SignupSubscriptionIntentResponseDto> {
+    return post<SignupSubscriptionIntentResponseDto>(
+      "auth/signup-subscription-intent",
+      body,
+    );
+  },
+
+  async finalizeSignupWithSubscription(
+    body: SignupSubscriptionFinalizeRequestDto,
+  ): Promise<RegisterResponseDto> {
+    const tokens = await post<TokensResponse>(
+      "auth/signup-subscription-finalize",
       body,
     );
     setStoredAuth({

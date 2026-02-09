@@ -147,12 +147,37 @@ function SignupFormInner() {
         return;
       }
 
-      const response = await authService.registerWithSubscription({
+      const intent = await authService.createSignupSubscriptionIntent({
+        name,
+        email,
+        planId: plan.id,
+        paymentMethodId: paymentMethodResult.paymentMethod.id,
+      });
+
+      if (intent.clientSecret) {
+        const confirmation = await stripe.confirmCardPayment(
+          intent.clientSecret,
+        );
+        if (confirmation.error) {
+          setCardError(
+            confirmation.error.message ?? "Payment verification failed.",
+          );
+          return;
+        }
+        const status = confirmation.paymentIntent?.status;
+        if (status !== "succeeded" && status !== "processing") {
+          setCardError("Payment was not completed. Please try again.");
+          return;
+        }
+      }
+
+      const response = await authService.finalizeSignupWithSubscription({
         name,
         email,
         password,
         planId: plan.id,
-        paymentMethodId: paymentMethodResult.paymentMethod.id,
+        subscriptionId: intent.subscriptionId,
+        customerId: intent.customerId,
       });
       setSubscribed(true);
       login({

@@ -9,6 +9,12 @@ type StripeSubscription = Stripe.Subscription & {
   current_period_end: number;
 };
 
+type StripeInvoiceWithIntent = Stripe.Invoice & {
+  payment_intent?: Stripe.PaymentIntent | string | null;
+};
+
+type StripeInvoiceRef = StripeInvoiceWithIntent | string | null;
+
 @Injectable()
 export class StripeService {
   private stripe: Stripe | null = null;
@@ -24,6 +30,88 @@ export class StripeService {
       this.stripe = new Stripe(key);
     }
     return this.stripe;
+  }
+
+  private async resolvePaymentIntent(
+    stripe: Stripe,
+    paymentIntent: Stripe.PaymentIntent | string | null | undefined,
+  ): Promise<Stripe.PaymentIntent | null> {
+    if (!paymentIntent) return null;
+    if (typeof paymentIntent === 'string') {
+      return stripe.paymentIntents.retrieve(paymentIntent);
+    }
+    if (!paymentIntent.client_secret || !paymentIntent.status) {
+      if (paymentIntent.id) {
+        return stripe.paymentIntents.retrieve(paymentIntent.id);
+      }
+    }
+    return paymentIntent;
+  }
+
+  private async resolvePaymentIntentFromInvoice(
+    stripe: Stripe,
+    invoice: StripeInvoiceRef,
+  ): Promise<Stripe.PaymentIntent | null> {
+    if (!invoice) return null;
+    let fullInvoice: StripeInvoiceWithIntent | null = null;
+    if (typeof invoice === 'string') {
+      fullInvoice = (await stripe.invoices.retrieve(invoice, {
+        expand: ['payment_intent'],
+      })) as StripeInvoiceWithIntent;
+    } else {
+      fullInvoice = invoice;
+    }
+
+    let paymentIntent = fullInvoice.payment_intent ?? null;
+    paymentIntent = await this.resolvePaymentIntent(stripe, paymentIntent);
+    if (paymentIntent) return paymentIntent;
+
+    if (fullInvoice.id) {
+      const refreshed = (await stripe.invoices.retrieve(fullInvoice.id, {
+        expand: ['payment_intent'],
+      })) as StripeInvoiceWithIntent;
+      return this.resolvePaymentIntent(stripe, refreshed.payment_intent ?? null);
+    }
+    return null;
+  }
+
+  private async resolveInvoice(
+    stripe: Stripe,
+    invoice: StripeInvoiceRef,
+  ): Promise<StripeInvoiceWithIntent | null> {
+    if (!invoice) return null;
+    if (typeof invoice === 'string') {
+      return (await stripe.invoices.retrieve(invoice, {
+        expand: ['payment_intent'],
+      })) as StripeInvoiceWithIntent;
+    }
+    if (invoice.id) {
+      return (await stripe.invoices.retrieve(invoice.id, {
+        expand: ['payment_intent'],
+      })) as StripeInvoiceWithIntent;
+    }
+    return invoice;
+  }
+
+  private async ensureInvoiceWithIntent(
+    stripe: Stripe,
+    invoice: StripeInvoiceRef,
+  ): Promise<StripeInvoiceWithIntent | null> {
+    const resolved = await this.resolveInvoice(stripe, invoice);
+    if (!resolved) return null;
+    if (resolved.amount_due > 0 && !resolved.payment_intent) {
+      if (resolved.status === 'draft') {
+        const finalized = (await stripe.invoices.finalizeInvoice(resolved.id, {
+          expand: ['payment_intent'],
+        })) as StripeInvoiceWithIntent;
+        return finalized;
+      }
+      const refreshed = (await stripe.invoices.retrieve(resolved.id, {
+        expand: ['payment_intent'],
+      })) as StripeInvoiceWithIntent;
+      return refreshed;
+    }
+    return resolved;
   }
 
   /**
@@ -66,14 +154,167 @@ export class StripeService {
       items: [{ price: plan.stripePriceId, quantity: 1 }],
       payment_behavior: 'error_if_incomplete',
       expand: ['latest_invoice.payment_intent'],
-    })) as StripeSubscription;
+    })) as unknown as StripeSubscription;
 
     return { customerId: customer.id, subscription };
   }
 
+  /**
+   * Create subscription in default_incomplete mode and return client secret for SCA/3DS.
+   */
+  async createSubscriptionIntentForSignup(params: {
+    planId: string;
+    customerEmail: string;
+    customerName?: string | null;
+    paymentMethodId: string;
+  }): Promise<{
+    customerId: string;
+    subscriptionId: string;
+    clientSecret: string | null;
+  }> {
+    const { planId, customerEmail, customerName, paymentMethodId } = params;
+    const plan = await (this.prisma as any).plan.findUnique({ where: { id: planId } });
+    if (!plan) throw new NotFoundException('Plan not found');
+    if (!plan.stripePriceId) {
+      throw new BadRequestException(
+        `Plan "${plan.name}" is not linked to a Stripe Price. Add stripePriceId in the database.`,
+      );
+    }
+
+    const stripe = this.getStripe();
+    const customer = await stripe.customers.create({
+      email: customerEmail,
+      name: customerName ?? undefined,
+    });
+
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customer.id,
+    });
+    await stripe.customers.update(customer.id, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    const subscription = (await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: plan.stripePriceId, quantity: 1 }],
+      payment_behavior: 'default_incomplete',
+      collection_method: 'charge_automatically',
+      default_payment_method: paymentMethodId,
+      payment_settings: {
+        save_default_payment_method: 'on_subscription',
+      },
+      expand: ['latest_invoice.payment_intent'],
+    })) as unknown as StripeSubscription & {
+      latest_invoice?: StripeInvoiceRef;
+    };
+
+    const latestInvoice = subscription.latest_invoice ?? null;
+    const resolvedInvoice = await this.ensureInvoiceWithIntent(stripe, latestInvoice);
+    console.log('[stripe] signup intent created', {
+      subscriptionId: subscription.id,
+      subscriptionStatus: subscription.status,
+      latestInvoiceType: typeof latestInvoice,
+      amountDue: resolvedInvoice?.amount_due ?? null,
+    });
+    const paymentIntent = await this.resolvePaymentIntentFromInvoice(stripe, resolvedInvoice);
+    console.log('[stripe] signup intent payment', {
+      subscriptionId: subscription.id,
+      paymentIntentStatus: paymentIntent?.status ?? null,
+      hasClientSecret: Boolean(paymentIntent?.client_secret),
+    });
+    if (!paymentIntent || !paymentIntent.client_secret) {
+      if (resolvedInvoice && resolvedInvoice.amount_due === 0) {
+        return {
+          customerId: customer.id,
+          subscriptionId: subscription.id,
+          clientSecret: null,
+        };
+      }
+      throw new BadRequestException('Unable to start payment. Please try again.');
+    }
+    return {
+      customerId: customer.id,
+      subscriptionId: subscription.id,
+      clientSecret: paymentIntent.client_secret,
+    };
+  }
+
+  async verifySubscriptionPayment(params: {
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
+  }): Promise<{
+    isActive: boolean;
+    startDate: Date;
+    endDate: Date;
+  }> {
+    const { subscriptionId, customerId, planId } = params;
+    const plan = await (this.prisma as any).plan.findUnique({ where: { id: planId } });
+    if (!plan) throw new NotFoundException('Plan not found');
+    if (!plan.stripePriceId) {
+      throw new BadRequestException('Plan is not linked to a Stripe Price.');
+    }
+
+    const stripe = this.getStripe();
+    const subscription = (await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['latest_invoice.payment_intent'],
+    })) as unknown as StripeSubscription & {
+      latest_invoice?: StripeInvoiceRef;
+    };
+
+    const latestInvoice = subscription.latest_invoice ?? null;
+    const resolvedInvoice = await this.resolveInvoice(stripe, latestInvoice);
+
+    if (subscription.customer !== customerId) {
+      throw new BadRequestException('Subscription does not match customer.');
+    }
+
+    const hasPlan = subscription.items.data.some((item) => item.price?.id === plan.stripePriceId);
+    if (!hasPlan) {
+      throw new BadRequestException('Subscription does not match selected plan.');
+    }
+
+    const paymentIntent = await this.resolvePaymentIntentFromInvoice(stripe, latestInvoice);
+    const paymentIntentStatus = paymentIntent?.status ?? null;
+    console.log('[stripe] verifySubscriptionPayment', {
+      subscriptionId,
+      status: subscription.status,
+      latestInvoiceType: typeof latestInvoice,
+      amountDue: resolvedInvoice?.amount_due ?? null,
+      paymentIntentStatus,
+      paymentIntentType: paymentIntent ? typeof paymentIntent : null,
+    });
+    if (paymentIntent) {
+      if (paymentIntentStatus !== 'succeeded' && paymentIntentStatus !== 'processing') {
+        throw new BadRequestException('Payment has not completed.');
+      }
+      return {
+        isActive: true,
+        startDate: new Date(subscription.current_period_start * 1000),
+        endDate: new Date(subscription.current_period_end * 1000),
+      };
+    }
+
+    if (resolvedInvoice && resolvedInvoice.amount_due === 0) {
+      return {
+        isActive: true,
+        startDate: new Date(subscription.current_period_start * 1000),
+        endDate: new Date(subscription.current_period_end * 1000),
+      };
+    }
+
+    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+    if (!isActive) {
+      throw new BadRequestException('Payment has not completed.');
+    }
+    const startDate = new Date(subscription.current_period_start * 1000);
+    const endDate = new Date(subscription.current_period_end * 1000);
+    return { isActive, startDate, endDate };
+  }
+
   async cancelSubscription(subscriptionId: string): Promise<void> {
     const stripe = this.getStripe();
-    await stripe.subscriptions.del(subscriptionId);
+    await stripe.subscriptions.cancel(subscriptionId);
   }
 
   /**

@@ -7,6 +7,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SignUpWithSubscriptionDto } from './dto/sign-up-with-subscription.dto';
+import { SignupSubscriptionIntentDto } from './dto/signup-subscription-intent.dto';
+import { SignupSubscriptionFinalizeDto } from './dto/signup-subscription-finalize.dto';
 import { TokensResponseDto } from './dto/tokens-response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -31,6 +33,32 @@ export class AuthController {
       dto.name,
       dto.planId,
       dto.paymentMethodId,
+    );
+  }
+
+  @Public()
+  @Post('signup-subscription-intent')
+  async signupSubscriptionIntent(@Body() dto: SignupSubscriptionIntentDto) {
+    return this.authService.createSignupSubscriptionIntent(
+      dto.email,
+      dto.name,
+      dto.planId,
+      dto.paymentMethodId,
+    );
+  }
+
+  @Public()
+  @Post('signup-subscription-finalize')
+  async signupSubscriptionFinalize(
+    @Body() dto: SignupSubscriptionFinalizeDto,
+  ): Promise<TokensResponseDto> {
+    return this.authService.finalizeSignupWithSubscription(
+      dto.email,
+      dto.password,
+      dto.name,
+      dto.planId,
+      dto.subscriptionId,
+      dto.customerId,
     );
   }
 

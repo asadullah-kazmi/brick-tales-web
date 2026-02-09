@@ -104,6 +104,79 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  async createSignupSubscriptionIntent(
+    email: string,
+    name: string,
+    planId: string,
+    paymentMethodId: string,
+  ) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    return this.stripeService.createSubscriptionIntentForSignup({
+      planId,
+      customerEmail: normalizedEmail,
+      customerName: name,
+      paymentMethodId,
+    });
+  }
+
+  async finalizeSignupWithSubscription(
+    email: string,
+    password: string,
+    name: string,
+    planId: string,
+    subscriptionId: string,
+    customerId: string,
+  ) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const { isActive, startDate, endDate } = await this.stripeService.verifySubscriptionPayment({
+      subscriptionId,
+      customerId,
+      planId,
+    });
+
+    if (!isActive) {
+      throw new BadRequestException('Subscription is not active.');
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    let user: User | null = null;
+    try {
+      user = await this.prisma.user.create({
+        data: { email: normalizedEmail, passwordHash, name, stripeCustomerId: customerId },
+      });
+
+      await this.prisma.subscription.create({
+        data: {
+          userId: user.id,
+          planId,
+          stripeSubscriptionId: subscriptionId,
+          status: 'ACTIVE',
+          startDate,
+          endDate,
+        },
+      });
+    } catch (err) {
+      try {
+        await this.stripeService.cancelSubscription(subscriptionId);
+      } catch {
+        // ignore cleanup errors
+      }
+      throw err;
+    }
+
+    return this.issueTokens(user);
+  }
+
   async login(email: string, password: string) {
     const user = await this.validateUser(email, password);
     if (!user) {
