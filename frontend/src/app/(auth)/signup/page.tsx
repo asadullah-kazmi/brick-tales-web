@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -306,7 +306,7 @@ function SignupFormInner() {
             fullWidth
             disabled={isLoading || !hasPlan || !stripeReady || !hasStripeKey}
           >
-            {isLoading ? "Creating account…" : "Create account"}
+            {isLoading ? "Creating account..." : "Create account"}
           </Button>
           <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
             Already have an account?{" "}
@@ -350,8 +350,26 @@ export default function SignupPage() {
     );
   }
   return (
-    <Elements stripe={stripePromise}>
-      <SignupFormInner />
-    </Elements>
+    <Suspense
+      fallback={
+        <Card>
+          <CardHeader>
+            <CardTitle>Create account</CardTitle>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              Loading signup details...
+            </p>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              Preparing the payment form.
+            </p>
+          </CardContent>
+        </Card>
+      }
+    >
+      <Elements stripe={stripePromise}>
+        <SignupFormInner />
+      </Elements>
+    </Suspense>
   );
 }
