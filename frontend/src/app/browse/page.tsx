@@ -1,7 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { contentService } from "@/lib/services/content.service";
+import type { ContentSummaryDto } from "@/types/api";
 
 type BrowseItem = {
   id: string;
@@ -19,73 +19,6 @@ type BrowseRow = {
   accent?: "amber" | "violet" | "cyan" | "rose";
 };
 
-const HERO_ITEMS: BrowseItem[] = [
-  {
-    id: "hero-1",
-    title: "City Lights",
-    subtitle: "New original",
-    size: "wide",
-  },
-  { id: "hero-2", title: "After Hours", subtitle: "Trending", size: "wide" },
-  { id: "hero-3", title: "Neon Miles", subtitle: "Top pick", size: "wide" },
-];
-
-const ROWS: BrowseRow[] = [
-  {
-    id: "recommended",
-    title: "Recommended",
-    subtitle: "Fresh picks based on tonight's vibe",
-    accent: "amber",
-    items: [
-      { id: "rec-1", title: "The Bachelorette Party" },
-      { id: "rec-2", title: "Terri Joe: Mission" },
-      { id: "rec-3", title: "Everybody Hates Chris" },
-      { id: "rec-4", title: "Rooftop Sessions" },
-      { id: "rec-5", title: "Jersey Days" },
-      { id: "rec-6", title: "Weekend Rebels" },
-    ],
-  },
-  {
-    id: "movie-night",
-    title: "Movie Night",
-    subtitle: "Blockbusters and comfort classics",
-    accent: "violet",
-    items: [
-      { id: "movie-1", title: "Talladega Nights" },
-      { id: "movie-2", title: "Taken 2" },
-      { id: "movie-3", title: "The Longest Yard" },
-      { id: "movie-4", title: "Fast Lane" },
-      { id: "movie-5", title: "Neon Boulevard" },
-    ],
-  },
-  {
-    id: "series",
-    title: "Series to Binge",
-    subtitle: "Get hooked in one episode",
-    accent: "cyan",
-    items: [
-      { id: "series-1", title: "Midnight Club" },
-      { id: "series-2", title: "Sunset Drive" },
-      { id: "series-3", title: "Northside" },
-      { id: "series-4", title: "Metro Pulse" },
-      { id: "series-5", title: "Afterglow" },
-    ],
-  },
-  {
-    id: "family",
-    title: "Family Favorites",
-    subtitle: "All ages, all smiles",
-    accent: "rose",
-    items: [
-      { id: "fam-1", title: "Sunday Brunch" },
-      { id: "fam-2", title: "Campus Crew" },
-      { id: "fam-3", title: "Young Legends" },
-      { id: "fam-4", title: "Playground Dreams" },
-      { id: "fam-5", title: "Weekend Wonders" },
-    ],
-  },
-];
-
 const GRADIENTS = [
   "from-slate-950 via-slate-900 to-slate-500/40",
   "from-indigo-950 via-indigo-900 to-slate-400/40",
@@ -94,8 +27,88 @@ const GRADIENTS = [
   "from-slate-950 via-slate-900 to-slate-500/40",
 ];
 
+const ACCENTS: BrowseRow["accent"][] = ["amber", "violet", "cyan", "rose"];
+
 function getGradient(index: number) {
   return GRADIENTS[index % GRADIENTS.length];
+}
+
+function formatSubtitle(item: ContentSummaryDto): string | undefined {
+  const parts: string[] = [];
+  if (item.releaseYear) parts.push(String(item.releaseYear));
+  if (item.ageRating) parts.push(item.ageRating);
+  const subtitle = parts.join(" • ");
+  return subtitle.length > 0 ? subtitle : undefined;
+}
+
+function toBrowseItem(item: ContentSummaryDto): BrowseItem {
+  return {
+    id: item.id,
+    title: item.title,
+    subtitle: formatSubtitle(item),
+  };
+}
+
+function slugifyRowId(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return slug.length > 0 ? slug : "featured";
+}
+
+function buildRows(
+  items: ContentSummaryDto[],
+  categories: string[],
+): BrowseRow[] {
+  const grouped = new Map<string, ContentSummaryDto[]>();
+  for (const item of items) {
+    const key = item.category?.trim() || "Featured";
+    const existing = grouped.get(key);
+    if (existing) existing.push(item);
+    else grouped.set(key, [item]);
+  }
+
+  const orderedCategories = categories.filter(
+    (category) => category.toLowerCase() !== "all",
+  );
+  const rowKeys = [
+    ...orderedCategories.filter((category) => grouped.has(category)),
+    ...Array.from(grouped.keys()).filter(
+      (category) => !orderedCategories.includes(category),
+    ),
+  ];
+
+  return rowKeys
+    .map((category, index) => ({
+      id: slugifyRowId(category),
+      title: category,
+      subtitle:
+        category === "Featured"
+          ? "Fresh picks for you"
+          : `Top picks in ${category}`,
+      accent: ACCENTS[index % ACCENTS.length],
+      items: (grouped.get(category) ?? []).map(toBrowseItem),
+    }))
+    .filter((row) => row.items.length > 0);
+}
+
+async function getBrowseData(): Promise<{
+  rows: BrowseRow[];
+  chips: string[];
+}> {
+  try {
+    const [items, categories] = await Promise.all([
+      contentService.getContentForBrowse(),
+      contentService.getCategories(),
+    ]);
+    return {
+      rows: buildRows(items, categories),
+      chips: categories.length > 0 ? categories : ["All"],
+    };
+  } catch {
+    return { rows: [], chips: ["All"] };
+  }
 }
 
 function AccentTag({
@@ -165,38 +178,6 @@ function PosterCard({ item, index }: { item: BrowseItem; index: number }) {
   );
 }
 
-function WideCard({ item, index }: { item: BrowseItem; index: number }) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "group relative flex h-44 w-72 shrink-0 flex-col justify-end overflow-hidden rounded-3xl border border-white/10 bg-neutral-900/60 p-4 text-left shadow-[0_20px_50px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:-translate-y-1",
-        "sm:h-56 sm:w-[26rem]",
-      )}
-      aria-label={item.title}
-    >
-      <div
-        className={cn(
-          "absolute inset-0 -z-10 bg-gradient-to-br opacity-95",
-          getGradient(index),
-        )}
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.2),transparent_60%)]"
-        aria-hidden
-      />
-      <span className="mb-2 inline-flex w-fit rounded-full bg-black/40 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white">
-        {item.subtitle ?? "Featured"}
-      </span>
-      <p className="text-lg font-semibold text-white sm:text-2xl">
-        {item.title}
-      </p>
-      <p className="mt-1 text-sm text-white/70">Stream now • 4K</p>
-    </button>
-  );
-}
-
 function BrowseRowSection({ row }: { row: BrowseRow }) {
   return (
     <section className="space-y-3" aria-labelledby={`row-${row.id}`}>
@@ -233,7 +214,8 @@ function BrowseRowSection({ row }: { row: BrowseRow }) {
   );
 }
 
-export default function BrowsePage() {
+export default async function BrowsePage() {
+  const { rows, chips } = await getBrowseData();
   return (
     <main className="relative flex flex-1 flex-col overflow-hidden bg-[#0b0b0e] text-white">
       <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-white/10 blur-[120px]" />
@@ -270,71 +252,29 @@ export default function BrowsePage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {["Recommended", "Movie Night", "Series", "Family"].map(
-                (chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/70 transition hover:border-white/30 hover:text-white"
-                  >
-                    {chip}
-                  </button>
-                ),
-              )}
+              {chips.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/70 transition hover:border-white/30 hover:text-white"
+                >
+                  {chip}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mt-6 space-y-4 px-4 sm:px-6 lg:px-10">
-        <div className="no-scrollbar reveal-delay flex gap-4 overflow-x-auto pb-2">
-          {HERO_ITEMS.map((item, index) => (
-            <WideCard key={item.id} item={item} index={index} />
-          ))}
-        </div>
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: 9 }, (_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-2 w-2 rounded-full",
-                i === 4 ? "bg-white/70" : "bg-white/20",
-              )}
-            />
-          ))}
-        </div>
-      </section>
-
       <section className="mt-10 space-y-10 px-4 pb-12 sm:px-6 lg:px-10">
-        {ROWS.map((row) => (
-          <BrowseRowSection key={row.id} row={row} />
-        ))}
+        {rows.length > 0 ? (
+          rows.map((row) => <BrowseRowSection key={row.id} row={row} />)
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
+            No content is available yet. Check back soon.
+          </div>
+        )}
       </section>
-
-      <style jsx>{`
-        .no-scrollbar {
-          scrollbar-width: none;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .reveal {
-          animation: fadeUp 0.6s ease-out both;
-        }
-        .reveal-delay {
-          animation: fadeUp 0.8s ease-out both;
-        }
-        @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(14px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </main>
   );
 }

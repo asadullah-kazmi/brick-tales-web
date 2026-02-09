@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts";
@@ -106,6 +107,8 @@ function NavContent({
 }
 
 export function Header() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   const { user, isAuthenticated, isSubscribed, isAdmin, logout } = useAuth();
   const [loginOrigin, setLoginOriginState] = useState<
     "admin" | "customer" | null
@@ -149,7 +152,13 @@ export function Header() {
     isAdmin && loginOrigin === "admin" ? "/admin" : "/dashboard";
 
   return (
-    <header className="border-b border-neutral-700/50 bg-off-black/95 backdrop-blur-sm sticky top-0 z-50">
+    <header
+      className={
+        isHome
+          ? "fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-transparent backdrop-blur-sm"
+          : "sticky top-0 z-50 border-b border-white/10 bg-transparent backdrop-blur-sm"
+      }
+    >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"

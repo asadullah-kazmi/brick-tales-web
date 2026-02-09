@@ -57,6 +57,8 @@ export default async function Home() {
   const brandingPage = await siteService.getPage("branding");
   const branding = parseBranding(brandingPage?.content ?? "");
   const bannerSrc = branding.bannerUrl?.trim() || "/hero-banner.png";
+  const heroVideoId = "TEjHDF9QXTY";
+  const heroVideoSrc = `https://www.youtube.com/embed/${heroVideoId}?autoplay=1&mute=1&loop=1&playlist=${heroVideoId}&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1`;
   return (
     <main className="flex flex-1 flex-col">
       <WebSiteJsonLd />
@@ -66,16 +68,27 @@ export default async function Home() {
         className="relative flex min-h-[100dvh] w-full max-w-full flex-col items-center justify-center overflow-hidden px-4 py-16"
         aria-label="Hero"
       >
-        <Image
-          src={bannerSrc}
-          alt=""
-          fill
-          priority
-          className="absolute inset-0 h-full w-full object-cover object-center"
-          sizes="100vw"
-          unoptimized
-        />
-        <div className="absolute inset-0 bg-black/5" aria-hidden />
+        <div className="absolute inset-0">
+          <Image
+            src={bannerSrc}
+            alt=""
+            fill
+            priority
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            sizes="100vw"
+            unoptimized
+          />
+          <div className="absolute inset-0 overflow-hidden" aria-hidden>
+            <iframe
+              className="absolute left-1/2 top-1/2 h-[56.25vw] w-[177.78vh] min-h-full min-w-full -translate-x-1/2 -translate-y-1/2"
+              src={heroVideoSrc}
+              title="Hero background video"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+          <div className="absolute inset-0 bg-black/35" aria-hidden />
+        </div>
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           {/* <div className="relative mb-8">
             <Image
