@@ -23,3 +23,4 @@ export type {
   AdminSystemLogDto,
 } from "./admin.service";
 export { siteService } from "./site.service";
+export { accountService } from "./account.service";

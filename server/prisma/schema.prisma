@@ -65,6 +65,8 @@ model User {
   id                String    @id @default(cuid())
   email             String    @unique
   name              String?
+  phone             String?
+  bio               String?
   passwordHash      String?
   role              String    @default("user")
   stripeCustomerId  String?   @unique
@@ -78,8 +80,28 @@ model User {
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   supportReplies      SupportReply[]
+  preferences        UserPreferences?
 
   @@index([email])
+}
+
+model UserPreferences {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  playbackQuality      String   @default("Auto")
+  autoplayNext         Boolean  @default(true)
+  skipRecaps           Boolean  @default(false)
+  subtitlesDefault     Boolean  @default(true)
+  notifyNewReleases    Boolean  @default(true)
+  notifyAccountAlerts  Boolean  @default(true)
+  notifyProductTips    Boolean  @default(false)
+  twoFactorEnabled     Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model PasswordResetToken {

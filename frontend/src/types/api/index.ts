@@ -12,6 +12,7 @@
 export * from "./common.types";
 export * from "./auth.types";
 export * from "./subscription.types";
+export * from "./user.types";
 export * from "./content.types";
 export * from "./streaming.types";
 export * from "./site.types";

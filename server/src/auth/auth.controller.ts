@@ -98,4 +98,10 @@ export class AuthController {
   ): Promise<{ message: string }> {
     return this.authService.changePassword(user.id, dto.currentPassword, dto.newPassword);
   }
+
+  @Post('revoke-sessions')
+  @HttpCode(HttpStatus.OK)
+  async revokeSessions(@CurrentUser() user: User): Promise<{ message: string }> {
+    return this.authService.revokeSessions(user.id);
+  }
 }

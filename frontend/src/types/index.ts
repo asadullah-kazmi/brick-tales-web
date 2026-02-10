@@ -15,6 +15,8 @@ export type User = {
   id?: string;
   email: string;
   name: string;
+  phone?: string | null;
+  bio?: string | null;
   role?: UserRole;
   /** ISO date string when from API. */
   createdAt?: string;

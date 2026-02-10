@@ -5,31 +5,86 @@ import Link from "next/link";
 import { Button, Input } from "@/components/ui";
 import { useAuth } from "@/contexts";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { subscriptionService } from "@/lib/services";
-import type { PublicPlanDto } from "@/types/api";
+import {
+  accountService,
+  authService,
+  subscriptionService,
+} from "@/lib/services";
+import type {
+  DeviceDto,
+  PlaybackQuality,
+  PublicPlanDto,
+  UpdateUserPreferencesRequestDto,
+  UpdateUserProfileRequestDto,
+  UserPreferencesDto,
+  UserProfileDto,
+  GetSubscriptionResponseDto,
+} from "@/types/api";
 
 export default function SettingsPage() {
   const { user, isSubscribed } = useAuth();
   const [plans, setPlans] = useState<PublicPlanDto[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
+  const [subscription, setSubscription] =
+    useState<GetSubscriptionResponseDto | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfileDto | null>(null);
+  const [profileDraft, setProfileDraft] = useState<UpdateUserProfileRequestDto>(
+    {},
+  );
+  const [preferences, setPreferences] = useState<UserPreferencesDto | null>(
+    null,
+  );
+  const [devices, setDevices] = useState<DeviceDto[]>([]);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [prefLoading, setPrefLoading] = useState(true);
+  const [deviceLoading, setDeviceLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [prefSaving, setPrefSaving] = useState(false);
+  const [securitySaving, setSecuritySaving] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
+  const [passwordCurrent, setPasswordCurrent] = useState("");
+  const [passwordNext, setPasswordNext] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   useEffect(() => {
     let active = true;
     Promise.all([
       subscriptionService.getPlans(),
       subscriptionService.getSubscription(),
+      accountService.getProfile(),
+      accountService.getPreferences(),
+      accountService.listDevices(),
     ])
-      .then(([planList, subscription]) => {
+      .then(([planList, subscriptionRes, profileRes, prefsRes, devicesRes]) => {
         if (!active) return;
         setPlans(planList);
-        setPlanId(subscription.planId ?? null);
+        setPlanId(subscriptionRes.planId ?? null);
+        setSubscription(subscriptionRes ?? null);
+        setProfile(profileRes);
+        setProfileDraft({
+          name: profileRes.name ?? "",
+          phone: profileRes.phone ?? "",
+          bio: profileRes.bio ?? "",
+        });
+        setPreferences(prefsRes);
+        setDevices(devicesRes);
       })
       .catch(() => {
         if (!active) return;
         setPlans([]);
         setPlanId(null);
+        setProfile(null);
+        setPreferences(null);
+        setDevices([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setProfileLoading(false);
+        setPrefLoading(false);
+        setDeviceLoading(false);
       });
     return () => {
       active = false;
@@ -43,8 +98,20 @@ export default function SettingsPage() {
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).getFullYear()
     : null;
-  const displayName = user?.name ?? "";
-  const email = user?.email ?? "";
+  const displayName = profile?.name ?? user?.name ?? "";
+  const email = profile?.email ?? user?.email ?? "";
+
+  const playbackQuality = preferences?.playbackQuality ?? "Auto";
+  const nextChargeLabel = subscription?.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+    : "--";
+
+  const setPreference = (partial: UpdateUserPreferencesRequestDto) => {
+    setPreferences((prev) => {
+      if (!prev) return prev;
+      return { ...prev, ...partial } as UserPreferencesDto;
+    });
+  };
 
   async function handleOpenBillingPortal() {
     setBillingError(null);
@@ -62,6 +129,128 @@ export default function SettingsPage() {
       setBillingError(getApiErrorMessage(err));
     } finally {
       setBillingLoading(false);
+    }
+  }
+
+  async function handleSaveProfile() {
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    setProfileSaving(true);
+    try {
+      const updated = await accountService.updateProfile(profileDraft);
+      setProfile(updated);
+      setProfileDraft({
+        name: updated.name ?? "",
+        phone: updated.phone ?? "",
+        bio: updated.bio ?? "",
+      });
+      setSettingsSuccess("Profile updated.");
+    } catch (err) {
+      setSettingsError(getApiErrorMessage(err));
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  async function handleSavePreferences() {
+    if (!preferences) return;
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    setPrefSaving(true);
+    try {
+      const updated = await accountService.updatePreferences(preferences);
+      setPreferences(updated);
+      setSettingsSuccess("Preferences updated.");
+    } catch (err) {
+      setSettingsError(getApiErrorMessage(err));
+    } finally {
+      setPrefSaving(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    if (!passwordCurrent || !passwordNext) {
+      setSettingsError("Enter your current and new password.");
+      return;
+    }
+    if (passwordNext !== passwordConfirm) {
+      setSettingsError("New passwords do not match.");
+      return;
+    }
+    setSecuritySaving(true);
+    try {
+      await authService.changePassword({
+        currentPassword: passwordCurrent,
+        newPassword: passwordNext,
+      });
+      await accountService.revokeSessions();
+      setPasswordCurrent("");
+      setPasswordNext("");
+      setPasswordConfirm("");
+      setSettingsSuccess("Password updated and sessions reset.");
+    } catch (err) {
+      setSettingsError(getApiErrorMessage(err));
+    } finally {
+      setSecuritySaving(false);
+    }
+  }
+
+  async function handleResetSessions() {
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    setSecuritySaving(true);
+    try {
+      const res = await accountService.revokeSessions();
+      setSettingsSuccess(res.message ?? "Sessions reset.");
+    } catch (err) {
+      setSettingsError(getApiErrorMessage(err));
+    } finally {
+      setSecuritySaving(false);
+    }
+  }
+
+  async function handleRemoveDevice(id: string) {
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    try {
+      await accountService.removeDevice(id);
+      setDevices((prev) => prev.filter((device) => device.id !== id));
+      setSettingsSuccess("Device removed.");
+    } catch (err) {
+      setSettingsError(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleExportData() {
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    try {
+      const res = await accountService.exportAccountData();
+      const blob = new Blob([JSON.stringify(res, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "account-data.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      setSettingsSuccess("Account data downloaded.");
+    } catch (err) {
+      setSettingsError(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    try {
+      await accountService.deleteAccount();
+      setSettingsSuccess("Account deleted.");
+    } catch (err) {
+      setSettingsError(getApiErrorMessage(err));
     }
   }
 
@@ -113,8 +302,8 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" size="lg">
-              Save changes
+            <Button type="button" size="lg" onClick={handleSaveProfile}>
+              {profileSaving ? "Saving..." : "Save changes"}
             </Button>
             <Link href="/subscription">
               <Button type="button" variant="outline" size="lg">
@@ -124,6 +313,21 @@ export default function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {(settingsError || settingsSuccess) && (
+        <div className="mt-6 rounded-2xl border border-neutral-700/50 bg-neutral-900/60 px-4 py-3 text-sm">
+          {settingsError && (
+            <p className="text-red-400" role="alert">
+              {settingsError}
+            </p>
+          )}
+          {!settingsError && settingsSuccess && (
+            <p className="text-emerald-300" role="status">
+              {settingsSuccess}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="space-y-6">
@@ -148,15 +352,33 @@ export default function SettingsPage() {
               <Input
                 label="Display name"
                 placeholder="Your name"
-                defaultValue={displayName}
+                value={profileDraft.name ?? ""}
+                onChange={(event) =>
+                  setProfileDraft((prev) => ({
+                    ...prev,
+                    name: event.target.value,
+                  }))
+                }
               />
               <Input
                 label="Email"
                 type="email"
                 placeholder="you@email.com"
-                defaultValue={email}
+                value={email}
+                disabled
               />
-              <Input label="Phone" type="tel" placeholder="+1 (555) 000-1289" />
+              <Input
+                label="Phone"
+                type="tel"
+                placeholder="+1 (555) 000-1289"
+                value={profileDraft.phone ?? ""}
+                onChange={(event) =>
+                  setProfileDraft((prev) => ({
+                    ...prev,
+                    phone: event.target.value,
+                  }))
+                }
+              />
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-sm font-medium text-neutral-300">
                   Bio
@@ -164,11 +386,20 @@ export default function SettingsPage() {
                 <textarea
                   className="h-24 w-full rounded-lg border border-neutral-600 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500/20"
                   placeholder="Tell us what you like to watch."
+                  value={profileDraft.bio ?? ""}
+                  onChange={(event) =>
+                    setProfileDraft((prev) => ({
+                      ...prev,
+                      bio: event.target.value,
+                    }))
+                  }
                 />
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button type="button">Update profile</Button>
+              <Button type="button" onClick={handleSaveProfile}>
+                {profileSaving ? "Saving..." : "Update profile"}
+              </Button>
               <Button type="button" variant="outline">
                 Cancel
               </Button>
@@ -188,16 +419,22 @@ export default function SettingsPage() {
                 label="Current password"
                 type="password"
                 placeholder="********"
+                value={passwordCurrent}
+                onChange={(event) => setPasswordCurrent(event.target.value)}
               />
               <Input
                 label="New password"
                 type="password"
                 placeholder="********"
+                value={passwordNext}
+                onChange={(event) => setPasswordNext(event.target.value)}
               />
               <Input
                 label="Confirm new password"
                 type="password"
                 placeholder="********"
+                value={passwordConfirm}
+                onChange={(event) => setPasswordConfirm(event.target.value)}
               />
               <div className="sm:col-span-2 rounded-xl border border-neutral-700/70 bg-neutral-950/60 p-4">
                 <div className="flex items-center justify-between">
@@ -212,16 +449,27 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     className="rounded-full border border-neutral-600 px-4 py-1 text-xs font-semibold text-neutral-200 hover:border-accent hover:text-accent"
+                    onClick={() =>
+                      setPreference({
+                        twoFactorEnabled: !preferences?.twoFactorEnabled,
+                      })
+                    }
                   >
-                    Enable
+                    {preferences?.twoFactorEnabled ? "Disable" : "Enable"}
                   </button>
                 </div>
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button type="button">Save security</Button>
-              <Button type="button" variant="ghost">
-                Reset sessions
+              <Button type="button" onClick={handleChangePassword}>
+                {securitySaving ? "Saving..." : "Save security"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleResetSessions}
+              >
+                {securitySaving ? "Working..." : "Reset sessions"}
               </Button>
             </div>
           </section>
@@ -249,7 +497,16 @@ export default function SettingsPage() {
                     <button
                       key={label}
                       type="button"
-                      className="rounded-full border border-neutral-600 px-3 py-1 text-xs font-semibold text-neutral-200 hover:border-accent hover:text-accent"
+                      onClick={() =>
+                        setPreference({
+                          playbackQuality: label as PlaybackQuality,
+                        })
+                      }
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                        playbackQuality === label
+                          ? "border-accent text-accent"
+                          : "border-neutral-600 text-neutral-200 hover:border-accent hover:text-accent"
+                      }`}
                     >
                       {label}
                     </button>
@@ -263,19 +520,34 @@ export default function SettingsPage() {
                     <span>Autoplay next episode</span>
                     <input
                       type="checkbox"
-                      defaultChecked
+                      checked={preferences?.autoplayNext ?? true}
+                      onChange={(event) =>
+                        setPreference({ autoplayNext: event.target.checked })
+                      }
                       className="h-4 w-4 accent-accent"
                     />
                   </label>
                   <label className="flex items-center justify-between gap-3">
                     <span>Skip recaps</span>
-                    <input type="checkbox" className="h-4 w-4 accent-accent" />
+                    <input
+                      type="checkbox"
+                      checked={preferences?.skipRecaps ?? false}
+                      onChange={(event) =>
+                        setPreference({ skipRecaps: event.target.checked })
+                      }
+                      className="h-4 w-4 accent-accent"
+                    />
                   </label>
                   <label className="flex items-center justify-between gap-3">
                     <span>Show subtitles by default</span>
                     <input
                       type="checkbox"
-                      defaultChecked
+                      checked={preferences?.subtitlesDefault ?? true}
+                      onChange={(event) =>
+                        setPreference({
+                          subtitlesDefault: event.target.checked,
+                        })
+                      }
                       className="h-4 w-4 accent-accent"
                     />
                   </label>
@@ -283,7 +555,9 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button type="button">Save playback</Button>
+              <Button type="button" onClick={handleSavePreferences}>
+                {prefSaving ? "Saving..." : "Save playback"}
+              </Button>
               <Button type="button" variant="outline">
                 Reset to defaults
               </Button>
@@ -308,7 +582,10 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  defaultChecked
+                  checked={preferences?.notifyNewReleases ?? true}
+                  onChange={(event) =>
+                    setPreference({ notifyNewReleases: event.target.checked })
+                  }
                   className="h-4 w-4 accent-accent"
                 />
               </label>
@@ -321,7 +598,12 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  defaultChecked
+                  checked={preferences?.notifyAccountAlerts ?? true}
+                  onChange={(event) =>
+                    setPreference({
+                      notifyAccountAlerts: event.target.checked,
+                    })
+                  }
                   className="h-4 w-4 accent-accent"
                 />
               </label>
@@ -332,11 +614,20 @@ export default function SettingsPage() {
                     Occasional updates about new features.
                   </p>
                 </div>
-                <input type="checkbox" className="h-4 w-4 accent-accent" />
+                <input
+                  type="checkbox"
+                  checked={preferences?.notifyProductTips ?? false}
+                  onChange={(event) =>
+                    setPreference({ notifyProductTips: event.target.checked })
+                  }
+                  className="h-4 w-4 accent-accent"
+                />
               </label>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button type="button">Save notifications</Button>
+              <Button type="button" onClick={handleSavePreferences}>
+                {prefSaving ? "Saving..." : "Save notifications"}
+              </Button>
               <Button type="button" variant="ghost">
                 Unsubscribe from all
               </Button>
@@ -357,13 +648,17 @@ export default function SettingsPage() {
               <p className="text-xs font-medium uppercase tracking-[0.3em] text-neutral-500">
                 Current plan
               </p>
-              <p className="mt-3 text-2xl font-semibold text-white">Starter</p>
+              <p className="mt-3 text-2xl font-semibold text-white">
+                {planName ?? (isSubscribed ? "Active plan" : "Free")}
+              </p>
               <p className="mt-1 text-sm text-neutral-400">
-                Upgrade for offline viewing and exclusive series.
+                {isSubscribed
+                  ? "Subscription benefits are active."
+                  : "Upgrade for offline viewing and exclusive series."}
               </p>
               <div className="mt-4 flex items-center justify-between text-xs text-neutral-500">
-                <span>Status: Active</span>
-                <span>Next charge: Aug 18</span>
+                <span>Status: {isSubscribed ? "Active" : "Free"}</span>
+                <span>Next charge: {nextChargeLabel}</span>
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -398,27 +693,36 @@ export default function SettingsPage() {
               Manage where you are signed in.
             </p>
             <div className="mt-5 space-y-3 text-sm text-neutral-300">
-              {[
-                { name: "MacBook Pro", meta: "San Francisco, CA" },
-                { name: "Living room TV", meta: "ChromeCast" },
-                { name: "iPhone 14", meta: "Last active 2 days ago" },
-              ].map((device) => (
-                <div
-                  key={device.name}
-                  className="flex items-center justify-between rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-white">{device.name}</p>
-                    <p className="text-xs text-neutral-400">{device.meta}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-neutral-400 hover:text-accent"
+              {deviceLoading ? (
+                <p className="text-sm text-neutral-400">Loading devices...</p>
+              ) : devices.length > 0 ? (
+                devices.map((device) => (
+                  <div
+                    key={device.id}
+                    className="flex items-center justify-between rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3"
                   >
-                    Sign out
-                  </button>
-                </div>
-              ))}
+                    <div>
+                      <p className="font-medium text-white">
+                        {device.deviceIdentifier}
+                      </p>
+                      <p className="text-xs text-neutral-400">
+                        {`${device.platform} • Last active ${new Date(device.lastActiveAt).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDevice(device.id)}
+                      className="text-xs font-semibold text-neutral-400 hover:text-accent"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-neutral-400">
+                  No devices registered yet.
+                </p>
+              )}
             </div>
           </section>
 
@@ -431,10 +735,20 @@ export default function SettingsPage() {
               Download your data or remove your account.
             </p>
             <div className="mt-5 space-y-3">
-              <Button type="button" variant="outline" fullWidth>
+              <Button
+                type="button"
+                variant="outline"
+                fullWidth
+                onClick={handleExportData}
+              >
                 Download data
               </Button>
-              <Button type="button" variant="danger" fullWidth>
+              <Button
+                type="button"
+                variant="danger"
+                fullWidth
+                onClick={handleDeleteAccount}
+              >
                 Delete account
               </Button>
             </div>

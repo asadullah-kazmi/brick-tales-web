@@ -317,6 +317,12 @@ export class AuthService {
     return { message: 'Password updated successfully.' };
   }
 
+  /** Revoke all refresh tokens for the current user. */
+  async revokeSessions(userId: string): Promise<{ message: string }> {
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    return { message: 'All sessions have been reset.' };
+  }
+
   private async issueTokens(user: User) {
     const accessSecret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? 'dev-secret';
     const refreshSecret =
