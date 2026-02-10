@@ -18,7 +18,6 @@ import { useAuth } from "@/contexts";
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/mkv"];
 const THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_VIDEO_BYTES = 20 * 1024 * 1024 * 1024;
-const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 
 const CONTENT_TYPES: { value: ContentType; label: string }[] = [
   { value: "MOVIE", label: "Movie" },
@@ -218,10 +217,6 @@ export default function AdminUploadPage() {
     }
     if (!THUMBNAIL_TYPES.includes(thumbnailFile.type)) {
       setError("Thumbnail must be JPEG, PNG, or WebP.");
-      return false;
-    }
-    if (thumbnailFile.size > MAX_THUMBNAIL_BYTES) {
-      setError(`Thumbnail exceeds ${formatBytes(MAX_THUMBNAIL_BYTES)}.`);
       return false;
     }
     setError(null);
@@ -581,7 +576,7 @@ export default function AdminUploadPage() {
                 className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
               />
               <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                JPEG, PNG, or WebP. Max {formatBytes(MAX_THUMBNAIL_BYTES)}.
+                JPEG, PNG, or WebP.
               </p>
             </div>
             <div>

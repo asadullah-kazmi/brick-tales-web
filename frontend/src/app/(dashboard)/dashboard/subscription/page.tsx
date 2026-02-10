@@ -8,6 +8,7 @@ import {
   Modal,
   ModalContent,
   ModalFooter,
+  Loader,
 } from "@/components/ui";
 import { useAuth } from "@/contexts";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -36,6 +37,7 @@ export default function SubscriptionPage() {
   const [billingSummary, setBillingSummary] =
     useState<BillingSummaryDto | null>(null);
   const [billingSummaryLoading, setBillingSummaryLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -59,6 +61,7 @@ export default function SubscriptionPage() {
       .finally(() => {
         if (!active) return;
         setBillingSummaryLoading(false);
+        setIsLoading(false);
       });
     return () => {
       active = false;
@@ -144,6 +147,14 @@ export default function SubscriptionPage() {
     if (!brand) return "Card";
     return brand.charAt(0).toUpperCase() + brand.slice(1);
   };
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[60vh] items-center justify-center px-4 py-12">
+        <Loader size="lg" label="Loading subscription…" />
+      </main>
+    );
+  }
 
   return (
     <div className="font-[var(--font-geist-sans)]">

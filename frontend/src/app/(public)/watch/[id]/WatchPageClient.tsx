@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { HLSVideoPlayerLazy } from "@/components/player";
 import { SubscriptionPrompt } from "@/components/content";
 import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
 import { USE_MOCK_API } from "@/lib/services/config";
 import { ApiError } from "@/lib/api-client";
-import type { ContentDetailDto } from "@/types/api";
+import type { ContentDetailDto, PlaybackType } from "@/types/api";
 import { formatDuration, isLongForm } from "@/lib/video-utils";
+import { DEFAULT_HLS_TEST_STREAM } from "@/lib/hls-streams";
 import {
   Loader,
   Modal,
@@ -72,7 +73,6 @@ function pickPrimaryEpisode(content: ContentDetailDto): PlayableEpisode | null {
 
 export default function WatchPageClient({ params }: WatchPageClientProps) {
   const { id } = params;
-  const router = useRouter();
   const pathname = usePathname();
   const { isSubscribed, isLoading: authLoading } = useAuth();
   const [content, setContent] = useState<ContentDetailDto | null>(null);
@@ -80,35 +80,21 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     null,
   );
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [playbackType, setPlaybackType] = useState<PlaybackType | undefined>();
   const [loading, setLoading] = useState(true);
+  const [usingDevStream, setUsingDevStream] = useState(false);
   /** Set when playback permission is denied (401/403) or unavailable. */
   const [playbackError, setPlaybackError] = useState<
     "unauthorized" | "forbidden" | "unavailable" | null
   >(null);
 
-  // Redirect inactive subscribers to pricing (real API only; mock allows playback via prompt).
-  useEffect(() => {
-    if (USE_MOCK_API || authLoading || loading) return;
-    if (content && streamUrl && !isSubscribed) {
-      const returnUrl = pathname ?? `/watch/${id}`;
-      router.replace(
-        `/subscription?returnUrl=${encodeURIComponent(returnUrl)}`,
-      );
-    }
-  }, [
-    authLoading,
-    loading,
-    content,
-    streamUrl,
-    isSubscribed,
-    router,
-    pathname,
-    id,
-  ]);
-
   useEffect(() => {
     let cancelled = false;
     setPlaybackError(null);
+    setUsingDevStream(false);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[Watch] loading content", { contentId: id });
+    }
     (async () => {
       setLoading(true);
       try {
@@ -117,21 +103,67 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
         const contentDetail = detailRes?.content ?? null;
         setContent(contentDetail);
         if (!contentDetail) return;
-        const episode = pickPrimaryEpisode(contentDetail);
+        let episode = pickPrimaryEpisode(contentDetail);
+        if (!episode && contentDetail.seasons?.length) {
+          const seasonId = contentDetail.seasons[0]?.id;
+          const episodes = await contentService.getEpisodes(
+            contentDetail.id,
+            seasonId,
+          );
+          if (cancelled) return;
+          const first = episodes?.[0];
+          if (first) {
+            episode = {
+              id: first.id,
+              title: first.title,
+              duration: first.duration,
+            };
+          }
+        }
         setPrimaryEpisode(episode);
-        if (!episode) return;
+        if (!episode) {
+          if (process.env.NODE_ENV !== "production") {
+            setStreamUrl(DEFAULT_HLS_TEST_STREAM);
+            setUsingDevStream(true);
+          }
+          return;
+        }
         const playbackRes = await streamingService.getPlaybackInfo(episode.id);
         if (cancelled) return;
-        setStreamUrl(playbackRes.url);
+        if (!playbackRes?.url) {
+          setStreamUrl(null);
+          setPlaybackError("unavailable");
+          setPlaybackType(undefined);
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[Watch] missing playback URL", playbackRes);
+          }
+        } else {
+          setStreamUrl(playbackRes.url);
+          setPlaybackType(playbackRes.type);
+          if (process.env.NODE_ENV !== "production") {
+            console.log("[Watch] playback URL", playbackRes.url);
+          }
+        }
       } catch (err) {
         if (!cancelled) {
-          setStreamUrl(null);
-          if (err instanceof ApiError) {
-            if (err.status === 401) setPlaybackError("unauthorized");
-            else if (err.status === 403) setPlaybackError("forbidden");
-            else setPlaybackError("unavailable");
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[Watch] playback error", err);
+          }
+          if (process.env.NODE_ENV !== "production") {
+            setStreamUrl(DEFAULT_HLS_TEST_STREAM);
+            setUsingDevStream(true);
+            setPlaybackError(null);
+            setPlaybackType("hls");
           } else {
-            setPlaybackError("unavailable");
+            setStreamUrl(null);
+            setPlaybackType(undefined);
+            if (err instanceof ApiError) {
+              if (err.status === 401) setPlaybackError("unauthorized");
+              else if (err.status === 403) setPlaybackError("forbidden");
+              else setPlaybackError("unavailable");
+            } else {
+              setPlaybackError("unavailable");
+            }
           }
         }
       } finally {
@@ -147,6 +179,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   const title = displayContent?.title ?? `Content ${id}`;
   const longForm = displayContent ? isLongForm(displayContent) : false;
   const [offlineModalOpen, setOfflineModalOpen] = useState(false);
+  const isDev = process.env.NODE_ENV !== "production";
 
   if (authLoading || loading) {
     return (
@@ -232,22 +265,66 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     );
   }
 
-  // Real API: inactive users are redirected above. Mock: show prompt.
-  const showPlayer = isSubscribed;
+  // If a stream URL is available, show the player. Subscription is enforced server-side.
+  const showPlayer = Boolean(streamUrl);
+  const showSubscribePrompt = !showPlayer && !isSubscribed;
 
   return (
     <main className="min-h-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
+        {isDev && (
+          <div className="mb-3 rounded-lg border border-neutral-700/60 bg-neutral-950/60 px-3 py-2 text-[11px] text-neutral-300">
+            <div>Debug: streamUrl={streamUrl ? "set" : "null"}</div>
+            <div>Debug: playbackError={playbackError ?? "none"}</div>
+            <div>Debug: playbackType={playbackType ?? "unset"}</div>
+            <div>
+              Debug: episodeId={primaryEpisode?.id ?? "none"}, usingDevStream=
+              {usingDevStream ? "true" : "false"}
+            </div>
+          </div>
+        )}
+        {usingDevStream && (
+          <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+            Using a dev test stream because real playback is not configured yet.
+          </div>
+        )}
         <section className="mb-6" aria-label="Video player">
           {showPlayer ? (
-            <div className="overflow-hidden rounded-xl bg-black shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
-              <HLSVideoPlayerLazy
-                src={streamUrl}
-                title={title}
-                className="vjs-theme-stream"
-              />
+            <div className="aspect-video min-h-[220px] overflow-hidden rounded-xl border border-neutral-700/60 bg-neutral-950 shadow-lg">
+              {playbackType === "mp4" ? (
+                <video
+                  controls
+                  playsInline
+                  preload="auto"
+                  className="h-full w-full"
+                  src={streamUrl}
+                />
+              ) : (
+                <HLSVideoPlayerLazy
+                  src={streamUrl}
+                  type={playbackType}
+                  title={title}
+                  className="vjs-theme-stream"
+                  onReady={(player) => {
+                    if (process.env.NODE_ENV === "production") return;
+                    console.log("[Watch] player ready", {
+                      currentSrc: player.currentSrc(),
+                      duration: player.duration(),
+                    });
+                    player.on("error", () => {
+                      const mediaError = player.error();
+                      console.error("[Watch] player error", mediaError);
+                    });
+                    player.on("loadedmetadata", () => {
+                      console.log("[Watch] loadedmetadata", {
+                        duration: player.duration(),
+                      });
+                    });
+                  }}
+                />
+              )}
             </div>
-          ) : (
+          ) : showSubscribePrompt ? (
             <div className="overflow-hidden rounded-xl shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800">
               <SubscriptionPrompt
                 contentTitle={title}
@@ -255,7 +332,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
                 className="rounded-xl border-0"
               />
             </div>
-          )}
+          ) : null}
         </section>
 
         {/* Title */}

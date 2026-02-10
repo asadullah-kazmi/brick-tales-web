@@ -2,17 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui";
+import { Button, Loader } from "@/components/ui";
 import type { ContentSummaryDto } from "@/types/api";
 
 export default function MyListPage() {
   const [savedItems, setSavedItems] = useState<ContentSummaryDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     setSavedItems([]);
+    setIsLoading(false);
   }, []);
 
   const hasSaved = savedItems.length > 0;
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[50vh] items-center justify-center px-4 py-12">
+        <Loader size="lg" label="Loading your list…" />
+      </main>
+    );
+  }
   return (
     <div className="font-[var(--font-geist-sans)]">
       <header className="mb-6">

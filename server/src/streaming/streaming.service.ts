@@ -10,6 +10,14 @@ import { R2Service } from '../storage/r2.service';
 
 const DEFAULT_TOKEN_EXPIRES_SEC = 60 * 60; // 1 hour
 
+function inferPlaybackType(videoUrl: string | null | undefined): 'hls' | 'mp4' | undefined {
+  if (!videoUrl) return undefined;
+  const normalized = videoUrl.toLowerCase();
+  if (/\.m3u8(\?|$)/.test(normalized)) return 'hls';
+  if (/\.mp4(\?|$)/.test(normalized)) return 'mp4';
+  return undefined;
+}
+
 interface PlayTokenPayload {
   episodeId: string;
   userId: string;
@@ -138,7 +146,7 @@ export class StreamingService {
   async getSignedPlayUrl(
     episodeId: string,
     userId: string,
-  ): Promise<{ playUrl: string; expiresAt: Date }> {
+  ): Promise<{ playUrl: string; expiresAt: Date; type?: 'hls' | 'mp4' }> {
     const hasSubscription = await this.hasActiveSubscription(userId);
     if (!hasSubscription) {
       throw new ForbiddenException(
@@ -146,7 +154,17 @@ export class StreamingService {
       );
     }
 
-    await this.getEpisodeStreamUrl(episodeId); // ensure episode exists and is streamable
+    const episode = await (this.prisma as any).episode.findUnique({
+      where: { id: episodeId },
+      select: { videoUrl: true, content: { select: { isPublished: true } } },
+    });
+    if (!episode) throw new NotFoundException('Episode not found');
+    if (!episode.videoUrl) {
+      throw new NotFoundException('Episode is not available for streaming');
+    }
+    if (!episode.content.isPublished) {
+      throw new ForbiddenException('Content is not yet published');
+    }
 
     const expiresIn =
       typeof process.env.STREAMING_TOKEN_EXPIRES === 'string'
@@ -157,8 +175,9 @@ export class StreamingService {
 
     const baseUrl = process.env.APP_URL ?? 'http://localhost:5000';
     const playUrl = `${baseUrl.replace(/\/$/, '')}/streaming/play/${episodeId}?token=${encodeURIComponent(token)}`;
+    const type = inferPlaybackType(episode.videoUrl);
 
-    return { playUrl, expiresAt };
+    return { playUrl, expiresAt, type };
   }
 
   private parseExpiresToSeconds(exp: string): number {

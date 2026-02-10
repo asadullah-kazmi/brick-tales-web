@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui";
+import { Button, Loader } from "@/components/ui";
 import { contentService } from "@/lib/services";
 import type { ContentSummaryDto } from "@/types/api";
 
 export default function LibraryPage() {
   const [libraryItems, setLibraryItems] = useState<ContentSummaryDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
+    setIsLoading(true);
     contentService
       .getContentForBrowse()
       .then((items) => {
@@ -20,6 +22,10 @@ export default function LibraryPage() {
       .catch(() => {
         if (!active) return;
         setLibraryItems([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setIsLoading(false);
       });
     return () => {
       active = false;
@@ -27,6 +33,13 @@ export default function LibraryPage() {
   }, []);
 
   const hasLibrary = libraryItems.length > 0;
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[50vh] items-center justify-center px-4 py-12">
+        <Loader size="lg" label="Loading library…" />
+      </main>
+    );
+  }
   return (
     <>
       <header className="mb-8">

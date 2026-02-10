@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, Loader } from "@/components/ui";
 import { useAuth } from "@/contexts";
 import { getApiErrorMessage } from "@/lib/api-client";
 import {
@@ -105,6 +105,16 @@ export default function SettingsPage() {
   const nextChargeLabel = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : "--";
+
+  const isLoading = profileLoading || prefLoading || deviceLoading;
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[60vh] items-center justify-center px-4 py-12">
+        <Loader size="lg" label="Loading settings…" />
+      </main>
+    );
+  }
 
   const setPreference = (partial: UpdateUserPreferencesRequestDto) => {
     setPreferences((prev) => {

@@ -50,7 +50,6 @@ import type { AdminSystemHealthDto, AdminSystemLogDto } from './dto/admin-system
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/mkv']);
 const THUMBNAIL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_VIDEO_BYTES = 20 * 1024 * 1024 * 1024;
-const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 
 function getExtensionFromName(fileName: string): string {
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -344,12 +343,12 @@ export class AdminController {
     const { kind, fileName, contentType, sizeBytes, uploadId } = body;
     const isVideo = kind === 'video';
     const allowedTypes = isVideo ? VIDEO_TYPES : THUMBNAIL_TYPES;
-    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_THUMBNAIL_BYTES;
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : null;
 
     if (!allowedTypes.has(contentType)) {
       throw new BadRequestException('File type is not allowed');
     }
-    if (sizeBytes > maxBytes) {
+    if (maxBytes !== null && sizeBytes > maxBytes) {
       throw new BadRequestException('File is too large');
     }
 

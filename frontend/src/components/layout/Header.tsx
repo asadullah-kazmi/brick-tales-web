@@ -36,8 +36,8 @@ function NavContent({
     ? "w-full rounded-md px-3 py-2 text-base text-neutral-200 transition-colors hover:bg-neutral-800/70 hover:text-white"
     : "hover:text-accent transition-colors text-neutral-300";
   const pillClass = isMobile
-    ? "w-full rounded-md bg-accent/90 px-3 py-2 text-base font-medium text-accent-foreground hover:bg-accent/80"
-    : "rounded-md bg-accent/90 px-2.5 py-1 text-sm font-medium text-accent-foreground hover:bg-accent/80";
+    ? "w-full rounded-md border border-accent/70 bg-transparent px-3 py-2 text-base font-semibold text-accent transition-colors hover:bg-accent/10"
+    : "rounded-md border border-accent/70 bg-transparent px-2.5 py-1 text-sm font-semibold text-accent transition-colors hover:bg-accent/10";
   return (
     <>
       <Link href="/browse" className={linkClass} onClick={onLinkClick}>

@@ -7,11 +7,12 @@ import type {
   UpdateSubscriptionResponseDto,
   BillingSummaryDto,
 } from "@/types/api";
-import { get, post } from "@/lib/api-client";
+import { get, post, ApiError } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { getMockSubscription, setMockSubscription } from "@/lib/mock-auth";
 import { USE_MOCK_API } from "./config";
 import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
+import { authService } from "./auth.service";
 
 /**
  * Subscription service. Uses real API (GET /subscriptions/me) when USE_MOCK_API is false.
@@ -72,7 +73,22 @@ export const subscriptionService = {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       });
       return res ?? { isSubscribed: false };
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await authService.getSession().catch(() => null);
+        const refreshed = getStoredAuth();
+        if (refreshed?.accessToken) {
+          try {
+            const res = await get<GetSubscriptionResponseDto>(
+              "subscriptions/me",
+              { headers: { Authorization: `Bearer ${refreshed.accessToken}` } },
+            );
+            return res ?? { isSubscribed: false };
+          } catch {
+            return { isSubscribed: false };
+          }
+        }
+      }
       return { isSubscribed: false };
     }
   },
@@ -110,13 +126,30 @@ export const subscriptionService = {
     if (!auth?.accessToken) {
       throw new Error("Not authenticated");
     }
-    return post<{ url: string }>(
-      "subscriptions/portal-session",
-      { returnUrl },
-      {
-        headers: { Authorization: `Bearer ${auth.accessToken}` },
-      },
-    );
+    try {
+      return await post<{ url: string }>(
+        "subscriptions/portal-session",
+        { returnUrl },
+        {
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
+        },
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await authService.getSession().catch(() => null);
+        const refreshed = getStoredAuth();
+        if (refreshed?.accessToken) {
+          return post<{ url: string }>(
+            "subscriptions/portal-session",
+            { returnUrl },
+            {
+              headers: { Authorization: `Bearer ${refreshed.accessToken}` },
+            },
+          );
+        }
+      }
+      throw err;
+    }
   },
 
   async getBillingSummary(): Promise<BillingSummaryDto> {
@@ -127,9 +160,22 @@ export const subscriptionService = {
     if (!auth?.accessToken) {
       return { paymentMethod: null, invoices: [] };
     }
-    return get<BillingSummaryDto>("subscriptions/billing-summary", {
-      headers: { Authorization: `Bearer ${auth.accessToken}` },
-    });
+    try {
+      return await get<BillingSummaryDto>("subscriptions/billing-summary", {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await authService.getSession().catch(() => null);
+        const refreshed = getStoredAuth();
+        if (refreshed?.accessToken) {
+          return get<BillingSummaryDto>("subscriptions/billing-summary", {
+            headers: { Authorization: `Bearer ${refreshed.accessToken}` },
+          });
+        }
+      }
+      return { paymentMethod: null, invoices: [] };
+    }
   },
 
   /** Local helper to set subscribed state (used by AuthContext / SubscriptionPrompt). */

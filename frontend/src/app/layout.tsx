@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import "video.js/dist/video-js.css";
 import { Providers } from "@/components/Providers";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/seo";
 import { getAppUrl } from "@/lib/env";

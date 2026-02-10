@@ -1,4 +1,8 @@
-import type { PlaybackInfoResponseDto, PlaybackRequestDto } from "@/types/api";
+import type {
+  PlaybackInfoResponseDto,
+  PlaybackRequestDto,
+  PlaybackType,
+} from "@/types/api";
 import { get, ApiError } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { DEFAULT_HLS_TEST_STREAM, HLS_TEST_STREAMS } from "@/lib/hls-streams";
@@ -8,6 +12,14 @@ import { USE_MOCK_API } from "./config";
 interface PlayUrlResponse {
   playUrl: string;
   expiresAt: string | number | Date;
+  type?: PlaybackType;
+}
+
+function inferPlaybackType(url: string): PlaybackType | undefined {
+  const normalized = url.toLowerCase();
+  if (/\.m3u8(\?|$)/.test(normalized)) return "hls";
+  if (/\.mp4(\?|$)/.test(normalized)) return "mp4";
+  return undefined;
 }
 
 /**
@@ -36,6 +48,9 @@ export const streamingService = {
     const res = await get<PlayUrlResponse>(`episodes/${episodeId}/play`, {
       headers: { Authorization: `Bearer ${auth.accessToken}` },
     });
+    if (!res?.playUrl || typeof res.playUrl !== "string") {
+      throw new ApiError("Playback URL is missing", 500, res ?? null);
+    }
     const expiresAt =
       typeof res.expiresAt === "string"
         ? res.expiresAt
@@ -44,7 +59,7 @@ export const streamingService = {
           : new Date(res.expiresAt).toISOString();
     return {
       episodeId,
-      type: "hls",
+      type: res.type ?? inferPlaybackType(res.playUrl) ?? "hls",
       url: res.playUrl,
       expiresAt,
     };

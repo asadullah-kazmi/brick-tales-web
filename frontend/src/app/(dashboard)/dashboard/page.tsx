@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts";
-import { Button } from "@/components/ui";
+import { Button, Loader } from "@/components/ui";
 import { contentService, subscriptionService } from "@/lib/services";
-import { USE_MOCK_API } from "@/lib/services/config";
 import type { ContentSummaryDto, PublicPlanDto } from "@/types/api";
 
 function getProgressFromId(id: string): number {
@@ -23,22 +22,18 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [plans, setPlans] = useState<PublicPlanDto[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    const loadContent = USE_MOCK_API
-      ? Promise.all([
-          contentService.getContentForBrowse(),
-          contentService.getCategories(),
-        ])
-      : Promise.resolve([[], []] as [ContentSummaryDto[], string[]]);
-
+    setIsLoading(true);
     Promise.all([
-      loadContent,
+      contentService.getContentForBrowse(),
+      contentService.getCategories(),
       subscriptionService.getPlans(),
       subscriptionService.getSubscription(),
     ])
-      .then(([[items, cats], planList, subscription]) => {
+      .then(([items, cats, planList, subscription]) => {
         if (!active) return;
         setContentItems(items);
         setCategories(cats);
@@ -51,6 +46,10 @@ export default function DashboardPage() {
         setCategories([]);
         setPlans([]);
         setPlanId(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        setIsLoading(false);
       });
     return () => {
       active = false;
@@ -69,6 +68,14 @@ export default function DashboardPage() {
     .filter((category) => category.toLowerCase() !== "all")
     .slice(0, 4);
   const savedItems: ContentSummaryDto[] = [];
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[60vh] items-center justify-center px-4 py-12">
+        <Loader size="lg" label="Loading dashboard…" />
+      </main>
+    );
+  }
 
   return (
     <div className="font-[var(--font-geist-sans)]">
