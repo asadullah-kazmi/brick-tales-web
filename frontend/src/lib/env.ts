@@ -11,9 +11,9 @@ export function getAppUrl(): string {
     process.env.NEXT_PUBLIC_APP_URL ??
     (typeof window !== "undefined"
       ? window.location.origin
-      : "https://bricktales.tv");
+      : "https://brixlore.tv");
   const trimmed = (raw ?? "").trim();
-  if (!trimmed) return "https://bricktales.tv";
+  if (!trimmed) return "https://brixlore.tv";
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
     return trimmed;
   return `https://${trimmed}`;

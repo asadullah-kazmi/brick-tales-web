@@ -319,9 +319,9 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
               <strong className="text-neutral-900 dark:text-white">
                 Offline downloads are available on our iOS and Android apps.
               </strong>{" "}
-              Install the BRICK TALES.TV app from the App Store or Google Play,
-              sign in with your subscription account, and use the download
-              button on supported videos.
+              Install the BRIXLORE app from the App Store or Google Play, sign
+              in with your subscription account, and use the download button on
+              supported videos.
             </p>
             <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
               This feature is not available in the web player. Download the

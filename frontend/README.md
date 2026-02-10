@@ -1,4 +1,4 @@
-# BRICK TALES.TV — Video Streaming Platform (Frontend)
+# BRIXLORE — Video Streaming Platform (Frontend)
 
 Next.js 14 app with App Router, TypeScript, and Tailwind CSS. Set up for a video streaming platform with a clean structure and no business logic yet.
 

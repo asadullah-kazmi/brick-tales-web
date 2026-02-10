@@ -32,7 +32,7 @@ export function Footer() {
             {logoUrl ? (
               <Image
                 src={logoUrl}
-                alt="BRICK TALES.TV"
+                alt="BRIXLORE"
                 width={100}
                 height={26}
                 className="h-6 w-auto object-contain opacity-90"
@@ -41,15 +41,13 @@ export function Footer() {
             ) : (
               <Image
                 src="/logo.png"
-                alt="BRICK TALES.TV"
+                alt="BRIXLORE"
                 width={100}
                 height={26}
                 className="h-6 w-auto object-contain opacity-90"
               />
             )}
-            <p>
-              © {new Date().getFullYear()} BRICK TALES.TV. All rights reserved.
-            </p>
+            <p>© {new Date().getFullYear()} BRIXLORE. All rights reserved.</p>
           </div>
           <nav
             className="flex flex-wrap items-center gap-x-6 gap-y-2"

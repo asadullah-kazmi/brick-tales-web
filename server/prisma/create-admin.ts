@@ -11,7 +11,7 @@ function generatePassword(): string {
 
 async function main() {
   const password = generatePassword();
-  const email = `admin@bricktales.test`;
+  const email = `admin@brixlore.test`;
   const name = 'Admin';
   const passwordHash = await bcrypt.hash(password, 10);
 

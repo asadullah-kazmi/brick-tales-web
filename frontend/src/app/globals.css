@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* BRICK TALES brand: dark-only theme — off-black background, soft white accent, white/light gray text */
+/* BRIXLORE brand: dark-only theme — off-black background, soft white accent, white/light gray text */
 :root {
   --background: #0b0b0e;
   --foreground: #f5f7fb;

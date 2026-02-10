@@ -4,7 +4,7 @@ import { siteService } from "@/lib/services";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description: "Terms of Use for BRICK TALES.TV.",
+  description: "Terms of Use for BRIXLORE.",
 };
 
 export default async function TermsOfUsePage() {

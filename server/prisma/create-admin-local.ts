@@ -14,7 +14,7 @@ function generatePassword(): string {
 }
 
 function generateEmail(): string {
-  return `admin@bricktales.test`;
+  return `admin@brixlore.test`;
 }
 
 async function main() {

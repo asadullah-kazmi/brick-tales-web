@@ -4,7 +4,7 @@ import { siteService } from "@/lib/services";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Privacy Policy for BRICK TALES.TV.",
+  description: "Privacy Policy for BRIXLORE.",
 };
 
 export default async function PrivacyPolicyPage() {

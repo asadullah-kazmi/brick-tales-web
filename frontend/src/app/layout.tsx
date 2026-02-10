@@ -22,17 +22,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   icons: { icon: "/favicon.ico" },
   title: {
-    default: `${SITE_NAME}.TV — Video Streaming Platform`,
-    template: `%s | ${SITE_NAME}.TV`,
+    default: `${SITE_NAME} — Video Streaming Platform`,
+    template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: `${SITE_NAME}.TV`,
-    images: [
-      { url: "/logo.png", width: 1200, height: 630, alt: "BRICK TALES.TV" },
-    ],
+    siteName: `${SITE_NAME}`,
+    images: [{ url: "/logo.png", width: 1200, height: 630, alt: "BRIXLORE" }],
   },
   twitter: {
     card: "summary_large_image",
