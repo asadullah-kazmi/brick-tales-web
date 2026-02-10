@@ -40,6 +40,22 @@ body {
   animation: fadeUp 0.8s ease-out both;
 }
 
+/* Ensure Video.js control bar renders on top of the player. */
+.video-js {
+  width: 100%;
+  height: 100%;
+}
+
+.video-js .vjs-control-bar {
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+}
+
+.video-js .vjs-big-play-button {
+  z-index: 2;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

@@ -38,3 +38,11 @@ export function getUseMockApi(): boolean {
 export function isProduction(): boolean {
   return isProd;
 }
+
+/** Base URL for the R2 Worker media proxy (no trailing slash). */
+export function getR2WorkerBaseUrl(): string | null {
+  const raw = process.env.NEXT_PUBLIC_R2_WORKER_BASE_URL;
+  if (!raw) return null;
+  const trimmed = raw.trim().replace(/\/$/, "");
+  return trimmed ? trimmed : null;
+}

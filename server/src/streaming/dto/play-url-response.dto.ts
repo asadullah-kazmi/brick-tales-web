@@ -1,5 +1,4 @@
 export class PlayUrlResponseDto {
-  playUrl: string;
-  expiresAt: Date;
+  streamKey: string;
   type?: 'hls' | 'mp4' | 'dash';
 }

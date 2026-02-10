@@ -17,10 +17,12 @@ export interface QualityLevelDto {
   uri?: string;
 }
 
-/** Response for GET /episodes/:id/play (playback info / signed URL). */
+/** Response for GET /episodes/:id/play (playback metadata). */
 export interface PlaybackInfoResponseDto {
   episodeId: string;
   type: PlaybackType;
+  /** Storage key or absolute URL for the stream (HLS manifest or MP4). */
+  streamKey?: string;
   /** Primary manifest URL (e.g. HLS .m3u8). Signed if required. */
   url: string;
   /** Optional expiry for signed URL (ISO date string). */

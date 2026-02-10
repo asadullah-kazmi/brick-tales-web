@@ -67,21 +67,25 @@ export function HLSVideoPlayer({
     const videoEl = videoRef.current;
     if (!videoEl || !src) return;
 
-    const player = videojs(
-      videoEl,
-      VIDEO_JS_OPTIONS,
-      function (this: VideoJsPlayer) {
-        if (onReady) onReady(this);
-      },
-    );
+    const rafId = requestAnimationFrame(() => {
+      const player = videojs(
+        videoEl,
+        VIDEO_JS_OPTIONS,
+        function (this: VideoJsPlayer) {
+          if (onReady) onReady(this);
+        },
+      );
 
-    const mimeType = resolveMimeFromPlaybackType(type) ?? resolveVideoType(src);
-    player.src(mimeType ? { src, type: mimeType } : { src });
-    if (poster) player.poster(poster);
+      const mimeType =
+        resolveMimeFromPlaybackType(type) ?? resolveVideoType(src);
+      player.src(mimeType ? { src, type: mimeType } : { src });
+      if (poster) player.poster(poster);
 
-    playerRef.current = player;
+      playerRef.current = player;
+    });
 
     return () => {
+      cancelAnimationFrame(rafId);
       if (playerRef.current && !playerRef.current.isDisposed()) {
         playerRef.current.dispose();
         playerRef.current = null;
@@ -101,7 +105,8 @@ export function HLSVideoPlayer({
     >
       <video
         ref={videoRef}
-        className="video-js vjs-big-play-centered vjs-fill h-full w-full"
+        className="video-js vjs-default-skin vjs-big-play-centered vjs-fill h-full w-full"
+        controls
         playsInline
         preload="auto"
         aria-label={title}

@@ -9,13 +9,13 @@ export class EpisodesController {
   constructor(private readonly streamingService: StreamingService) {}
 
   /**
-   * Authenticated: get a time-limited signed play URL for an episode.
+   * Authenticated: get playback metadata for an episode.
    */
   @Get(':id/play')
   async getEpisodePlayUrl(
     @CurrentUser() user: User,
     @Param('id') id: string,
   ): Promise<PlayUrlResponseDto> {
-    return this.streamingService.getSignedPlayUrl(id.trim(), user.id);
+    return this.streamingService.getPlaybackMetadata(id.trim(), user.id);
   }
 }

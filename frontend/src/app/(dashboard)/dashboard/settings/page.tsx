@@ -98,7 +98,7 @@ export default function SettingsPage() {
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).getFullYear()
     : null;
-  const displayName = profile?.name ?? user?.name ?? "";
+  // const displayName = profile?.name ?? user?.name ?? ""; // Removed unused variable
   const email = profile?.email ?? user?.email ?? "";
 
   const playbackQuality = preferences?.playbackQuality ?? "Auto";

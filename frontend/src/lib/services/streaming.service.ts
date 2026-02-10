@@ -7,11 +7,11 @@ import { get, ApiError } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { DEFAULT_HLS_TEST_STREAM, HLS_TEST_STREAMS } from "@/lib/hls-streams";
 import { USE_MOCK_API } from "./config";
+import { getR2WorkerBaseUrl } from "@/lib/env";
 
 /** Backend GET /episodes/:id/play response (authenticated, requires subscription). */
-interface PlayUrlResponse {
-  playUrl: string;
-  expiresAt: string | number | Date;
+interface PlaybackMetadataResponse {
+  streamKey: string;
   type?: PlaybackType;
 }
 
@@ -22,13 +22,39 @@ function inferPlaybackType(url: string): PlaybackType | undefined {
   return undefined;
 }
 
+function buildWorkerStreamUrl(streamKey: string): string {
+  const trimmed = streamKey.trim();
+  if (!trimmed) return trimmed;
+  const workerBaseUrl = getR2WorkerBaseUrl();
+  if (/^https?:\/\//i.test(trimmed)) {
+    if (!workerBaseUrl) return trimmed;
+    try {
+      const absolute = new URL(trimmed);
+      if (absolute.hostname.endsWith(".r2.dev")) {
+        const rebased = new URL(workerBaseUrl);
+        rebased.pathname = absolute.pathname;
+        rebased.search = absolute.search;
+        return rebased.toString();
+      }
+    } catch {
+      return trimmed;
+    }
+    return trimmed;
+  }
+  if (!workerBaseUrl) {
+    throw new ApiError("R2 worker base URL is not configured", 500);
+  }
+  return `${workerBaseUrl}/${trimmed.replace(/^\/+/, "")}`;
+}
+
 /**
- * Streaming service. Real API: requests signed play URL from GET /episodes/:id/play (requires auth + subscription).
+ * Streaming service. Real API: requests playback metadata from GET /episodes/:id/play.
+ * The client builds the Worker URL for HLS/MP4 playback.
  * Mock: returns test HLS stream.
  */
 export const streamingService = {
   /**
-   * Get authorized playback URL. Real API: GET /episodes/:id/play — returns signed URL; 401/403 if not allowed.
+   * Get authorized playback metadata. Real API: GET /episodes/:id/play — returns stream key; 401/403 if not allowed.
    */
   async getPlaybackInfo(
     episodeId: string,
@@ -45,23 +71,25 @@ export const streamingService = {
       throw new ApiError("Sign in to watch", 401);
     }
 
-    const res = await get<PlayUrlResponse>(`episodes/${episodeId}/play`, {
-      headers: { Authorization: `Bearer ${auth.accessToken}` },
-    });
-    if (!res?.playUrl || typeof res.playUrl !== "string") {
-      throw new ApiError("Playback URL is missing", 500, res ?? null);
+    const res = await get<PlaybackMetadataResponse>(
+      `episodes/${episodeId}/play`,
+      {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      },
+    );
+    if (!res?.streamKey || typeof res.streamKey !== "string") {
+      throw new ApiError("Playback stream key is missing", 500, res ?? null);
     }
-    const expiresAt =
-      typeof res.expiresAt === "string"
-        ? res.expiresAt
-        : res.expiresAt instanceof Date
-          ? res.expiresAt.toISOString()
-          : new Date(res.expiresAt).toISOString();
+    const url = buildWorkerStreamUrl(res.streamKey);
     return {
       episodeId,
-      type: res.type ?? inferPlaybackType(res.playUrl) ?? "hls",
-      url: res.playUrl,
-      expiresAt,
+      type:
+        res.type ??
+        inferPlaybackType(res.streamKey) ??
+        inferPlaybackType(url) ??
+        "hls",
+      url,
+      streamKey: res.streamKey,
     };
   },
 };

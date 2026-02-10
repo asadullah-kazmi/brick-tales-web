@@ -71,6 +71,11 @@ export class R2Service {
     return `${config.publicBaseUrl}/${normalized}`;
   }
 
+  getPublicBaseUrl(): string | null {
+    const config = this.ensureConfig();
+    return config.publicBaseUrl ?? null;
+  }
+
   async getSignedGetUrl(
     key: string,
     expiresInSec = DEFAULT_SIGNED_URL_EXPIRES_SEC,

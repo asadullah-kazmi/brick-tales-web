@@ -7,7 +7,6 @@ import { HLSVideoPlayerLazy } from "@/components/player";
 import { SubscriptionPrompt } from "@/components/content";
 import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
-import { USE_MOCK_API } from "@/lib/services/config";
 import { ApiError } from "@/lib/api-client";
 import type { ContentDetailDto, PlaybackType } from "@/types/api";
 import { formatDuration, isLongForm } from "@/lib/video-utils";
@@ -93,7 +92,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     setPlaybackError(null);
     setUsingDevStream(false);
     if (process.env.NODE_ENV !== "production") {
-      console.log("[Watch] loading content", { contentId: id });
+      //console.log("[Watch] loading content", { contentId: id });
     }
     (async () => {
       setLoading(true);
@@ -128,6 +127,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
           }
           return;
         }
+        // Playback metadata is authorized by the backend; the stream URL is built for the Worker.
         const playbackRes = await streamingService.getPlaybackInfo(episode.id);
         if (cancelled) return;
         if (!playbackRes?.url) {
@@ -135,19 +135,22 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
           setPlaybackError("unavailable");
           setPlaybackType(undefined);
           if (process.env.NODE_ENV !== "production") {
-            console.warn("[Watch] missing playback URL", playbackRes);
+            //console.warn("[Watch] missing playback URL", playbackRes);
           }
         } else {
           setStreamUrl(playbackRes.url);
           setPlaybackType(playbackRes.type);
           if (process.env.NODE_ENV !== "production") {
-            console.log("[Watch] playback URL", playbackRes.url);
+            //console.log("[Watch] playback URL", playbackRes.url);
+            if (playbackRes.streamKey) {
+              //console.log("[Watch] playback streamKey", playbackRes.streamKey);
+            }
           }
         }
       } catch (err) {
         if (!cancelled) {
           if (process.env.NODE_ENV !== "production") {
-            console.error("[Watch] playback error", err);
+            //console.error("[Watch] playback error", err);
           }
           if (process.env.NODE_ENV !== "production") {
             setStreamUrl(DEFAULT_HLS_TEST_STREAM);
@@ -179,7 +182,6 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   const title = displayContent?.title ?? `Content ${id}`;
   const longForm = displayContent ? isLongForm(displayContent) : false;
   const [offlineModalOpen, setOfflineModalOpen] = useState(false);
-  const isDev = process.env.NODE_ENV !== "production";
 
   if (authLoading || loading) {
     return (
@@ -272,17 +274,6 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   return (
     <main className="min-h-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        {isDev && (
-          <div className="mb-3 rounded-lg border border-neutral-700/60 bg-neutral-950/60 px-3 py-2 text-[11px] text-neutral-300">
-            <div>Debug: streamUrl={streamUrl ? "set" : "null"}</div>
-            <div>Debug: playbackError={playbackError ?? "none"}</div>
-            <div>Debug: playbackType={playbackType ?? "unset"}</div>
-            <div>
-              Debug: episodeId={primaryEpisode?.id ?? "none"}, usingDevStream=
-              {usingDevStream ? "true" : "false"}
-            </div>
-          </div>
-        )}
         {usingDevStream && (
           <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
             Using a dev test stream because real playback is not configured yet.
@@ -306,19 +297,12 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
                   title={title}
                   className="vjs-theme-stream"
                   onReady={(player) => {
-                    if (process.env.NODE_ENV === "production") return;
-                    console.log("[Watch] player ready", {
-                      currentSrc: player.currentSrc(),
-                      duration: player.duration(),
-                    });
+                    // Clean handler, no debug code
                     player.on("error", () => {
-                      const mediaError = player.error();
-                      console.error("[Watch] player error", mediaError);
+                      // Optionally handle error
                     });
                     player.on("loadedmetadata", () => {
-                      console.log("[Watch] loadedmetadata", {
-                        duration: player.duration(),
-                      });
+                      // Optionally handle loadedmetadata
                     });
                   }}
                 />
