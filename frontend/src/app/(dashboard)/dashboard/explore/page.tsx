@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Button, Input } from "@/components/ui";
 import { contentService } from "@/lib/services";
 import type { ContentSummaryDto } from "@/types/api";
+import { VideoCardSkeleton } from "@/components/content/VideoCardSkeleton";
 
 export default function ExplorePage() {
   const [contentItems, setContentItems] = useState<ContentSummaryDto[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -25,21 +30,57 @@ export default function ExplorePage() {
         if (!active) return;
         setContentItems([]);
         setCategories([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setIsLoading(false);
       });
     return () => {
       active = false;
     };
   }, []);
 
-  const trendingItems = contentItems.slice(0, 4);
   const quickFilters = categories
     .filter((category) => category.toLowerCase() !== "all")
     .slice(0, 5);
   const moods = categories
     .filter((category) => category.toLowerCase() !== "all")
     .slice(0, 6);
+
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return contentItems.filter((item) => {
+      const matchesCategory = activeCategory
+        ? (item.category ?? item.type).toLowerCase() ===
+          activeCategory.toLowerCase()
+        : true;
+      const matchesQuery = normalizedQuery
+        ? [item.title, item.category, item.type]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedQuery)
+        : true;
+      return matchesCategory && matchesQuery;
+    });
+  }, [contentItems, searchQuery, activeCategory]);
+
+  const trendingItems = filteredItems.slice(0, 4);
   const hasTrending = trendingItems.length > 0;
   const hasMoods = moods.length > 0;
+
+  const handleFilterSelect = (category: string) => {
+    setActiveCategory(category);
+    setSearchQuery("");
+    requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  };
+
+  const handleClearFilters = () => {
+    setActiveCategory(null);
+    setSearchQuery("");
+  };
   return (
     <div className="font-[var(--font-geist-sans)]">
       <header className="mb-6">
@@ -63,6 +104,8 @@ export default function ExplorePage() {
           <Input
             label="Search titles, creators, or genres"
             placeholder='Try "live concerts"'
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
           />
           <div className="rounded-xl border border-neutral-700/70 bg-neutral-950/60 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-neutral-500">
@@ -74,7 +117,12 @@ export default function ExplorePage() {
                   <button
                     key={filter}
                     type="button"
-                    className="rounded-full border border-neutral-600 px-3 py-1 text-xs font-semibold text-neutral-200 hover:border-accent hover:text-accent"
+                    onClick={() => handleFilterSelect(filter)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      activeCategory === filter
+                        ? "border-accent text-accent"
+                        : "border-neutral-600 text-neutral-200 hover:border-accent hover:text-accent"
+                    }`}
                   >
                     {filter}
                   </button>
@@ -85,6 +133,15 @@ export default function ExplorePage() {
                 </span>
               )}
             </div>
+            {(activeCategory || searchQuery) && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="mt-4 text-xs font-semibold text-neutral-400 hover:text-accent"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -100,7 +157,11 @@ export default function ExplorePage() {
           </Link>
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {hasTrending ? (
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <VideoCardSkeleton key={`trend-skeleton-${index}`} />
+            ))
+          ) : hasTrending ? (
             trendingItems.map((item) => (
               <div
                 key={item.id}
@@ -110,7 +171,7 @@ export default function ExplorePage() {
                   {item.thumbnailUrl ? (
                     <img
                       src={item.thumbnailUrl}
-                      alt=""
+                      alt={item.title}
                       className="h-full w-full object-cover"
                       loading="lazy"
                     />
@@ -122,19 +183,63 @@ export default function ExplorePage() {
                 <p className="mt-1 text-xs text-neutral-400">
                   {item.category ?? item.type}
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-4 w-full"
-                >
-                  View details
-                </Button>
+                <Link href={`/watch/${item.id}`} className="mt-4 block">
+                  <Button type="button" variant="outline" size="sm" fullWidth>
+                    View details
+                  </Button>
+                </Link>
               </div>
             ))
           ) : (
             <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-900/40 p-6 text-sm text-neutral-400 sm:col-span-2 lg:col-span-4">
               Trending content will appear once titles are available.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-8" aria-label="Results" ref={resultsRef}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">Results</h2>
+          {(activeCategory || searchQuery) && (
+            <span className="text-xs text-neutral-400">
+              {activeCategory ? `Filter: ${activeCategory}` : "All categories"}
+            </span>
+          )}
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, index) => (
+              <VideoCardSkeleton key={`result-skeleton-${index}`} />
+            ))
+          ) : filteredItems.length > 0 ? (
+            filteredItems.slice(0, 9).map((item) => (
+              <Link
+                key={item.id}
+                href={`/watch/${item.id}`}
+                className="rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-4 transition hover:border-neutral-500"
+              >
+                <div className="relative h-32 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/80 via-neutral-900 to-neutral-800/60">
+                  {item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt={item.title}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                </div>
+                <p className="mt-4 text-sm font-semibold text-white">
+                  {item.title}
+                </p>
+                <p className="mt-1 text-xs text-neutral-400">
+                  {item.category ?? item.type}
+                </p>
+              </Link>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-900/40 p-6 text-sm text-neutral-400 sm:col-span-2 lg:col-span-3">
+              No results found. Try a different search or filter.
             </div>
           )}
         </div>
@@ -155,6 +260,7 @@ export default function ExplorePage() {
                 </div>
                 <button
                   type="button"
+                  onClick={() => handleFilterSelect(mood)}
                   className="text-xs font-semibold text-neutral-400 hover:text-accent"
                 >
                   Explore

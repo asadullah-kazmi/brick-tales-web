@@ -228,13 +228,122 @@ export default function SettingsPage() {
     setSettingsSuccess(null);
     try {
       const res = await accountService.exportAccountData();
-      const blob = new Blob([JSON.stringify(res, null, 2)], {
-        type: "application/json",
-      });
+      const escapeHtml = (value: string) =>
+        value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+
+      const formatDate = (value?: string) => {
+        if (!value) return "--";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? "--" : date.toLocaleString();
+      };
+
+      const profileHtml = `
+        <h2>Profile</h2>
+        <table>
+          <tr><th>Name</th><td>${escapeHtml(res.user.name ?? "")}</td></tr>
+          <tr><th>Email</th><td>${escapeHtml(res.user.email)}</td></tr>
+          <tr><th>Phone</th><td>${escapeHtml(res.user.phone ?? "")}</td></tr>
+          <tr><th>Bio</th><td>${escapeHtml(res.user.bio ?? "")}</td></tr>
+          <tr><th>Member since</th><td>${escapeHtml(formatDate(res.user.createdAt))}</td></tr>
+        </table>
+      `;
+
+      const preferencesHtml = `
+        <h2>Preferences</h2>
+        <table>
+          <tr><th>Playback quality</th><td>${escapeHtml(res.preferences.playbackQuality)}</td></tr>
+          <tr><th>Autoplay next</th><td>${res.preferences.autoplayNext ? "Yes" : "No"}</td></tr>
+          <tr><th>Skip recaps</th><td>${res.preferences.skipRecaps ? "Yes" : "No"}</td></tr>
+          <tr><th>Subtitles by default</th><td>${res.preferences.subtitlesDefault ? "Yes" : "No"}</td></tr>
+          <tr><th>Notify new releases</th><td>${res.preferences.notifyNewReleases ? "Yes" : "No"}</td></tr>
+          <tr><th>Notify account alerts</th><td>${res.preferences.notifyAccountAlerts ? "Yes" : "No"}</td></tr>
+          <tr><th>Notify product tips</th><td>${res.preferences.notifyProductTips ? "Yes" : "No"}</td></tr>
+          <tr><th>Two-factor enabled</th><td>${res.preferences.twoFactorEnabled ? "Yes" : "No"}</td></tr>
+        </table>
+      `;
+
+      const devicesRows = res.devices.length
+        ? res.devices
+            .map(
+              (device) => `
+          <tr>
+            <td>${escapeHtml(device.deviceIdentifier)}</td>
+            <td>${escapeHtml(device.platform)}</td>
+            <td>${escapeHtml(formatDate(device.lastActiveAt))}</td>
+          </tr>
+        `,
+            )
+            .join("")
+        : `<tr><td colspan="3">No devices registered.</td></tr>`;
+
+      const devicesHtml = `
+        <h2>Devices</h2>
+        <table>
+          <tr><th>Device</th><th>Platform</th><th>Last active</th></tr>
+          ${devicesRows}
+        </table>
+      `;
+
+      const subscriptionRows = res.subscriptions.length
+        ? res.subscriptions
+            .map(
+              (sub) => `
+          <tr>
+            <td>${escapeHtml(sub.planId)}</td>
+            <td>${escapeHtml(sub.status)}</td>
+            <td>${escapeHtml(formatDate(sub.startDate))}</td>
+            <td>${escapeHtml(formatDate(sub.endDate))}</td>
+          </tr>
+        `,
+            )
+            .join("")
+        : `<tr><td colspan="4">No subscriptions found.</td></tr>`;
+
+      const subscriptionsHtml = `
+        <h2>Subscriptions</h2>
+        <table>
+          <tr><th>Plan</th><th>Status</th><th>Start date</th><th>End date</th></tr>
+          ${subscriptionRows}
+        </table>
+      `;
+
+      const html = `
+        <!doctype html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <title>Account data export</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
+              h1 { margin-bottom: 8px; }
+              h2 { margin-top: 24px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+              th, td { text-align: left; border-bottom: 1px solid #e5e7eb; padding: 8px; }
+              th { background: #f3f4f6; }
+              .meta { color: #6b7280; font-size: 0.9rem; }
+            </style>
+          </head>
+          <body>
+            <h1>Account data export</h1>
+            <p class="meta">Generated on ${escapeHtml(new Date().toLocaleString())}</p>
+            ${profileHtml}
+            ${preferencesHtml}
+            ${devicesHtml}
+            ${subscriptionsHtml}
+          </body>
+        </html>
+      `;
+
+      const blob = new Blob([html], { type: "text/html" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "account-data.json";
+      link.download = "account-data.html";
       link.click();
       URL.revokeObjectURL(url);
       setSettingsSuccess("Account data downloaded.");
