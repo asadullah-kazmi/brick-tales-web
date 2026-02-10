@@ -114,6 +114,26 @@ export class StripeService {
     return resolved;
   }
 
+  private computePeriodFromDuration(duration: string): { startDate: Date; endDate: Date } {
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    const normalized = duration.trim().toUpperCase();
+    const numberMatch = normalized.match(/\d+/);
+    const count = numberMatch ? Number(numberMatch[0]) : 1;
+
+    if (normalized.includes('YEAR')) {
+      endDate.setFullYear(endDate.getFullYear() + count);
+    } else if (normalized.includes('MONTH')) {
+      endDate.setMonth(endDate.getMonth() + count);
+    } else if (Number.isFinite(count)) {
+      endDate.setMonth(endDate.getMonth() + count);
+    } else {
+      endDate.setMonth(endDate.getMonth() + 1);
+    }
+
+    return { startDate, endDate };
+  }
+
   /**
    * Create a Stripe customer + subscription for signup using a PaymentMethod ID.
    * Uses payment_behavior=error_if_incomplete to ensure payment succeeds.
@@ -194,13 +214,15 @@ export class StripeService {
       invoice_settings: { default_payment_method: paymentMethodId },
     });
 
+    // Create subscription with default_incomplete to get a PaymentIntent requiring confirmation
     const subscription = (await stripe.subscriptions.create({
       customer: customer.id,
       items: [{ price: plan.stripePriceId, quantity: 1 }],
-      payment_behavior: 'default_incomplete',
       collection_method: 'charge_automatically',
       default_payment_method: paymentMethodId,
+      payment_behavior: 'default_incomplete',
       payment_settings: {
+        payment_method_types: ['card'],
         save_default_payment_method: 'on_subscription',
       },
       expand: ['latest_invoice.payment_intent'],
@@ -208,22 +230,62 @@ export class StripeService {
       latest_invoice?: StripeInvoiceRef;
     };
 
-    const latestInvoice = subscription.latest_invoice ?? null;
-    const resolvedInvoice = await this.ensureInvoiceWithIntent(stripe, latestInvoice);
-    console.log('[stripe] signup intent created', {
-      subscriptionId: subscription.id,
-      subscriptionStatus: subscription.status,
-      latestInvoiceType: typeof latestInvoice,
-      amountDue: resolvedInvoice?.amount_due ?? null,
-    });
-    const paymentIntent = await this.resolvePaymentIntentFromInvoice(stripe, resolvedInvoice);
-    console.log('[stripe] signup intent payment', {
-      subscriptionId: subscription.id,
-      paymentIntentStatus: paymentIntent?.status ?? null,
-      hasClientSecret: Boolean(paymentIntent?.client_secret),
-    });
+    // Get the invoice ID from the subscription
+    const latestInvoice = subscription.latest_invoice;
+    const invoiceId = typeof latestInvoice === 'string' ? latestInvoice : latestInvoice?.id;
+
+    // Retrieve the invoice directly with payment_intent expanded
+    let resolvedInvoice: StripeInvoiceWithIntent | null = null;
+    if (invoiceId) {
+      resolvedInvoice = (await stripe.invoices.retrieve(invoiceId, {
+        expand: ['payment_intent'],
+      })) as StripeInvoiceWithIntent;
+    }
+
+    let paymentIntent = await this.resolvePaymentIntent(
+      stripe,
+      resolvedInvoice?.payment_intent ?? null,
+    );
+
+    // If still no PaymentIntent, try paying the invoice to trigger its creation
+    if (!paymentIntent && resolvedInvoice && resolvedInvoice.amount_due > 0) {
+      try {
+        const paidResult = await stripe.invoices.pay(resolvedInvoice.id, {
+          payment_method: paymentMethodId,
+          expand: ['payment_intent'],
+        });
+        const paidInvoice = paidResult as StripeInvoiceWithIntent;
+        const refreshedInvoice = (await stripe.invoices.retrieve(resolvedInvoice.id, {
+          expand: ['payment_intent'],
+        })) as StripeInvoiceWithIntent;
+        paymentIntent = await this.resolvePaymentIntent(
+          stripe,
+          refreshedInvoice.payment_intent ?? paidInvoice.payment_intent ?? null,
+        );
+      } catch (payErr: any) {
+        console.warn('[stripe] invoice pay error', payErr?.message ?? payErr);
+        // Check if error contains the PaymentIntent that requires action
+        if (payErr.payment_intent) {
+          paymentIntent = payErr.payment_intent;
+        } else if (payErr.raw?.payment_intent) {
+          paymentIntent = payErr.raw.payment_intent;
+        }
+      }
+    }
+
+    if (resolvedInvoice) {
+      resolvedInvoice = (await stripe.invoices.retrieve(resolvedInvoice.id, {
+        expand: ['payment_intent'],
+      })) as StripeInvoiceWithIntent;
+    }
+
+    const invoicePaid =
+      resolvedInvoice?.status === 'paid' ||
+      (typeof resolvedInvoice?.amount_remaining === 'number' &&
+        resolvedInvoice.amount_remaining === 0);
+
     if (!paymentIntent || !paymentIntent.client_secret) {
-      if (resolvedInvoice && resolvedInvoice.amount_due === 0) {
+      if (invoicePaid || (resolvedInvoice && resolvedInvoice.amount_due === 0)) {
         return {
           customerId: customer.id,
           subscriptionId: subscription.id,
@@ -262,6 +324,20 @@ export class StripeService {
       latest_invoice?: StripeInvoiceRef;
     };
 
+    const periodStart = subscription.current_period_start
+      ? new Date(subscription.current_period_start * 1000)
+      : null;
+    const periodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000)
+      : null;
+    const hasValidPeriod =
+      Boolean(periodStart && !Number.isNaN(periodStart.getTime())) &&
+      Boolean(periodEnd && !Number.isNaN(periodEnd.getTime()));
+    const fallbackPeriod = this.computePeriodFromDuration(plan.duration);
+    const resolvedStartDate =
+      hasValidPeriod && periodStart ? periodStart : fallbackPeriod.startDate;
+    const resolvedEndDate = hasValidPeriod && periodEnd ? periodEnd : fallbackPeriod.endDate;
+
     const latestInvoice = subscription.latest_invoice ?? null;
     const resolvedInvoice = await this.resolveInvoice(stripe, latestInvoice);
 
@@ -276,30 +352,27 @@ export class StripeService {
 
     const paymentIntent = await this.resolvePaymentIntentFromInvoice(stripe, latestInvoice);
     const paymentIntentStatus = paymentIntent?.status ?? null;
-    console.log('[stripe] verifySubscriptionPayment', {
-      subscriptionId,
-      status: subscription.status,
-      latestInvoiceType: typeof latestInvoice,
-      amountDue: resolvedInvoice?.amount_due ?? null,
-      paymentIntentStatus,
-      paymentIntentType: paymentIntent ? typeof paymentIntent : null,
-    });
     if (paymentIntent) {
       if (paymentIntentStatus !== 'succeeded' && paymentIntentStatus !== 'processing') {
         throw new BadRequestException('Payment has not completed.');
       }
       return {
         isActive: true,
-        startDate: new Date(subscription.current_period_start * 1000),
-        endDate: new Date(subscription.current_period_end * 1000),
+        startDate: resolvedStartDate,
+        endDate: resolvedEndDate,
       };
     }
 
-    if (resolvedInvoice && resolvedInvoice.amount_due === 0) {
+    const invoicePaid =
+      resolvedInvoice?.status === 'paid' ||
+      (typeof resolvedInvoice?.amount_remaining === 'number' &&
+        resolvedInvoice.amount_remaining === 0);
+
+    if (invoicePaid || (resolvedInvoice && resolvedInvoice.amount_due === 0)) {
       return {
         isActive: true,
-        startDate: new Date(subscription.current_period_start * 1000),
-        endDate: new Date(subscription.current_period_end * 1000),
+        startDate: resolvedStartDate,
+        endDate: resolvedEndDate,
       };
     }
 
@@ -307,9 +380,7 @@ export class StripeService {
     if (!isActive) {
       throw new BadRequestException('Payment has not completed.');
     }
-    const startDate = new Date(subscription.current_period_start * 1000);
-    const endDate = new Date(subscription.current_period_end * 1000);
-    return { isActive, startDate, endDate };
+    return { isActive, startDate: resolvedStartDate, endDate: resolvedEndDate };
   }
 
   async cancelSubscription(subscriptionId: string): Promise<void> {

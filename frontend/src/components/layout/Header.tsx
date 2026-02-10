@@ -163,24 +163,24 @@ export function Header() {
         <Link
           href="/"
           className="flex shrink-0 items-center gap-2 text-white"
-          aria-label="BRICK TALES.TV home"
+          aria-label="BRIXLORE.TV home"
         >
           {logoUrl ? (
             <Image
               src={logoUrl}
-              alt="BRICK TALES.TV"
+              alt="BRIXLORE.TV"
               width={LOGO_WIDTH}
               height={LOGO_HEIGHT}
-              className="h-12 w-auto object-contain"
+              className="-ml-1 h-12 w-auto object-contain"
               unoptimized
             />
           ) : (
             <Image
               src="/logo.png"
-              alt="BRICK TALES.TV"
+              alt="BRIXLORE.TV"
               width={LOGO_WIDTH}
               height={LOGO_HEIGHT}
-              className="h-9 w-auto object-contain"
+              className="-ml-1 h-9 w-auto object-contain"
               priority
             />
           )}
