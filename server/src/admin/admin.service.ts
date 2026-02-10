@@ -671,6 +671,7 @@ export class AdminService {
             description: dto.description?.trim() || null,
             duration: seconds ?? 0,
             videoUrl: dto.videoKey!.trim(),
+            hlsUrl: dto.hlsKey?.trim() || null,
           },
         });
       }
@@ -726,6 +727,7 @@ export class AdminService {
           description: trailer.description,
           duration: seconds,
           videoUrl: dto.videoKey.trim(),
+          hlsUrl: dto.hlsKey?.trim() || null,
         },
       });
 
@@ -844,6 +846,7 @@ export class AdminService {
         description: dto.description?.trim() || null,
         duration: seconds,
         videoUrl: dto.videoKey.trim(),
+        hlsUrl: dto.hlsKey?.trim() || null,
       },
     });
   }

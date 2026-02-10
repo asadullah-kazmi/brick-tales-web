@@ -28,4 +28,8 @@ export class CreateAdminEpisodeDto {
   @IsString()
   @MinLength(1)
   videoKey: string;
+
+  @IsOptional()
+  @IsString()
+  hlsKey?: string;
 }

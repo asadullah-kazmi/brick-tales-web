@@ -10,9 +10,13 @@ import { R2Service } from '../storage/r2.service';
 
 const DEFAULT_TOKEN_EXPIRES_SEC = 60 * 60; // 1 hour
 
-function inferPlaybackType(videoUrl: string | null | undefined): 'hls' | 'mp4' | undefined {
-  if (!videoUrl) return undefined;
-  const normalized = videoUrl.toLowerCase();
+function inferPlaybackType(
+  hlsUrl: string | null | undefined,
+  videoUrl: string | null | undefined,
+): 'hls' | 'mp4' | undefined {
+  const candidate = hlsUrl?.trim() || videoUrl?.trim();
+  if (!candidate) return undefined;
+  const normalized = candidate.toLowerCase();
   if (/\.m3u8(\?|$)/.test(normalized)) return 'hls';
   if (/\.mp4(\?|$)/.test(normalized)) return 'mp4';
   return undefined;
@@ -116,17 +120,27 @@ export class StreamingService {
   async getEpisodeStreamUrl(episodeId: string): Promise<string> {
     const episode = await (this.prisma as any).episode.findUnique({
       where: { id: episodeId },
-      select: { videoUrl: true, content: { select: { isPublished: true } } },
+      select: {
+        videoUrl: true,
+        hlsUrl: true,
+        content: { select: { isPublished: true } },
+      },
     });
     if (!episode) throw new NotFoundException('Episode not found');
-    if (!episode.videoUrl) {
+    if (!episode.videoUrl && !episode.hlsUrl) {
       throw new NotFoundException('Episode is not available for streaming');
     }
     if (!episode.content.isPublished) {
       throw new ForbiddenException('Content is not yet published');
     }
-    if (/^https?:\/\//i.test(episode.videoUrl)) return episode.videoUrl;
-    return this.r2Service.getSignedGetUrl(episode.videoUrl);
+    const streamKey = episode.hlsUrl?.trim() || episode.videoUrl?.trim();
+    if (!streamKey) {
+      throw new NotFoundException('Episode is not available for streaming');
+    }
+    if (/^https?:\/\//i.test(streamKey)) return streamKey;
+    const publicUrl = this.r2Service.getPublicUrl(streamKey);
+    if (publicUrl) return publicUrl;
+    return this.r2Service.getSignedGetUrl(streamKey);
   }
 
   async recordEpisodeView(userId: string, episodeId: string): Promise<void> {
@@ -156,10 +170,14 @@ export class StreamingService {
 
     const episode = await (this.prisma as any).episode.findUnique({
       where: { id: episodeId },
-      select: { videoUrl: true, content: { select: { isPublished: true } } },
+      select: {
+        videoUrl: true,
+        hlsUrl: true,
+        content: { select: { isPublished: true } },
+      },
     });
     if (!episode) throw new NotFoundException('Episode not found');
-    if (!episode.videoUrl) {
+    if (!episode.videoUrl && !episode.hlsUrl) {
       throw new NotFoundException('Episode is not available for streaming');
     }
     if (!episode.content.isPublished) {
@@ -175,7 +193,7 @@ export class StreamingService {
 
     const baseUrl = process.env.APP_URL ?? 'http://localhost:5000';
     const playUrl = `${baseUrl.replace(/\/$/, '')}/streaming/play/${episodeId}?token=${encodeURIComponent(token)}`;
-    const type = inferPlaybackType(episode.videoUrl);
+    const type = inferPlaybackType(episode.hlsUrl, episode.videoUrl);
 
     return { playUrl, expiresAt, type };
   }

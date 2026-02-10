@@ -46,6 +46,8 @@ import type {
   AdminRevenueAnalyticsDto,
 } from './dto/admin-analytics.dto';
 import type { AdminSystemHealthDto, AdminSystemLogDto } from './dto/admin-system.dto';
+import { TranscodeEpisodeDto } from './dto/transcode-episode.dto';
+import { TranscodeService } from '../streaming/transcode.service';
 
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/mkv']);
 const THUMBNAIL_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -90,6 +92,7 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly r2Service: R2Service,
     private readonly siteService: SiteService,
+    private readonly transcodeService: TranscodeService,
   ) {}
 
   /**
@@ -99,6 +102,21 @@ export class AdminController {
   async getStats(@CurrentUser() user: User): Promise<DashboardStatsDto> {
     ensureAdmin(user);
     return this.adminService.getDashboardStats();
+  }
+
+  /**
+   * Admin: transcode an episode to HLS and update hlsUrl.
+   */
+  @Post('transcode')
+  async transcodeEpisode(
+    @CurrentUser() user: User,
+    @Body() dto: TranscodeEpisodeDto,
+  ): Promise<{ episodeId: string; hlsKey: string; files: number }> {
+    ensureAdmin(user);
+    return this.transcodeService.transcodeEpisodeToHls(dto.episodeId, {
+      outputPrefix: dto.outputPrefix,
+      tempDir: dto.tempDir,
+    });
   }
 
   /**
@@ -377,7 +395,18 @@ export class AdminController {
     @Body() body: CreateAdminContentDto,
   ): Promise<AdminContentItemDto> {
     ensureAdmin(user);
-    return this.adminService.createContent(body);
+    const created = await this.adminService.createContent(body);
+    if (body.videoKey && !body.hlsKey) {
+      const episodeId = created.episodes?.[0]?.id;
+      if (episodeId) {
+        setImmediate(() => {
+          this.transcodeService
+            .transcodeEpisodeToHls(episodeId)
+            .catch((err) => console.error('[HLS] Transcode failed', err));
+        });
+      }
+    }
+    return created;
   }
 
   /**
@@ -390,7 +419,18 @@ export class AdminController {
     @Body() body: CreateAdminTrailerDto,
   ): Promise<AdminContentItemDto | null> {
     ensureAdmin(user);
-    return this.adminService.createTrailer(id, body);
+    const created = await this.adminService.createTrailer(id, body);
+    if (created && body.videoKey && !body.hlsKey) {
+      const episodeId = created.episodes?.[0]?.id;
+      if (episodeId) {
+        setImmediate(() => {
+          this.transcodeService
+            .transcodeEpisodeToHls(episodeId)
+            .catch((err) => console.error('[HLS] Transcode failed', err));
+        });
+      }
+    }
+    return created;
   }
 
   /**
@@ -408,7 +448,15 @@ export class AdminController {
   @Post('episode')
   async createEpisode(@CurrentUser() user: User, @Body() body: CreateAdminEpisodeDto) {
     ensureAdmin(user);
-    return this.adminService.createEpisode(body);
+    const episode = await this.adminService.createEpisode(body);
+    if (body.videoKey && !body.hlsKey) {
+      setImmediate(() => {
+        this.transcodeService
+          .transcodeEpisodeToHls(episode.id)
+          .catch((err) => console.error('[HLS] Transcode failed', err));
+      });
+    }
+    return episode;
   }
 
   /**

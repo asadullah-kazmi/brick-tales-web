@@ -34,6 +34,10 @@ export class CreateAdminTrailerDto {
   videoKey: string;
 
   @IsOptional()
+  @IsString()
+  hlsKey?: string;
+
+  @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
 }

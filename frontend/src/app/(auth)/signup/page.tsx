@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -48,6 +48,7 @@ function SignupFormInner() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [plans, setPlans] = useState<PublicPlanDto[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<PublicPlanDto | null>(null);
   const [plansError, setPlansError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{
     name?: string;
@@ -62,6 +63,7 @@ function SignupFormInner() {
   const hasStripeKey = stripePublishableKey.length > 0;
 
   const selectedPlanId = searchParams.get("plan")?.trim() ?? "";
+  const planNameFromUrl = searchParams.get("planName")?.trim() ?? "";
   const trialSelected = searchParams.get("trial") === "1";
 
   useEffect(() => {
@@ -83,11 +85,43 @@ function SignupFormInner() {
     };
   }, []);
 
-  const selectedPlan = useMemo(
-    () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
-    [plans, selectedPlanId],
-  );
+  useEffect(() => {
+    let active = true;
+    if (!selectedPlanId) {
+      setSelectedPlan(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    const fromList = plans.find((plan) => plan.id === selectedPlanId) ?? null;
+    if (fromList) {
+      setSelectedPlan(fromList);
+      return () => {
+        active = false;
+      };
+    }
+
+    subscriptionService
+      .getPlanById(selectedPlanId)
+      .then((plan) => {
+        if (!active) return;
+        setSelectedPlan(plan);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSelectedPlan(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [plans, selectedPlanId]);
   const hasPlan = Boolean(selectedPlan);
+  const displayPlanName =
+    selectedPlan?.name ||
+    planNameFromUrl ||
+    (selectedPlanId ? "Selected plan" : "");
 
   function runValidation(): boolean {
     const nameError = validateRequired(name, "Name");
@@ -206,6 +240,11 @@ function SignupFormInner() {
           ) : hasPlan ? (
             <span>
               Selected plan: <strong>{selectedPlan?.name}</strong>
+              {trialSelected ? " (trial)" : ""}
+            </span>
+          ) : displayPlanName ? (
+            <span>
+              Selected plan: <strong>{displayPlanName}</strong>
               {trialSelected ? " (trial)" : ""}
             </span>
           ) : (

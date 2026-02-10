@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createReadStream } from 'fs';
 
 const DEFAULT_SIGNED_URL_EXPIRES_SEC = 60 * 60;
 const DEFAULT_PRESIGN_UPLOAD_EXPIRES_SEC = 15 * 60;
@@ -98,5 +99,18 @@ export class R2Service {
       ContentType: contentType,
     });
     return getSignedUrl(client, command, { expiresIn: expiresInSec });
+  }
+
+  async uploadFile(key: string, filePath: string, contentType?: string): Promise<void> {
+    const config = this.ensureConfig();
+    const client = this.getClient();
+    const normalized = key.replace(/^\/+/, '');
+    const command = new PutObjectCommand({
+      Bucket: config.bucket,
+      Key: normalized,
+      Body: createReadStream(filePath),
+      ContentType: contentType,
+    });
+    await client.send(command);
   }
 }

@@ -56,6 +56,18 @@ export const subscriptionService = {
       }));
     }
   },
+  async getPlanById(planId: string): Promise<PublicPlanDto | null> {
+    if (!planId.trim()) return null;
+    if (!USE_MOCK_API) {
+      try {
+        return await get<PublicPlanDto>(`subscriptions/plans/${planId}`);
+      } catch {
+        return null;
+      }
+    }
+    const plans = await this.getPlans();
+    return plans.find((plan) => plan.id === planId) ?? null;
+  },
   async getSubscription(): Promise<GetSubscriptionResponseDto> {
     if (USE_MOCK_API) {
       const isSubscribed = getMockSubscription();

@@ -49,6 +49,10 @@ export class CreateAdminContentDto {
   videoKey?: string;
 
   @IsOptional()
+  @IsString()
+  hlsKey?: string;
+
+  @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
 }

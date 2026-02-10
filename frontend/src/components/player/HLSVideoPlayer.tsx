@@ -25,8 +25,7 @@ export type HLSVideoPlayerProps = {
 
 const VIDEO_JS_OPTIONS = {
   controls: true,
-  responsive: true,
-  fluid: true,
+  fill: true,
   playbackRates: [0.5, 1, 1.25, 1.5, 2],
   html5: {
     vhs: { overrideNative: true },
@@ -102,7 +101,7 @@ export function HLSVideoPlayer({
     >
       <video
         ref={videoRef}
-        className="video-js vjs-big-play-centered vjs-fluid h-full w-full"
+        className="video-js vjs-big-play-centered vjs-fill h-full w-full"
         playsInline
         preload="auto"
         aria-label={title}

@@ -359,7 +359,7 @@ export default async function SubscriptionPage() {
 
                   <div className="mt-8 flex flex-col gap-3">
                     <Link
-                      href={`/signup?plan=${plan.id}&trial=1`}
+                      href={`/signup?plan=${plan.id}&planName=${encodeURIComponent(plan.name)}&trial=1`}
                       className={cn(
                         "inline-flex h-12 items-center justify-center rounded-lg px-6 text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:focus-visible:ring-offset-off-black",
                         plan.featured
@@ -371,7 +371,7 @@ export default async function SubscriptionPage() {
                       Start Free Trial
                     </Link>
                     <Link
-                      href={`/signup?plan=${plan.id}`}
+                      href={`/signup?plan=${plan.id}&planName=${encodeURIComponent(plan.name)}`}
                       className="inline-flex h-12 items-center justify-center rounded-lg bg-neutral-100 px-6 text-base font-medium text-neutral-900 hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:focus-visible:ring-accent dark:focus-visible:ring-offset-off-black"
                       aria-label={`Subscribe to ${plan.name} now`}
                     >
