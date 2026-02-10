@@ -5,8 +5,9 @@ import type {
   SubscribeResponseDto,
   UpdateSubscriptionRequestDto,
   UpdateSubscriptionResponseDto,
+  BillingSummaryDto,
 } from "@/types/api";
-import { get } from "@/lib/api-client";
+import { get, post } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { getMockSubscription, setMockSubscription } from "@/lib/mock-auth";
 import { USE_MOCK_API } from "./config";
@@ -99,6 +100,36 @@ export const subscriptionService = {
         planId: isSubscribed ? "monthly" : "free",
       },
     };
+  },
+
+  async createPortalSession(returnUrl?: string): Promise<{ url: string }> {
+    if (USE_MOCK_API) {
+      throw new Error("Billing portal is not available in mock mode.");
+    }
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) {
+      throw new Error("Not authenticated");
+    }
+    return post<{ url: string }>(
+      "subscriptions/portal-session",
+      { returnUrl },
+      {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      },
+    );
+  },
+
+  async getBillingSummary(): Promise<BillingSummaryDto> {
+    if (USE_MOCK_API) {
+      return { paymentMethod: null, invoices: [] };
+    }
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) {
+      return { paymentMethod: null, invoices: [] };
+    }
+    return get<BillingSummaryDto>("subscriptions/billing-summary", {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    });
   },
 
   /** Local helper to set subscribed state (used by AuthContext / SubscriptionPrompt). */

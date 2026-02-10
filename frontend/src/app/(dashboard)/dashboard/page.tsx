@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts";
 import { Button } from "@/components/ui";
 import { contentService, subscriptionService } from "@/lib/services";
+import { USE_MOCK_API } from "@/lib/services/config";
 import type { ContentSummaryDto, PublicPlanDto } from "@/types/api";
 
 function getProgressFromId(id: string): number {
@@ -25,13 +26,19 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let active = true;
+    const loadContent = USE_MOCK_API
+      ? Promise.all([
+          contentService.getContentForBrowse(),
+          contentService.getCategories(),
+        ])
+      : Promise.resolve([[], []] as [ContentSummaryDto[], string[]]);
+
     Promise.all([
-      contentService.getContentForBrowse(),
-      contentService.getCategories(),
+      loadContent,
       subscriptionService.getPlans(),
       subscriptionService.getSubscription(),
     ])
-      .then(([items, cats, planList, subscription]) => {
+      .then(([[items, cats], planList, subscription]) => {
         if (!active) return;
         setContentItems(items);
         setCategories(cats);
@@ -57,11 +64,11 @@ export default function DashboardPage() {
   const categoryCount = categories.filter(
     (category) => category.toLowerCase() !== "all",
   ).length;
-  const continueItems = contentItems.slice(0, 2);
+  const continueItems: ContentSummaryDto[] = [];
   const exploreTags = categories
     .filter((category) => category.toLowerCase() !== "all")
     .slice(0, 4);
-  const savedItems = contentItems.slice(2, 5);
+  const savedItems: ContentSummaryDto[] = [];
 
   return (
     <div className="font-[var(--font-geist-sans)]">

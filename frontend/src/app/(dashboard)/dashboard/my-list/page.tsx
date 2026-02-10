@@ -3,27 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
-import { contentService } from "@/lib/services";
 import type { ContentSummaryDto } from "@/types/api";
 
 export default function MyListPage() {
   const [savedItems, setSavedItems] = useState<ContentSummaryDto[]>([]);
 
   useEffect(() => {
-    let active = true;
-    contentService
-      .getContentForBrowse()
-      .then((items) => {
-        if (!active) return;
-        setSavedItems(items.slice(0, 4));
-      })
-      .catch(() => {
-        if (!active) return;
-        setSavedItems([]);
-      });
-    return () => {
-      active = false;
-    };
+    setSavedItems([]);
   }, []);
 
   const hasSaved = savedItems.length > 0;

@@ -7,6 +7,7 @@ import type { User } from '@prisma/client';
 import { SubscriptionsService } from './subscriptions.service';
 import { StripeService } from './stripe.service';
 import { PlanResponseDto } from './dto/plan-response.dto';
+import { BillingSummaryDto } from './dto/billing-summary.dto';
 import { SubscriptionMeResponseDto } from './dto/subscription-me-response.dto';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 
@@ -78,6 +79,14 @@ export class SubscriptionsController {
     const baseUrl = process.env.APP_URL ?? 'http://localhost:5000';
     const url = returnUrl ?? `${baseUrl}/subscription`;
     return this.stripeService.createPortalSession(user.id, url);
+  }
+
+  /**
+   * Authenticated: get billing summary (default card + recent invoices).
+   */
+  @Get('billing-summary')
+  async getBillingSummary(@CurrentUser() user: User): Promise<BillingSummaryDto> {
+    return this.stripeService.getBillingSummary(user.id);
   }
 
   /**

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
-import { contentService } from "@/lib/services";
 import type { ContentSummaryDto } from "@/types/api";
 
 function getProgressFromId(id: string): number {
@@ -18,20 +17,7 @@ export default function ContinueWatchingPage() {
   const [continueItems, setContinueItems] = useState<ContentSummaryDto[]>([]);
 
   useEffect(() => {
-    let active = true;
-    contentService
-      .getContentForBrowse()
-      .then((items) => {
-        if (!active) return;
-        setContinueItems(items.slice(0, 3));
-      })
-      .catch(() => {
-        if (!active) return;
-        setContinueItems([]);
-      });
-    return () => {
-      active = false;
-    };
+    setContinueItems([]);
   }, []);
 
   const hasItems = continueItems.length > 0;

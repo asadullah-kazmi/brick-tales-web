@@ -1,6 +1,11 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  BillingInvoiceDto,
+  BillingPaymentMethodDto,
+  BillingSummaryDto,
+} from './dto/billing-summary.dto';
 
 type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'EXPIRED';
 
@@ -473,6 +478,72 @@ export class StripeService {
       return_url: returnUrl,
     });
     return { url: session.url };
+  }
+
+  /**
+   * Get default payment method and recent invoices for billing UI.
+   */
+  async getBillingSummary(userId: string): Promise<BillingSummaryDto> {
+    const user = await (this.prisma as any).user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true },
+    });
+    if (!user?.stripeCustomerId) {
+      throw new BadRequestException('No Stripe customer linked. Subscribe first.');
+    }
+
+    const stripe = this.getStripe();
+    const customer = (await stripe.customers.retrieve(user.stripeCustomerId, {
+      expand: ['invoice_settings.default_payment_method'],
+    })) as Stripe.Customer;
+
+    let paymentMethod: Stripe.PaymentMethod | null = null;
+    const defaultPm = customer.invoice_settings?.default_payment_method ?? null;
+    if (defaultPm && typeof defaultPm !== 'string') {
+      paymentMethod = defaultPm as Stripe.PaymentMethod;
+    } else if (typeof defaultPm === 'string') {
+      paymentMethod = await stripe.paymentMethods.retrieve(defaultPm);
+    }
+
+    if (!paymentMethod) {
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: user.stripeCustomerId,
+        type: 'card',
+        limit: 1,
+      });
+      paymentMethod = paymentMethods.data[0] ?? null;
+    }
+
+    const card = paymentMethod?.card ?? null;
+    const paymentMethodDto: BillingPaymentMethodDto | null = card
+      ? {
+          brand: card.brand ?? 'card',
+          last4: card.last4 ?? '----',
+          expMonth: card.exp_month ?? 0,
+          expYear: card.exp_year ?? 0,
+        }
+      : null;
+
+    const invoices = await stripe.invoices.list({
+      customer: user.stripeCustomerId,
+      limit: 10,
+    });
+
+    const invoiceDtos: BillingInvoiceDto[] = invoices.data.map((invoice) => ({
+      id: invoice.id,
+      amountDue: invoice.amount_due ?? 0,
+      amountPaid: invoice.amount_paid ?? 0,
+      currency: invoice.currency ?? 'usd',
+      status: invoice.status ?? 'unknown',
+      hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+      invoicePdf: invoice.invoice_pdf ?? null,
+      createdAt: new Date(invoice.created * 1000).toISOString(),
+    }));
+
+    return {
+      paymentMethod: paymentMethodDto,
+      invoices: invoiceDtos,
+    };
   }
 
   /**

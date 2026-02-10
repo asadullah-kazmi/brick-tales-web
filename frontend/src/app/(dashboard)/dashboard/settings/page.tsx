@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button, Input } from "@/components/ui";
 import { useAuth } from "@/contexts";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { subscriptionService } from "@/lib/services";
 import type { PublicPlanDto } from "@/types/api";
 
@@ -11,6 +12,8 @@ export default function SettingsPage() {
   const { user, isSubscribed } = useAuth();
   const [plans, setPlans] = useState<PublicPlanDto[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -42,6 +45,25 @@ export default function SettingsPage() {
     : null;
   const displayName = user?.name ?? "";
   const email = user?.email ?? "";
+
+  async function handleOpenBillingPortal() {
+    setBillingError(null);
+    setBillingLoading(true);
+    try {
+      const res = await subscriptionService.createPortalSession(
+        window.location.href,
+      );
+      if (res?.url) {
+        window.location.href = res.url;
+      } else {
+        setBillingError("Billing portal is unavailable right now.");
+      }
+    } catch (err) {
+      setBillingError(getApiErrorMessage(err));
+    } finally {
+      setBillingLoading(false);
+    }
+  }
 
   return (
     <div className="font-[var(--font-geist-sans)]">
@@ -350,10 +372,21 @@ export default function SettingsPage() {
                   View plans
                 </Button>
               </Link>
-              <Button type="button" size="sm" variant="outline">
-                Update card
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleOpenBillingPortal}
+                disabled={billingLoading}
+              >
+                {billingLoading ? "Opening..." : "Update card"}
               </Button>
             </div>
+            {billingError && (
+              <p className="mt-3 text-sm text-red-400" role="alert">
+                {billingError}
+              </p>
+            )}
           </section>
 
           <section

@@ -16,6 +16,33 @@ export interface SubscriptionStatusDto {
   createdAt?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Billing summary
+// ---------------------------------------------------------------------------
+
+export interface BillingPaymentMethodDto {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+}
+
+export interface BillingInvoiceDto {
+  id: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  status: string;
+  hostedInvoiceUrl?: string | null;
+  invoicePdf?: string | null;
+  createdAt: string;
+}
+
+export interface BillingSummaryDto {
+  paymentMethod?: BillingPaymentMethodDto | null;
+  invoices: BillingInvoiceDto[];
+}
+
 /** Request body for POST /subscriptions (subscribe). */
 export interface SubscribeRequestDto {
   planId: PlanId;
