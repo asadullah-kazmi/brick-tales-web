@@ -91,8 +91,9 @@ export const contentService = {
     options?: { cache?: RequestCache },
   ): Promise<ContentSummaryDto[]> {
     if (!USE_MOCK_API) {
+      // Use 120 items for faster API response (thumbnail URL resolution). Enough for browse rows.
       const res = await get<ContentListResponseDto>("content", {
-        params: { limit: "500", ...(type ? { type } : {}) },
+        params: { limit: "120", ...(type ? { type } : {}) },
         ...(options?.cache ? { cache: options.cache } : {}),
       });
       return res.items;

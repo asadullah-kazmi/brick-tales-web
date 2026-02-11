@@ -20,6 +20,7 @@ const GRADIENTS = [
 ];
 
 const AUTO_ADVANCE_MS = 5000;
+const IMAGE_LOAD_TIMEOUT_MS = 12000;
 
 function getGradient(index: number) {
   return GRADIENTS[index % GRADIENTS.length];
@@ -28,6 +29,7 @@ function getGradient(index: number) {
 export function NewlyUploadedBannerCarousel({ items }: { items: BannerItem[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
+  const [imgLoaded, setImgLoaded] = useState<Record<number, boolean>>({});
 
   const goTo = useCallback(
     (index: number) => {
@@ -47,6 +49,18 @@ export function NewlyUploadedBannerCarousel({ items }: { items: BannerItem[] }) 
   const setImgError = useCallback((index: number) => {
     setImgErrors((prev) => ({ ...prev, [index]: true }));
   }, []);
+
+  // If a slide's image does not load within timeout, show placeholder so tab is not stuck
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    items.forEach((item, index) => {
+      if (!item.thumbnailUrl || imgErrors[index] || imgLoaded[index]) return;
+      timers.push(
+        setTimeout(() => setImgError(index), IMAGE_LOAD_TIMEOUT_MS)
+      );
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [items, imgErrors, imgLoaded, setImgError]);
 
   if (items.length === 0) return null;
 
@@ -76,6 +90,9 @@ export function NewlyUploadedBannerCarousel({ items }: { items: BannerItem[] }) 
                   className="group relative flex flex-1 flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-neutral-900/60 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                   aria-label={`Watch ${item.title}`}
                 >
+                {showThumbnail && (
+                  <div className="absolute inset-0 z-0 animate-pulse bg-white/10" aria-hidden />
+                )}
                 {showThumbnail ? (
                   <img
                     src={item.thumbnailUrl!}
@@ -84,6 +101,7 @@ export function NewlyUploadedBannerCarousel({ items }: { items: BannerItem[] }) 
                     loading={index === 0 ? "eager" : "lazy"}
                     decoding="async"
                     fetchPriority={index === 0 ? "high" : "auto"}
+                    onLoad={() => setImgLoaded((p) => ({ ...p, [index]: true }))}
                     onError={() => setImgError(index)}
                   />
                 ) : (

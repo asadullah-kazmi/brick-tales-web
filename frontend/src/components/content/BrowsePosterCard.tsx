@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { AddToMyListButton } from "./AddToMyListButton";
+
+const IMAGE_LOAD_TIMEOUT_MS = 12000;
 
 type BrowseItem = {
   id: string;
@@ -33,7 +35,15 @@ export function BrowsePosterCard({
   index: number;
 }) {
   const [imgError, setImgError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const showThumbnail = item.thumbnailUrl && !imgError;
+
+  // If image does not load within timeout, show placeholder so tab is not stuck
+  useEffect(() => {
+    if (!item.thumbnailUrl) return;
+    const t = setTimeout(() => setImgError(true), IMAGE_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [item.thumbnailUrl, loaded]);
 
   return (
     <div className="relative h-40 w-72 shrink-0 sm:h-44 sm:w-80">
@@ -49,17 +59,21 @@ export function BrowsePosterCard({
         )}
         aria-label={`Watch ${item.title}`}
       >
-      {/* Thumbnail or placeholder: use z-0 so it sits above the default stack and is always visible */}
+      {/* Thumbnail: show immediately so browser can load. Skeleton behind for initial paint. */}
       {showThumbnail ? (
-        <img
-          src={item.thumbnailUrl!}
-          alt=""
-          className="absolute inset-0 z-0 h-full w-full object-cover object-center"
-          loading="lazy"
-          decoding="async"
-          fetchPriority={index < 6 ? "high" : "auto"}
-          onError={() => setImgError(true)}
-        />
+        <>
+          <div className="absolute inset-0 z-0 h-full w-full animate-pulse bg-white/5" aria-hidden />
+          <img
+            src={item.thumbnailUrl!}
+            alt=""
+            className="absolute inset-0 z-0 h-full w-full object-cover object-center"
+            loading="lazy"
+            decoding="async"
+            fetchPriority={index < 6 ? "high" : "auto"}
+            onLoad={() => setLoaded(true)}
+            onError={() => setImgError(true)}
+          />
+        </>
       ) : (
         <div
           className="absolute inset-0 z-0 flex items-center justify-center bg-neutral-800/80"
