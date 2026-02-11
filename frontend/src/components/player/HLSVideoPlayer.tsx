@@ -8,6 +8,8 @@ import type { PlaybackType } from "@/types/api";
 /** Player instance type from Video.js (avoids using internal types). */
 type VideoJsPlayer = ReturnType<typeof videojs>;
 
+const PROGRESS_REPORT_INTERVAL_SEC = 10;
+
 export type HLSVideoPlayerProps = {
   /** HLS manifest URL (.m3u8) or MP4 URL. */
   src: string;
@@ -21,6 +23,8 @@ export type HLSVideoPlayerProps = {
   className?: string;
   /** Optional callback when player is ready. */
   onReady?: (player: VideoJsPlayer) => void;
+  /** Optional callback with current time in seconds (throttled on timeupdate, and on pause). */
+  onProgress?: (progressSeconds: number) => void;
 };
 
 const VIDEO_JS_OPTIONS = {
@@ -59,9 +63,11 @@ export function HLSVideoPlayer({
   title,
   className,
   onReady,
+  onProgress,
 }: HLSVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<VideoJsPlayer | null>(null);
+  const lastReportedRef = useRef<number>(0);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -80,6 +86,27 @@ export function HLSVideoPlayer({
         resolveMimeFromPlaybackType(type) ?? resolveVideoType(src);
       player.src(mimeType ? { src, type: mimeType } : { src });
       if (poster) player.poster(poster);
+
+      if (onProgress) {
+        const report = () => {
+          const t = player.currentTime();
+          if (typeof t === "number" && t >= 0) {
+            lastReportedRef.current = t;
+            onProgress(t);
+          }
+        };
+        player.on("timeupdate", () => {
+          const t = player.currentTime();
+          if (
+            typeof t === "number" &&
+            t >= 0 &&
+            t - lastReportedRef.current >= PROGRESS_REPORT_INTERVAL_SEC
+          ) {
+            report();
+          }
+        });
+        player.on("pause", report);
+      }
 
       playerRef.current = player;
     });

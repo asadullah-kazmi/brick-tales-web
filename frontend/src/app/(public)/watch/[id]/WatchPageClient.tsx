@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { HLSVideoPlayerLazy } from "@/components/player";
 import { SubscriptionPrompt } from "@/components/content";
 import { useAuth } from "@/contexts";
 import { contentService, streamingService } from "@/lib/services";
 import { ApiError } from "@/lib/api-client";
 import type { ContentDetailDto, PlaybackType } from "@/types/api";
-import { formatDuration, isLongForm } from "@/lib/video-utils";
+import { formatDuration, isLongForm, durationToSeconds } from "@/lib/video-utils";
 import { DEFAULT_HLS_TEST_STREAM } from "@/lib/hls-streams";
 import {
   Loader,
@@ -73,6 +73,8 @@ function pickPrimaryEpisode(content: ContentDetailDto): PlayableEpisode | null {
 export default function WatchPageClient({ params }: WatchPageClientProps) {
   const { id } = params;
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const episodeIdFromUrl = searchParams.get("episodeId")?.trim() || null;
   const { isSubscribed, isLoading: authLoading } = useAuth();
   const [content, setContent] = useState<ContentDetailDto | null>(null);
   const [primaryEpisode, setPrimaryEpisode] = useState<PlayableEpisode | null>(
@@ -102,7 +104,38 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
         const contentDetail = detailRes?.content ?? null;
         setContent(contentDetail);
         if (!contentDetail) return;
-        let episode = pickPrimaryEpisode(contentDetail);
+        let episode: PlayableEpisode | null = null;
+        if (episodeIdFromUrl) {
+          const fromList = contentDetail.episodes?.find(
+            (e) => e.id === episodeIdFromUrl,
+          );
+          if (fromList) {
+            episode = {
+              id: fromList.id,
+              title: fromList.title,
+              duration: fromList.duration,
+            };
+          }
+          if (!episode && contentDetail.seasons?.length) {
+            for (const season of contentDetail.seasons) {
+              const episodes = await contentService.getEpisodes(
+                contentDetail.id,
+                season.id,
+              );
+              if (cancelled) return;
+              const found = episodes?.find((e) => e.id === episodeIdFromUrl);
+              if (found) {
+                episode = {
+                  id: found.id,
+                  title: found.title,
+                  duration: found.duration,
+                };
+                break;
+              }
+            }
+          }
+        }
+        if (!episode) episode = pickPrimaryEpisode(contentDetail);
         if (!episode && contentDetail.seasons?.length) {
           const seasonId = contentDetail.seasons[0]?.id;
           const episodes = await contentService.getEpisodes(
@@ -176,7 +209,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, episodeIdFromUrl]);
 
   const displayContent = content ? toDisplayContent(content) : null;
   const title = displayContent?.title ?? `Content ${id}`;
@@ -296,14 +329,23 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
                   type={playbackType}
                   title={title}
                   className="vjs-theme-stream"
+                  onProgress={
+                    primaryEpisode
+                      ? (progressSeconds) => {
+                          const durationSec = durationToSeconds(
+                            primaryEpisode?.duration,
+                          );
+                          void streamingService.reportProgress(
+                            primaryEpisode.id,
+                            progressSeconds,
+                            durationSec > 0 ? durationSec : undefined,
+                          );
+                        }
+                      : undefined
+                  }
                   onReady={(player) => {
-                    // Clean handler, no debug code
-                    player.on("error", () => {
-                      // Optionally handle error
-                    });
-                    player.on("loadedmetadata", () => {
-                      // Optionally handle loadedmetadata
-                    });
+                    player.on("error", () => {});
+                    player.on("loadedmetadata", () => {});
                   }}
                 />
               )}

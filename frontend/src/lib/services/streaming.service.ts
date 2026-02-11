@@ -1,9 +1,10 @@
 import type {
+  ContinueWatchingItemDto,
   PlaybackInfoResponseDto,
   PlaybackRequestDto,
   PlaybackType,
 } from "@/types/api";
-import { get, ApiError } from "@/lib/api-client";
+import { get, patch, del, ApiError } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { DEFAULT_HLS_TEST_STREAM, HLS_TEST_STREAMS } from "@/lib/hls-streams";
 import { USE_MOCK_API } from "./config";
@@ -91,5 +92,59 @@ export const streamingService = {
       url,
       streamKey: res.streamKey,
     };
+  },
+
+  /**
+   * Report watch progress (seconds). Real API: PATCH /streaming/continue-watching/:episodeId.
+   */
+  async reportProgress(
+    episodeId: string,
+    progressSeconds: number,
+    durationSeconds?: number,
+  ): Promise<void> {
+    if (USE_MOCK_API) return;
+
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) return;
+
+    const url = `streaming/continue-watching/${encodeURIComponent(episodeId)}${durationSeconds != null ? `?duration=${durationSeconds}` : ""}`;
+    await patch<{ ok: boolean }>(url, { progress: Math.round(progressSeconds) }, {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    });
+  },
+
+  /**
+   * Remove an episode from continue watching. Real API: DELETE /streaming/continue-watching/:episodeId.
+   */
+  async removeFromContinueWatching(episodeId: string): Promise<void> {
+    if (USE_MOCK_API) return;
+
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) return;
+
+    await del<{ ok: boolean }>(
+      `streaming/continue-watching/${encodeURIComponent(episodeId)}`,
+      {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      },
+    );
+  },
+
+  /**
+   * Get in-progress titles for continue watching. Real API: GET /streaming/continue-watching.
+   */
+  async getContinueWatching(): Promise<ContinueWatchingItemDto[]> {
+    if (USE_MOCK_API) return [];
+
+    const auth = getStoredAuth();
+    if (!auth?.accessToken) return [];
+
+    const items = await get<ContinueWatchingItemDto[]>(
+      "streaming/continue-watching",
+      {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      },
+    );
+    return Array.isArray(items) ? items : [];
   },
 };

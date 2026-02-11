@@ -38,6 +38,23 @@ export function formatDuration(duration: string): string {
 }
 
 /**
+ * Parse duration string (MM:SS or HH:MM:SS) to total seconds.
+ */
+export function durationToSeconds(duration: string | undefined): number {
+  if (!duration?.trim()) return 0;
+  const parts = duration.trim().split(":").map(Number);
+  if (parts.length === 3) {
+    const [h, m, s] = parts;
+    return (h || 0) * 3600 + (m || 0) * 60 + (s || 0);
+  }
+  if (parts.length === 2) {
+    const [m, s] = parts;
+    return (m || 0) * 60 + (s || 0);
+  }
+  return 0;
+}
+
+/**
  * Whether the video is considered long-form (e.g. 1+ hour).
  */
 export function isLongForm(video: { duration?: string }): boolean {

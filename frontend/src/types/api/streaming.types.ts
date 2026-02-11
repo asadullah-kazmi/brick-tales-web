@@ -66,3 +66,16 @@ export interface TranscodeResponseDto {
   videoId: string;
   status: "queued" | "processing";
 }
+
+/** Item from GET /streaming/continue-watching (in-progress view history). */
+export interface ContinueWatchingItemDto {
+  contentId: string;
+  episodeId: string;
+  contentTitle: string;
+  episodeTitle: string;
+  progress: number;
+  duration: number;
+  thumbnailUrl: string | null;
+  type: string;
+  watchedAt: string;
+}
