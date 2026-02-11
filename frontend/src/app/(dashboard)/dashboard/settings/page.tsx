@@ -10,9 +10,10 @@ import {
   authService,
   subscriptionService,
 } from "@/lib/services";
+import { getDeviceDisplayName } from "@/lib/device-utils";
 import type {
   DeviceDto,
-  PlaybackQuality,
+  DevicePlatform,
   PublicPlanDto,
   UpdateUserPreferencesRequestDto,
   UpdateUserProfileRequestDto,
@@ -41,7 +42,6 @@ export default function SettingsPage() {
   const [prefLoading, setPrefLoading] = useState(true);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
-  const [prefSaving, setPrefSaving] = useState(false);
   const [securitySaving, setSecuritySaving] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
@@ -101,7 +101,6 @@ export default function SettingsPage() {
   // const displayName = profile?.name ?? user?.name ?? ""; // Removed unused variable
   const email = profile?.email ?? user?.email ?? "";
 
-  const playbackQuality = preferences?.playbackQuality ?? "Auto";
   const nextChargeLabel = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : "--";
@@ -115,13 +114,6 @@ export default function SettingsPage() {
       </main>
     );
   }
-
-  const setPreference = (partial: UpdateUserPreferencesRequestDto) => {
-    setPreferences((prev) => {
-      if (!prev) return prev;
-      return { ...prev, ...partial } as UserPreferencesDto;
-    });
-  };
 
   async function handleOpenBillingPortal() {
     setBillingError(null);
@@ -159,22 +151,6 @@ export default function SettingsPage() {
       setSettingsError(getApiErrorMessage(err));
     } finally {
       setProfileSaving(false);
-    }
-  }
-
-  async function handleSavePreferences() {
-    if (!preferences) return;
-    setSettingsError(null);
-    setSettingsSuccess(null);
-    setPrefSaving(true);
-    try {
-      const updated = await accountService.updatePreferences(preferences);
-      setPreferences(updated);
-      setSettingsSuccess("Preferences updated.");
-    } catch (err) {
-      setSettingsError(getApiErrorMessage(err));
-    } finally {
-      setPrefSaving(false);
     }
   }
 
@@ -568,11 +544,17 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     className="rounded-full border border-neutral-600 px-4 py-1 text-xs font-semibold text-neutral-200 hover:border-accent hover:text-accent"
-                    onClick={() =>
-                      setPreference({
-                        twoFactorEnabled: !preferences?.twoFactorEnabled,
-                      })
-                    }
+                    onClick={async () => {
+                      if (!preferences) return;
+                      try {
+                        const updated = await accountService.updatePreferences({
+                          twoFactorEnabled: !preferences.twoFactorEnabled,
+                        });
+                        setPreferences(updated);
+                      } catch (err) {
+                        setSettingsError(getApiErrorMessage(err));
+                      }
+                    }}
                   >
                     {preferences?.twoFactorEnabled ? "Disable" : "Enable"}
                   </button>
@@ -589,166 +571,6 @@ export default function SettingsPage() {
                 onClick={handleResetSessions}
               >
                 {securitySaving ? "Working..." : "Reset sessions"}
-              </Button>
-            </div>
-          </section>
-
-          <section
-            className="rounded-2xl border border-neutral-700/50 bg-neutral-900/60 p-6"
-            aria-label="Playback preferences"
-          >
-            <h3 className="text-lg font-semibold text-white">
-              Playback preferences
-            </h3>
-            <p className="mt-1 text-sm text-neutral-400">
-              Pick how you want videos to behave by default.
-            </p>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-neutral-700/70 bg-neutral-950/60 p-4">
-                <p className="text-sm font-semibold text-white">
-                  Default quality
-                </p>
-                <p className="mt-1 text-xs text-neutral-400">
-                  We will prioritize this setting on Wi-Fi.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {"Auto, 1080p, 720p".split(", ").map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() =>
-                        setPreference({
-                          playbackQuality: label as PlaybackQuality,
-                        })
-                      }
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                        playbackQuality === label
-                          ? "border-accent text-accent"
-                          : "border-neutral-600 text-neutral-200 hover:border-accent hover:text-accent"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-xl border border-neutral-700/70 bg-neutral-950/60 p-4">
-                <p className="text-sm font-semibold text-white">Controls</p>
-                <div className="mt-4 space-y-3 text-sm text-neutral-300">
-                  <label className="flex items-center justify-between gap-3">
-                    <span>Autoplay next episode</span>
-                    <input
-                      type="checkbox"
-                      checked={preferences?.autoplayNext ?? true}
-                      onChange={(event) =>
-                        setPreference({ autoplayNext: event.target.checked })
-                      }
-                      className="h-4 w-4 accent-accent"
-                    />
-                  </label>
-                  <label className="flex items-center justify-between gap-3">
-                    <span>Skip recaps</span>
-                    <input
-                      type="checkbox"
-                      checked={preferences?.skipRecaps ?? false}
-                      onChange={(event) =>
-                        setPreference({ skipRecaps: event.target.checked })
-                      }
-                      className="h-4 w-4 accent-accent"
-                    />
-                  </label>
-                  <label className="flex items-center justify-between gap-3">
-                    <span>Show subtitles by default</span>
-                    <input
-                      type="checkbox"
-                      checked={preferences?.subtitlesDefault ?? true}
-                      onChange={(event) =>
-                        setPreference({
-                          subtitlesDefault: event.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 accent-accent"
-                    />
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button type="button" onClick={handleSavePreferences}>
-                {prefSaving ? "Saving..." : "Save playback"}
-              </Button>
-              <Button type="button" variant="outline">
-                Reset to defaults
-              </Button>
-            </div>
-          </section>
-
-          <section
-            className="rounded-2xl border border-neutral-700/50 bg-neutral-900/60 p-6"
-            aria-label="Notifications"
-          >
-            <h3 className="text-lg font-semibold text-white">Notifications</h3>
-            <p className="mt-1 text-sm text-neutral-400">
-              Decide how and when we should reach you.
-            </p>
-            <div className="mt-6 grid gap-3 text-sm text-neutral-300">
-              <label className="flex items-center justify-between gap-3 rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3">
-                <div>
-                  <p className="font-medium text-white">New releases</p>
-                  <p className="text-xs text-neutral-400">
-                    Get notified when a creator you follow posts.
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={preferences?.notifyNewReleases ?? true}
-                  onChange={(event) =>
-                    setPreference({ notifyNewReleases: event.target.checked })
-                  }
-                  className="h-4 w-4 accent-accent"
-                />
-              </label>
-              <label className="flex items-center justify-between gap-3 rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3">
-                <div>
-                  <p className="font-medium text-white">Account alerts</p>
-                  <p className="text-xs text-neutral-400">
-                    Billing, security, and important updates.
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={preferences?.notifyAccountAlerts ?? true}
-                  onChange={(event) =>
-                    setPreference({
-                      notifyAccountAlerts: event.target.checked,
-                    })
-                  }
-                  className="h-4 w-4 accent-accent"
-                />
-              </label>
-              <label className="flex items-center justify-between gap-3 rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3">
-                <div>
-                  <p className="font-medium text-white">Product tips</p>
-                  <p className="text-xs text-neutral-400">
-                    Occasional updates about new features.
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={preferences?.notifyProductTips ?? false}
-                  onChange={(event) =>
-                    setPreference({ notifyProductTips: event.target.checked })
-                  }
-                  className="h-4 w-4 accent-accent"
-                />
-              </label>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button type="button" onClick={handleSavePreferences}>
-                {prefSaving ? "Saving..." : "Save notifications"}
-              </Button>
-              <Button type="button" variant="ghost">
-                Unsubscribe from all
               </Button>
             </div>
           </section>
@@ -815,32 +637,61 @@ export default function SettingsPage() {
               {deviceLoading ? (
                 <p className="text-sm text-neutral-400">Loading devices...</p>
               ) : devices.length > 0 ? (
-                devices.map((device) => (
-                  <div
-                    key={device.id}
-                    className="flex items-center justify-between rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3"
-                  >
-                    <div>
-                      <p className="font-medium text-white">
-                        {device.deviceIdentifier}
-                      </p>
-                      <p className="text-xs text-neutral-400">
-                        {`${device.platform} • Last active ${new Date(device.lastActiveAt).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDevice(device.id)}
-                      className="text-xs font-semibold text-neutral-400 hover:text-accent"
+                devices.map((device) => {
+                  const displayName = getDeviceDisplayName(
+                    device.deviceIdentifier,
+                    device.platform as DevicePlatform,
+                  );
+                  const lastActive = new Date(device.lastActiveAt);
+                  const isRecent =
+                    Date.now() - lastActive.getTime() < 7 * 24 * 60 * 60 * 1000; // 7 days
+                  const lastActiveText = isRecent
+                    ? lastActive.toLocaleDateString()
+                    : lastActive.toLocaleDateString();
+                  
+                  return (
+                    <div
+                      key={device.id}
+                      className="flex items-center justify-between rounded-xl border border-neutral-700/70 bg-neutral-950/60 px-4 py-3"
                     >
-                      Sign out
-                    </button>
-                  </div>
-                ))
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-white truncate">
+                          {displayName}
+                        </p>
+                        <p className="text-xs text-neutral-400">
+                          {device.platform}
+                          {isRecent && (
+                            <span className="ml-2 text-emerald-400">
+                              • Active
+                            </span>
+                          )}
+                          {!isRecent && (
+                            <span className="ml-2">
+                              • Last active {lastActiveText}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDevice(device.id)}
+                        className="ml-3 shrink-0 text-xs font-semibold text-neutral-400 hover:text-red-400 transition-colors"
+                        title="Remove this device"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })
               ) : (
-                <p className="text-sm text-neutral-400">
-                  No devices registered yet.
-                </p>
+                <div className="rounded-xl border border-dashed border-neutral-700/70 bg-neutral-950/40 px-4 py-6 text-center">
+                  <p className="text-sm text-neutral-400">
+                    No devices registered yet.
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Devices are registered automatically when you sign in.
+                  </p>
+                </div>
               )}
             </div>
           </section>

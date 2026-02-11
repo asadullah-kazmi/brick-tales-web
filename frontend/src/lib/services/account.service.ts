@@ -1,6 +1,7 @@
 import {
   type AccountExportDto,
   type DeviceDto,
+  type DevicePlatform,
   type UpdateUserPreferencesRequestDto,
   type UpdateUserProfileRequestDto,
   type UserPreferencesDto,
@@ -9,6 +10,7 @@ import {
 import { del, get, patch, post } from "@/lib/api-client";
 import { getStoredAuth } from "@/lib/auth-storage";
 import { USE_MOCK_API } from "./config";
+import { detectPlatform, generateDeviceIdentifier } from "@/lib/device-utils";
 
 const MOCK_PROFILE_KEY = "mockProfile";
 const MOCK_PREFS_KEY = "mockPreferences";
@@ -121,17 +123,61 @@ export const accountService = {
     return patch<UserPreferencesDto>("users/preferences", body, { headers });
   },
 
+  async registerDevice(): Promise<DeviceDto | null> {
+    if (typeof window === "undefined") return null;
+    
+    const platform = detectPlatform(); // Now returns "ANDROID", "IOS", or "WEB"
+    const deviceIdentifier = generateDeviceIdentifier();
+    
+    if (USE_MOCK_API) {
+      const devices = readMock<DeviceDto[]>(MOCK_DEVICES_KEY, []);
+      const existing = devices.find(
+        (d) => d.deviceIdentifier === deviceIdentifier,
+      );
+      if (existing) {
+        // Update last active
+        const updated = {
+          ...existing,
+          lastActiveAt: new Date().toISOString(),
+        };
+        const updatedList = devices.map((d) =>
+          d.id === existing.id ? updated : d,
+        );
+        writeMock(MOCK_DEVICES_KEY, updatedList);
+        return updated;
+      }
+      const newDevice: DeviceDto = {
+        id: `device-${Date.now()}`,
+        platform,
+        deviceIdentifier,
+        lastActiveAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      writeMock(MOCK_DEVICES_KEY, [...devices, newDevice]);
+      return newDevice;
+    }
+
+    const headers = getAuthHeaders();
+    if (!headers) return null;
+    
+    try {
+      return await post<DeviceDto>(
+        "devices/register",
+        {
+          platform: platform as DevicePlatform,
+          deviceIdentifier,
+        },
+        { headers },
+      );
+    } catch {
+      // Silently fail - device registration is optional
+      return null;
+    }
+  },
+
   async listDevices(): Promise<DeviceDto[]> {
     if (USE_MOCK_API) {
-      const devices = readMock<DeviceDto[]>(MOCK_DEVICES_KEY, [
-        {
-          id: "device-1",
-          platform: "IOS",
-          deviceIdentifier: "iPhone-14",
-          lastActiveAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      const devices = readMock<DeviceDto[]>(MOCK_DEVICES_KEY, []);
       writeMock(MOCK_DEVICES_KEY, devices);
       return devices;
     }

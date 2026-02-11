@@ -11,6 +11,7 @@ import {
 import type { User } from "@/types";
 import { getApiErrorMessage } from "@/lib/api-client";
 import {
+  accountService,
   authService,
   getStoredSubscription,
   subscriptionService,
@@ -134,10 +135,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback((newUser: User) => {
-    setUser(newUser);
-    setSessionError(null);
-  }, []);
+  const login = useCallback(
+    async (newUser: User) => {
+      setUser(newUser);
+      setSessionError(null);
+      // Register device after login (silently fail if it doesn't work)
+      try {
+        await accountService.registerDevice();
+      } catch {
+        // Ignore errors - device registration is optional
+      }
+    },
+    [],
+  );
 
   const logout = useCallback(() => {
     authService.logout();

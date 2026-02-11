@@ -214,7 +214,7 @@ function SignupFormInner() {
         customerId: intent.customerId,
       });
       setSubscribed(true);
-      login({
+      await login({
         email: response.user.email,
         name: response.user.name,
         role: response.user.role,

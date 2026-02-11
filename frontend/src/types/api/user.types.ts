@@ -28,7 +28,7 @@ export interface UserPreferencesDto {
 
 export type UpdateUserPreferencesRequestDto = Partial<UserPreferencesDto>;
 
-export type DevicePlatform = "ANDROID" | "IOS";
+export type DevicePlatform = "ANDROID" | "IOS" | "WEB";
 
 export interface DeviceDto {
   id: string;

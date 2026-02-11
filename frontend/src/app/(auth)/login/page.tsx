@@ -52,7 +52,7 @@ function LoginPageContent() {
     try {
       const response = await authService.login({ email, password });
       setLoginOrigin("customer");
-      login({
+      await login({
         email: response.user.email,
         name: response.user.name,
         role: response.user.role,

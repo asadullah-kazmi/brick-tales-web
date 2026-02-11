@@ -3,7 +3,7 @@ import { Platform } from '@prisma/client';
 
 export class RegisterDeviceDto {
   @IsEnum(Platform, {
-    message: 'platform must be ANDROID or IOS',
+    message: 'platform must be ANDROID, IOS, or WEB',
   })
   platform: Platform;
 
