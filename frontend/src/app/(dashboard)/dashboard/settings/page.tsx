@@ -239,20 +239,6 @@ export default function SettingsPage() {
         </table>
       `;
 
-      const preferencesHtml = `
-        <h2>Preferences</h2>
-        <table>
-          <tr><th>Playback quality</th><td>${escapeHtml(res.preferences.playbackQuality)}</td></tr>
-          <tr><th>Autoplay next</th><td>${res.preferences.autoplayNext ? "Yes" : "No"}</td></tr>
-          <tr><th>Skip recaps</th><td>${res.preferences.skipRecaps ? "Yes" : "No"}</td></tr>
-          <tr><th>Subtitles by default</th><td>${res.preferences.subtitlesDefault ? "Yes" : "No"}</td></tr>
-          <tr><th>Notify new releases</th><td>${res.preferences.notifyNewReleases ? "Yes" : "No"}</td></tr>
-          <tr><th>Notify account alerts</th><td>${res.preferences.notifyAccountAlerts ? "Yes" : "No"}</td></tr>
-          <tr><th>Notify product tips</th><td>${res.preferences.notifyProductTips ? "Yes" : "No"}</td></tr>
-          <tr><th>Two-factor enabled</th><td>${res.preferences.twoFactorEnabled ? "Yes" : "No"}</td></tr>
-        </table>
-      `;
-
       const devicesRows = res.devices.length
         ? res.devices
             .map(
@@ -318,7 +304,6 @@ export default function SettingsPage() {
             <h1>Account data export</h1>
             <p class="meta">Generated on ${escapeHtml(new Date().toLocaleString())}</p>
             ${profileHtml}
-            ${preferencesHtml}
             ${devicesHtml}
             ${subscriptionsHtml}
           </body>
