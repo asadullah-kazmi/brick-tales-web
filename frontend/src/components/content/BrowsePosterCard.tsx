@@ -1,11 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { AddToMyListButton } from "./AddToMyListButton";
-
-const IMAGE_LOAD_TIMEOUT_MS = 12000;
 
 type BrowseItem = {
   id: string;
@@ -27,6 +24,10 @@ function getGradient(index: number) {
   return GRADIENTS[index % GRADIENTS.length];
 }
 
+/**
+ * Thumbnail logic matches /dashboard/explore: render img when URL exists, no error
+ * state or timeout that hides the image. Keeps thumbnails visible and loading smoothly.
+ */
 export function BrowsePosterCard({
   item,
   index,
@@ -34,16 +35,7 @@ export function BrowsePosterCard({
   item: BrowseItem;
   index: number;
 }) {
-  const [imgError, setImgError] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const showThumbnail = item.thumbnailUrl && !imgError;
-
-  // If image does not load within timeout, show placeholder so tab is not stuck
-  useEffect(() => {
-    if (!item.thumbnailUrl) return;
-    const t = setTimeout(() => setImgError(true), IMAGE_LOAD_TIMEOUT_MS);
-    return () => clearTimeout(t);
-  }, [item.thumbnailUrl, loaded]);
+  const hasThumbnail = Boolean(item.thumbnailUrl);
 
   return (
     <div className="relative h-40 w-72 shrink-0 sm:h-44 sm:w-80">
@@ -59,22 +51,20 @@ export function BrowsePosterCard({
         )}
         aria-label={`Watch ${item.title}`}
       >
-      {/* Thumbnail: show immediately so browser can load. Skeleton behind for initial paint. */}
-      {showThumbnail ? (
-        <>
-          <div className="absolute inset-0 z-0 h-full w-full animate-pulse bg-white/5" aria-hidden />
+      {/* Thumbnail: same as explore page — show img when URL exists, gradient behind; never hide on error/timeout */}
+      <div className="absolute inset-0 z-0 h-full w-full bg-gradient-to-br from-neutral-800/80 via-neutral-900 to-neutral-800/60">
+        {hasThumbnail ? (
           <img
             src={item.thumbnailUrl!}
             alt=""
-            className="absolute inset-0 z-0 h-full w-full object-cover object-center"
+            className="h-full w-full object-cover object-center"
             loading="lazy"
             decoding="async"
             fetchPriority={index < 6 ? "high" : "auto"}
-            onLoad={() => setLoaded(true)}
-            onError={() => setImgError(true)}
           />
-        </>
-      ) : (
+        ) : null}
+      </div>
+      {hasThumbnail ? null : (
         <div
           className="absolute inset-0 z-0 flex items-center justify-center bg-neutral-800/80"
           aria-hidden
@@ -95,7 +85,7 @@ export function BrowsePosterCard({
         </div>
       )}
       {/* Overlay: visible on hover so title/watch now are readable; when no thumbnail use full dark gradient (always visible) */}
-      {showThumbnail ? (
+      {hasThumbnail ? (
         <div
           className="absolute inset-x-0 bottom-0 z-[1] h-1/2 bg-gradient-to-t from-black/90 to-transparent pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           aria-hidden

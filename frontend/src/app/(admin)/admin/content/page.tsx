@@ -29,7 +29,8 @@ export default function AdminContentPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const isReadOnly = user?.role === "CUSTOMER_SUPPORT";
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const isSuperAdmin =
+    user?.role === "SUPER_ADMIN" || user?.role === "admin";
 
   async function handleTogglePublish(id: string, current: boolean) {
     setTogglingId(id);
