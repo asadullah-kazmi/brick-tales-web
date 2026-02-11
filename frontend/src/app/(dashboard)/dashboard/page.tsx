@@ -4,15 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts";
 import { Button, Loader } from "@/components/ui";
-import { contentService, subscriptionService } from "@/lib/services";
-import type { ContentSummaryDto, PublicPlanDto } from "@/types/api";
+import { contentService, subscriptionService, streamingService } from "@/lib/services";
+import type { ContentSummaryDto, ContinueWatchingItemDto, PublicPlanDto } from "@/types/api";
 
-function getProgressFromId(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash * 31 + id.charCodeAt(i)) % 1000;
-  }
-  return 20 + (hash % 70);
+function progressPercent(progress: number, duration: number): number {
+  if (duration <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((progress / duration) * 100)));
 }
 
 export default function DashboardPage() {
@@ -22,6 +19,7 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [plans, setPlans] = useState<PublicPlanDto[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
+  const [continueItems, setContinueItems] = useState<ContinueWatchingItemDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -32,13 +30,15 @@ export default function DashboardPage() {
       contentService.getCategories(),
       subscriptionService.getPlans(),
       subscriptionService.getSubscription(),
+      streamingService.getContinueWatching(),
     ])
-      .then(([items, cats, planList, subscription]) => {
+      .then(([items, cats, planList, subscription, continueList]) => {
         if (!active) return;
         setContentItems(items);
         setCategories(cats);
         setPlans(planList);
         setPlanId(subscription.planId ?? null);
+        setContinueItems(Array.isArray(continueList) ? continueList : []);
       })
       .catch(() => {
         if (!active) return;
@@ -46,6 +46,7 @@ export default function DashboardPage() {
         setCategories([]);
         setPlans([]);
         setPlanId(null);
+        setContinueItems([]);
       })
       .finally(() => {
         if (!active) return;
@@ -63,7 +64,6 @@ export default function DashboardPage() {
   const categoryCount = categories.filter(
     (category) => category.toLowerCase() !== "all",
   ).length;
-  const continueItems: ContentSummaryDto[] = [];
   const exploreTags = categories
     .filter((category) => category.toLowerCase() !== "all")
     .slice(0, 4);
@@ -171,30 +171,39 @@ export default function DashboardPage() {
           </div>
           <div className="mt-6 space-y-4">
             {continueItems.length > 0 ? (
-              continueItems.map((item) => {
-                const progress = getProgressFromId(item.id);
+              continueItems.slice(0, 5).map((item) => {
+                const percent = progressPercent(item.progress, item.duration);
+                const watchUrl = `/watch/${item.contentId}?episodeId=${encodeURIComponent(item.episodeId)}`;
                 return (
                   <div
-                    key={item.id}
+                    key={`${item.contentId}-${item.episodeId}`}
                     className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
                   >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {item.title}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
+                          {item.contentTitle}
                         </p>
-                        <p className="text-xs text-neutral-400">
-                          {item.category ?? "In progress"}
+                        <p className="text-xs text-neutral-400 truncate">
+                          {item.episodeTitle !== item.contentTitle
+                            ? item.episodeTitle
+                            : item.type}
                         </p>
                       </div>
-                      <Button type="button" size="sm" variant="outline">
-                        Resume
-                      </Button>
+                      <Link
+                        href={watchUrl}
+                        className="shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button type="button" size="sm" variant="outline">
+                          Resume
+                        </Button>
+                      </Link>
                     </div>
                     <div className="mt-3 h-1.5 rounded-full bg-neutral-800">
                       <div
                         className="h-1.5 rounded-full bg-accent"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: `${percent}%` }}
                       />
                     </div>
                   </div>

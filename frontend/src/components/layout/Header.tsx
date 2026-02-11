@@ -21,6 +21,7 @@ function NavContent({
   logout,
   onLinkClick,
   variant = "desktop",
+  isWatchPage = false,
 }: {
   dashboardHref: string;
   isAuthenticated: boolean;
@@ -30,6 +31,7 @@ function NavContent({
   logout: () => void;
   onLinkClick?: () => void;
   variant?: "desktop" | "mobile";
+  isWatchPage?: boolean;
 }) {
   const isMobile = variant === "mobile";
   const linkClass = isMobile
@@ -46,7 +48,7 @@ function NavContent({
       <Link href="/subscription" className={linkClass} onClick={onLinkClick}>
         Plans
       </Link>
-      {isAuthenticated && !isSubscribed && !isAdmin && (
+      {isAuthenticated && !isSubscribed && !isAdmin && !isWatchPage && (
         <Link href="/subscription" className={pillClass} onClick={onLinkClick}>
           Upgrade
         </Link>
@@ -109,6 +111,7 @@ function NavContent({
 export function Header() {
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const isWatchPage = pathname?.startsWith("/watch");
   const { user, isAuthenticated, isSubscribed, isAdmin, logout } = useAuth();
   const [loginOrigin, setLoginOriginState] = useState<
     "admin" | "customer" | null
@@ -197,6 +200,7 @@ export function Header() {
             isAdmin={isAdmin}
             user={user}
             logout={logout}
+            isWatchPage={isWatchPage}
           />
         </nav>
         {/* Mobile menu button */}
@@ -271,6 +275,7 @@ export function Header() {
             logout={logout}
             onLinkClick={() => setMobileMenuOpen(false)}
             variant="mobile"
+            isWatchPage={isWatchPage}
           />
         </nav>
       </div>

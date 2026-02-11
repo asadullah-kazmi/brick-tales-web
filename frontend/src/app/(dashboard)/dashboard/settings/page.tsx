@@ -531,35 +531,6 @@ export default function SettingsPage() {
                 value={passwordConfirm}
                 onChange={(event) => setPasswordConfirm(event.target.value)}
               />
-              <div className="sm:col-span-2 rounded-xl border border-neutral-700/70 bg-neutral-950/60 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      Two-factor authentication
-                    </p>
-                    <p className="mt-1 text-xs text-neutral-400">
-                      Add a second layer of security when you sign in.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-full border border-neutral-600 px-4 py-1 text-xs font-semibold text-neutral-200 hover:border-accent hover:text-accent"
-                    onClick={async () => {
-                      if (!preferences) return;
-                      try {
-                        const updated = await accountService.updatePreferences({
-                          twoFactorEnabled: !preferences.twoFactorEnabled,
-                        });
-                        setPreferences(updated);
-                      } catch (err) {
-                        setSettingsError(getApiErrorMessage(err));
-                      }
-                    }}
-                  >
-                    {preferences?.twoFactorEnabled ? "Disable" : "Enable"}
-                  </button>
-                </div>
-              </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button type="button" onClick={handleChangePassword}>
