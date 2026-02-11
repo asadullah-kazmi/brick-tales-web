@@ -14,6 +14,7 @@ import type { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AdminService } from './admin.service';
 import type { OfflineAnalyticsDto } from './admin.service';
+import { UsersService } from '../users/users.service';
 import type { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import type { AdminUserDto } from './dto/admin-user.dto';
 import type { AdminContentItemDto } from './dto/admin-content.dto';
@@ -93,6 +94,7 @@ export class AdminController {
     private readonly r2Service: R2Service,
     private readonly siteService: SiteService,
     private readonly transcodeService: TranscodeService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -210,6 +212,19 @@ export class AdminController {
   ): Promise<AdminUserDto> {
     ensureAdmin(user);
     return this.adminService.revokeAdminAccess(id, user.id);
+  }
+
+  /**
+   * Export a user's account data (profile, devices, subscriptions) for admin download.
+   * Same shape as GET /users/export but for the specified user.
+   */
+  @Get('users/:id/export')
+  async exportUserAccountData(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+  ) {
+    ensureAdmin(user);
+    return this.usersService.exportAccountData(id);
   }
 
   /**

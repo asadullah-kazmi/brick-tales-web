@@ -34,6 +34,7 @@ import type {
   SupportRequestsResponseDto,
   UpdateSupportRequestDto,
 } from "@/types/api";
+import type { AccountExportDto } from "@/types/api";
 
 /** Dashboard stats from GET /admin/stats */
 export interface DashboardStatsDto {
@@ -161,6 +162,16 @@ export const adminService = {
   async revokeAdminAccess(id: string): Promise<AdminUserDto> {
     return withAuthRetry((headers) =>
       del<AdminUserDto>(`admin/users/${id}/access`, { headers }),
+    );
+  },
+
+  /**
+   * Export a user's account data (profile, devices, subscriptions) for admin download.
+   * Same shape as the customer "Download data" in settings.
+   */
+  async exportUserAccountData(userId: string): Promise<AccountExportDto> {
+    return withAuthRetry((headers) =>
+      get<AccountExportDto>(`admin/users/${userId}/export`, { headers }),
     );
   },
 

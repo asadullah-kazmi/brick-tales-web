@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { adminService } from "@/lib/services";
 import type { AdminUserDto } from "@/types/api";
+import type { AccountExportDto } from "@/types/api";
 import { Loader, Button } from "@/components/ui";
 
 function formatCreatedAt(iso: string): string {
@@ -17,12 +18,115 @@ function formatCreatedAt(iso: string): string {
   }
 }
 
+function buildAccountExportHtml(res: AccountExportDto): string {
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const formatDate = (value?: string) => {
+    if (!value) return "--";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "--" : date.toLocaleString();
+  };
+
+  const profileHtml = `
+    <h2>Profile</h2>
+    <table>
+      <tr><th>Name</th><td>${escapeHtml(res.user.name ?? "")}</td></tr>
+      <tr><th>Email</th><td>${escapeHtml(res.user.email)}</td></tr>
+      <tr><th>Phone</th><td>${escapeHtml(res.user.phone ?? "")}</td></tr>
+      <tr><th>Bio</th><td>${escapeHtml(res.user.bio ?? "")}</td></tr>
+      <tr><th>Member since</th><td>${escapeHtml(formatDate(res.user.createdAt))}</td></tr>
+    </table>
+  `;
+
+  const devicesRows = res.devices.length
+    ? res.devices
+        .map(
+          (device) => `
+      <tr>
+        <td>${escapeHtml(device.deviceIdentifier)}</td>
+        <td>${escapeHtml(device.platform)}</td>
+        <td>${escapeHtml(formatDate(device.lastActiveAt))}</td>
+      </tr>
+    `,
+        )
+        .join("")
+    : `<tr><td colspan="3">No devices registered.</td></tr>`;
+
+  const devicesHtml = `
+    <h2>Devices</h2>
+    <table>
+      <tr><th>Device</th><th>Platform</th><th>Last active</th></tr>
+      ${devicesRows}
+    </table>
+  `;
+
+  const subscriptionRows = res.subscriptions.length
+    ? res.subscriptions
+        .map(
+          (sub) => `
+      <tr>
+        <td>${escapeHtml(sub.planId)}</td>
+        <td>${escapeHtml(sub.status)}</td>
+        <td>${escapeHtml(formatDate(sub.startDate))}</td>
+        <td>${escapeHtml(formatDate(sub.endDate))}</td>
+      </tr>
+    `,
+        )
+        .join("")
+    : `<tr><td colspan="4">No subscriptions found.</td></tr>`;
+
+  const subscriptionsHtml = `
+    <h2>Subscriptions</h2>
+    <table>
+      <tr><th>Plan</th><th>Status</th><th>Start date</th><th>End date</th></tr>
+      ${subscriptionRows}
+    </table>
+  `;
+
+  return `
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>Account data export</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
+          h1 { margin-bottom: 8px; }
+          h2 { margin-top: 24px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          th, td { text-align: left; border-bottom: 1px solid #e5e7eb; padding: 8px; }
+          th { background: #f3f4f6; }
+          .meta { color: #6b7280; font-size: 0.9rem; }
+        </style>
+      </head>
+      <body>
+        <h1>Account data export</h1>
+        <p class="meta">Generated on ${escapeHtml(new Date().toLocaleString())}</p>
+        ${profileHtml}
+        ${devicesHtml}
+        ${subscriptionsHtml}
+      </body>
+    </html>
+  `;
+}
+
+function sanitizeFilename(email: string): string {
+  return email.replace(/[^a-zA-Z0-9._@-]/g, "_").slice(0, 80) || "user";
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const limit = 20;
 
   useEffect(() => {
@@ -54,6 +158,26 @@ export default function AdminUsersPage() {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
+
+  const handleDownloadData = useCallback(
+    async (user: AdminUserDto) => {
+      setDownloadingId(user.id);
+      try {
+        const res = await adminService.exportUserAccountData(user.id);
+        const html = buildAccountExportHtml(res);
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `account-data-${sanitizeFilename(user.email)}.html`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } finally {
+        setDownloadingId(null);
+      }
+    },
+    [],
+  );
 
   return (
     <>
@@ -105,6 +229,9 @@ export default function AdminUsersPage() {
                     <th className="px-4 py-3 font-medium text-neutral-300">
                       Created
                     </th>
+                    <th className="px-4 py-3 font-medium text-neutral-300">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -135,6 +262,19 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-4 py-3 text-neutral-400">
                         {formatCreatedAt(user.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={downloadingId === user.id}
+                          onClick={() => void handleDownloadData(user)}
+                        >
+                          {downloadingId === user.id
+                            ? "Downloading…"
+                            : "Download data"}
+                        </Button>
                       </td>
                     </tr>
                   ))}

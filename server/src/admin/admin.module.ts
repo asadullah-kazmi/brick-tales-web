@@ -5,11 +5,20 @@ import { SiteModule } from '../site/site.module';
 import { AuthModule } from '../auth/auth.module';
 import { MailModule } from '../mail/mail.module';
 import { StreamingModule } from '../streaming/streaming.module';
+import { UsersModule } from '../users/users.module';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
 @Module({
-  imports: [PrismaModule, StorageModule, SiteModule, AuthModule, MailModule, StreamingModule],
+  imports: [
+    PrismaModule,
+    StorageModule,
+    SiteModule,
+    AuthModule,
+    MailModule,
+    StreamingModule,
+    UsersModule,
+  ],
   controllers: [AdminController],
   providers: [AdminService],
   exports: [AdminService],
