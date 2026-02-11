@@ -22,6 +22,21 @@ export class AppController {
   }
 
   /**
+   * Health check endpoint for Railway/Docker health checks.
+   */
+  @Public()
+  @Get('health')
+  health() {
+    return { ok: true, status: 'healthy', timestamp: new Date().toISOString() };
+  }
+
+  @Public()
+  @Get('api/health')
+  apiHealth() {
+    return { ok: true, status: 'healthy', timestamp: new Date().toISOString() };
+  }
+
+  /**
    * Health check for SitePage table availability.
    */
   @Public()
