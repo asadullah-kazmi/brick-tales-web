@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAdminContent, useAuth } from "@/contexts";
+import { adminService } from "@/lib/services";
 import { Button, Loader } from "@/components/ui";
 import { formatDuration } from "@/lib/video-utils";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,10 @@ export default function AdminContentPage() {
   const { user } = useAuth();
   const { items, loading, error, publishContent, refresh } = useAdminContent();
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const isReadOnly = user?.role === "CUSTOMER_SUPPORT";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
   async function handleTogglePublish(id: string, current: boolean) {
     setTogglingId(id);
@@ -33,6 +37,24 @@ export default function AdminContentPage() {
       await publishContent(id, !current);
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  async function handleDelete(id: string, title: string) {
+    if (!isSuperAdmin) return;
+    const confirmed = window.confirm(
+      `Delete "${title}"? This will permanently remove the content and all its seasons and episodes. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    setDeleteError(null);
+    setDeletingId(id);
+    try {
+      await adminService.deleteContent(id);
+      await refresh();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete content.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -92,7 +114,13 @@ export default function AdminContentPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-neutral-700/50 bg-neutral-900/50">
+        <div>
+          {deleteError && (
+            <div className="mb-4 rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3 text-sm text-red-300">
+              {deleteError}
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border border-neutral-700/50 bg-neutral-900/50">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
@@ -115,7 +143,7 @@ export default function AdminContentPage() {
                   <th className="px-4 py-3 font-medium text-neutral-300">
                     Status
                   </th>
-                  <th className="px-4 py-3 font-medium text-neutral-300">
+                  <th className="min-w-[240px] px-4 py-3 font-medium text-neutral-300">
                     Actions
                   </th>
                 </tr>
@@ -151,8 +179,8 @@ export default function AdminContentPage() {
                         {item.isPublished ? "Published" : "Unpublished"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex flex-nowrap items-center gap-2">
                         <Button
                           type="button"
                           variant="outline"
@@ -175,6 +203,19 @@ export default function AdminContentPage() {
                         >
                           {item.isPublished ? "Unpublish" : "Publish"}
                         </Button>
+                        {isSuperAdmin && (
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            disabled={deletingId === item.id}
+                            onClick={() =>
+                              void handleDelete(item.id, item.title)
+                            }
+                          >
+                            {deletingId === item.id ? "Deleting…" : "Delete"}
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -182,6 +223,7 @@ export default function AdminContentPage() {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
     </>

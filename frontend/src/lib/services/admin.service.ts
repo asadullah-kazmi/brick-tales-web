@@ -292,6 +292,12 @@ export const adminService = {
     }
   },
 
+  async deleteContent(id: string): Promise<{ success: boolean }> {
+    return withAuthRetry((headers) =>
+      del<{ success: boolean }>(`admin/content/${id}`, { headers }),
+    );
+  },
+
   async presignUpload(
     body: PresignUploadRequestDto,
   ): Promise<PresignUploadResponseDto> {

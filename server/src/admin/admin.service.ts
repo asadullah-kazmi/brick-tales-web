@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
@@ -557,6 +557,19 @@ export class AdminService {
       include: { category: true },
     });
     return toAdminContentItemDto(updated);
+  }
+
+  async deleteContent(id: string): Promise<void> {
+    const content = await (this.prisma as any).content.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!content) {
+      throw new NotFoundException('Content not found');
+    }
+    await (this.prisma as any).content.delete({
+      where: { id },
+    });
   }
 
   async updateContent(id: string, dto: UpdateAdminContentDto): Promise<AdminContentItemDto | null> {
