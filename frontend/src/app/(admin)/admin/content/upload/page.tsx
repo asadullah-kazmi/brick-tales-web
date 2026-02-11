@@ -11,6 +11,7 @@ import {
   CardTitle,
   Input,
 } from "@/components/ui";
+import { getApiErrorUserMessage } from "@/lib/api-client";
 import { adminService } from "@/lib/services";
 import type { AdminCategoryDto, ContentType } from "@/types/api";
 import { useAuth } from "@/contexts";
@@ -198,15 +199,16 @@ export default function AdminUploadPage() {
         setError("Episode duration must be MM:SS or HH:MM:SS.");
         return false;
       }
-      if (!episodeVideoFile) {
+      const episodeVideo = episodeVideoFile ?? videoFile;
+      if (!episodeVideo) {
         setError("Please select an episode video file.");
         return false;
       }
-      if (!VIDEO_TYPES.includes(episodeVideoFile.type)) {
+      if (!VIDEO_TYPES.includes(episodeVideo.type)) {
         setError("Episode video must be MP4, WebM, or MKV.");
         return false;
       }
-      if (episodeVideoFile.size > MAX_VIDEO_BYTES) {
+      if (episodeVideo.size > MAX_VIDEO_BYTES) {
         setError(`Episode video exceeds ${formatBytes(MAX_VIDEO_BYTES)}.`);
         return false;
       }
@@ -229,7 +231,9 @@ export default function AdminUploadPage() {
     if (!thumbnailFile) return;
     setSubmitting(true);
     try {
-      const activeVideoFile = isEpisodic ? episodeVideoFile : videoFile;
+      const activeVideoFile = isEpisodic
+        ? (episodeVideoFile ?? videoFile)
+        : videoFile;
       if (!activeVideoFile) return;
 
       const videoPresign = await adminService.presignUpload({
@@ -312,7 +316,17 @@ export default function AdminUploadPage() {
       setEpisodeVideoFile(null);
       setThumbnailFile(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.");
+      const message = getApiErrorUserMessage(err);
+      const isNetwork =
+        message.includes("Network") ||
+        (err instanceof Error &&
+          (err.message === "Failed to fetch" ||
+            err.message === "Network request failed"));
+      setError(
+        isNetwork
+          ? "Network error. Check that the backend is running and NEXT_PUBLIC_API_BASE_URL points to it (e.g. http://localhost:5000). If the backend responded but upload failed, configure CORS on your storage (R2/S3) to allow PUT from this site."
+          : message,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -547,11 +561,15 @@ export default function AdminUploadPage() {
                 id="video-file"
                 type="file"
                 accept={VIDEO_TYPES.join(",")}
-                onChange={(e) =>
-                  isEpisodic
-                    ? setEpisodeVideoFile(e.target.files?.[0] ?? null)
-                    : setVideoFile(e.target.files?.[0] ?? null)
-                }
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (isEpisodic) {
+                    setEpisodeVideoFile(file);
+                  } else {
+                    setVideoFile(file);
+                  }
+                  if (file) setError(null);
+                }}
                 className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
               />
               <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
@@ -572,7 +590,11 @@ export default function AdminUploadPage() {
                 id="thumbnail-file"
                 type="file"
                 accept={THUMBNAIL_TYPES.join(",")}
-                onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setThumbnailFile(file);
+                  if (file) setError(null);
+                }}
                 className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
               />
               <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">

@@ -92,22 +92,26 @@ export class ContentService {
           }))
       : undefined;
 
-    const includeEpisodes = !content.seasons.length;
+    // Always include episodes if they exist, regardless of whether seasons exist.
+    // Episodes can belong to seasons (via seasonId) or be standalone.
     const episodes: EpisodeResponseDto[] | undefined =
-      includeEpisodes && content.episodes.length
-        ? content.episodes
-            .sort(
-              (a: { episodeNumber: number }, b: { episodeNumber: number }) =>
-                a.episodeNumber - b.episodeNumber,
-            )
-            .map((episode: any) => ({
-              id: episode.id,
-              seasonId: episode.seasonId ?? undefined,
-              episodeNumber: episode.episodeNumber,
-              title: episode.title,
-              description: episode.description ?? undefined,
-              duration: formatDurationSeconds(episode.duration),
-            }))
+      content.episodes.length
+        ? await Promise.all(
+            content.episodes
+              .sort(
+                (a: { episodeNumber: number }, b: { episodeNumber: number }) =>
+                  a.episodeNumber - b.episodeNumber,
+              )
+              .map(async (episode: any) => ({
+                id: episode.id,
+                seasonId: episode.seasonId ?? undefined,
+                episodeNumber: episode.episodeNumber,
+                title: episode.title,
+                description: episode.description ?? undefined,
+                duration: formatDurationSeconds(episode.duration),
+                thumbnailUrl: await this.resolveThumbnailUrl(episode.thumbnailUrl),
+              })),
+          )
         : undefined;
 
     return {
@@ -174,14 +178,17 @@ export class ContentService {
       orderBy: { episodeNumber: 'asc' },
     });
 
-    return episodes.map((episode: any) => ({
-      id: episode.id,
-      seasonId: episode.seasonId ?? undefined,
-      episodeNumber: episode.episodeNumber,
-      title: episode.title,
-      description: episode.description ?? undefined,
-      duration: formatDurationSeconds(episode.duration),
-    }));
+    return Promise.all(
+      episodes.map(async (episode: any) => ({
+        id: episode.id,
+        seasonId: episode.seasonId ?? undefined,
+        episodeNumber: episode.episodeNumber,
+        title: episode.title,
+        description: episode.description ?? undefined,
+        duration: formatDurationSeconds(episode.duration),
+        thumbnailUrl: await this.resolveThumbnailUrl(episode.thumbnailUrl),
+      })),
+    );
   }
 
   async getCategories(): Promise<CategoriesResponseDto> {

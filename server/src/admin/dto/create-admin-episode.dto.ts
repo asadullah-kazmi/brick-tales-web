@@ -32,4 +32,8 @@ export class CreateAdminEpisodeDto {
   @IsOptional()
   @IsString()
   hlsKey?: string;
+
+  @IsOptional()
+  @IsString()
+  thumbnailKey?: string;
 }

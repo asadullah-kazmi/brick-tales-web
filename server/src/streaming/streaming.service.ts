@@ -3,6 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { R2Service } from '../storage/r2.service';
 import type { ContinueWatchingItemDto } from './dto/continue-watching-item.dto';
 
+const ADMIN_ROLES = new Set([
+  'admin',
+  'SUPER_ADMIN',
+  'CONTENT_MANAGER',
+  'CUSTOMER_SUPPORT',
+]);
+
 function inferPlaybackType(
   hlsUrl: string | null | undefined,
   videoUrl: string | null | undefined,
@@ -57,16 +64,23 @@ export class StreamingService {
     }
   }
 
-  /** Return playback metadata for an authenticated user with active subscription. */
+  /** Return playback metadata for an authenticated user with active subscription (admins bypass subscription). */
   async getPlaybackMetadata(
     episodeId: string,
     userId: string,
   ): Promise<{ streamKey: string; type?: 'hls' | 'mp4' }> {
-    const hasSubscription = await this.hasActiveSubscription(userId);
-    if (!hasSubscription) {
-      throw new ForbiddenException(
-        'Active subscription required to stream. Please subscribe to watch.',
-      );
+    const user = await (this.prisma as any).user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    const isAdmin = user?.role && ADMIN_ROLES.has(user.role);
+    if (!isAdmin) {
+      const hasSubscription = await this.hasActiveSubscription(userId);
+      if (!hasSubscription) {
+        throw new ForbiddenException(
+          'Active subscription required to stream. Please subscribe to watch.',
+        );
+      }
     }
 
     const episode = await (this.prisma as any).episode.findUnique({

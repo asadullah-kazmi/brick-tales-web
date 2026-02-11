@@ -52,6 +52,22 @@ function toDisplayContent(dto: ContentDetailDto): DisplayContent {
 }
 
 function pickPrimaryEpisode(content: ContentDetailDto): PlayableEpisode | null {
+  // If seasons exist, select the first episode from the first season
+  if (content.seasons && content.seasons.length > 0 && content.episodes) {
+    const firstSeason = content.seasons[0];
+    const firstSeasonEpisodes = content.episodes
+      .filter((e) => e.seasonId === firstSeason.id)
+      .sort((a, b) => a.episodeNumber - b.episodeNumber);
+    if (firstSeasonEpisodes.length > 0) {
+      const first = firstSeasonEpisodes[0];
+      return {
+        id: first.id,
+        title: first.title,
+        duration: first.duration,
+      };
+    }
+  }
+  // Otherwise, use the first episode from the episodes array
   const firstEpisode = content.episodes?.[0];
   if (firstEpisode) {
     return {
@@ -60,6 +76,7 @@ function pickPrimaryEpisode(content: ContentDetailDto): PlayableEpisode | null {
       duration: firstEpisode.duration,
     };
   }
+  // Fallback to trailer if available
   if (content.trailer) {
     return {
       id: content.trailer.id,
@@ -86,7 +103,7 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   const [usingDevStream, setUsingDevStream] = useState(false);
   /** Set when playback permission is denied (401/403) or unavailable. */
   const [playbackError, setPlaybackError] = useState<
-    "unauthorized" | "forbidden" | "unavailable" | null
+    "unauthorized" | "forbidden" | "unavailable" | "config_required" | null
   >(null);
 
   useEffect(() => {
@@ -182,15 +199,21 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
         }
       } catch (err) {
         if (!cancelled) {
-          if (process.env.NODE_ENV !== "production") {
-            //console.error("[Watch] playback error", err);
-          }
-          if (process.env.NODE_ENV !== "production") {
+          const isWorkerConfigMissing =
+            err instanceof ApiError &&
+            err.status === 500 &&
+            (err.message?.includes("R2 worker") ||
+              err.message?.includes("worker base URL"));
+          if (isWorkerConfigMissing) {
+            setStreamUrl(null);
+            setPlaybackType(undefined);
+            setPlaybackError("config_required");
+          } else if (process.env.NODE_ENV !== "production" && !(err instanceof ApiError)) {
             setStreamUrl(DEFAULT_HLS_TEST_STREAM);
             setUsingDevStream(true);
             setPlaybackError(null);
             setPlaybackType("hls");
-          } else {
+          } else if (process.env.NODE_ENV === "production" || err instanceof ApiError) {
             setStreamUrl(null);
             setPlaybackType(undefined);
             if (err instanceof ApiError) {
@@ -253,14 +276,18 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
             ? "Sign in to watch"
             : playbackError === "forbidden"
               ? "Active subscription required"
-              : "Playback not available"}
+              : playbackError === "config_required"
+                ? "Video playback not configured"
+                : "Playback not available"}
         </h2>
-        <p className="text-center text-neutral-600 dark:text-neutral-400">
+        <p className="text-center text-neutral-600 dark:text-neutral-400 max-w-md">
           {playbackError === "unauthorized"
             ? "You need to sign in to stream this video."
             : playbackError === "forbidden"
               ? "An active subscription is required to watch. Subscribe to get access."
-              : "This video cannot be played right now. Try again later."}
+              : playbackError === "config_required"
+                ? "Set NEXT_PUBLIC_R2_WORKER_BASE_URL in your frontend .env to the base URL of your R2 media worker (no trailing slash). The frontend loads video directly from that worker using the stream key returned by the backend."
+                : "This video cannot be played right now. Try again later."}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           {playbackError === "unauthorized" && (
@@ -462,6 +489,187 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
             )}
           </div>
         </section>
+
+        {/* Episodes & Seasons List */}
+        {content &&
+        (content.type === "SERIES" || content.type === "ANIMATION") &&
+        ((content.seasons?.length ?? 0) > 0 || (content.episodes?.length ?? 0) > 0) ? (
+          <section
+            className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800"
+            aria-labelledby="episodes-heading"
+          >
+            <h2
+              id="episodes-heading"
+              className="mb-4 text-xl font-semibold text-neutral-900 dark:text-white"
+            >
+              Episodes & Seasons
+            </h2>
+            {content.seasons && content.seasons.length > 0 ? (
+              <div className="space-y-6">
+                {content.seasons
+                  .sort((a, b) => a.seasonNumber - b.seasonNumber)
+                  .map((season) => {
+                    const seasonEpisodes =
+                      content.episodes?.filter(
+                        (e) => e.seasonId === season.id,
+                      ) ?? [];
+                    return (
+                      <div key={season.id}>
+                        <h3 className="mb-3 text-lg font-medium text-neutral-800 dark:text-neutral-200">
+                          {season.title || `Season ${season.seasonNumber}`}
+                        </h3>
+                        {seasonEpisodes.length > 0 ? (
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            {seasonEpisodes
+                              .sort((a, b) => a.episodeNumber - b.episodeNumber)
+                              .map((episode) => {
+                                const isActive = primaryEpisode?.id === episode.id;
+                                return (
+                                  <Link
+                                    key={episode.id}
+                                    href={`/watch/${content.id}?episodeId=${episode.id}`}
+                                    className={`group relative overflow-hidden rounded-lg border transition-colors ${
+                                      isActive
+                                        ? "border-accent bg-accent/10 dark:bg-accent/20"
+                                        : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
+                                    }`}
+                                  >
+                                    <div className="flex flex-col">
+                                      <div className="relative aspect-video w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
+                                        {episode.thumbnailUrl ? (
+                                          <img
+                                            src={episode.thumbnailUrl}
+                                            alt={`${episode.title} thumbnail`}
+                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                          />
+                                        ) : (
+                                          <div className="flex h-full w-full items-center justify-center text-neutral-400">
+                                            <span className="text-2xl">▶</span>
+                                          </div>
+                                        )}
+                                        {isActive && (
+                                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                            <span
+                                              className="text-2xl font-medium text-white"
+                                              aria-label="Currently playing"
+                                            >
+                                              ▶
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="p-3">
+                                        <p
+                                          className={`font-medium ${
+                                            isActive
+                                              ? "text-accent dark:text-accent"
+                                              : "text-neutral-900 dark:text-neutral-100"
+                                          }`}
+                                        >
+                                          Episode {episode.episodeNumber}
+                                        </p>
+                                        <p
+                                          className={`mt-1 text-sm line-clamp-2 ${
+                                            isActive
+                                              ? "text-neutral-700 dark:text-neutral-300"
+                                              : "text-neutral-600 dark:text-neutral-400"
+                                          }`}
+                                        >
+                                          {episode.title}
+                                        </p>
+                                        {episode.duration && (
+                                          <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-500">
+                                            {formatDuration(episode.duration)}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </Link>
+                                );
+                              })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                            No episodes available for this season.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : content.episodes && content.episodes.length > 0 ? (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {content.episodes
+                  .sort((a, b) => a.episodeNumber - b.episodeNumber)
+                  .map((episode) => {
+                    const isActive = primaryEpisode?.id === episode.id;
+                    return (
+                      <Link
+                        key={episode.id}
+                        href={`/watch/${content.id}?episodeId=${episode.id}`}
+                        className={`group relative overflow-hidden rounded-lg border transition-colors ${
+                          isActive
+                            ? "border-accent bg-accent/10 dark:bg-accent/20"
+                            : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <div className="relative aspect-video w-full overflow-hidden bg-neutral-200 dark:bg-neutral-800">
+                            {episode.thumbnailUrl ? (
+                              <img
+                                src={episode.thumbnailUrl}
+                                alt={`${episode.title} thumbnail`}
+                                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-neutral-400">
+                                <span className="text-2xl">▶</span>
+                              </div>
+                            )}
+                            {isActive && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <span
+                                  className="text-2xl font-medium text-white"
+                                  aria-label="Currently playing"
+                                >
+                                  ▶
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3">
+                            <p
+                              className={`font-medium ${
+                                isActive
+                                  ? "text-accent dark:text-accent"
+                                  : "text-neutral-900 dark:text-neutral-100"
+                              }`}
+                            >
+                              Episode {episode.episodeNumber}
+                            </p>
+                            <p
+                              className={`mt-1 text-sm line-clamp-2 ${
+                                isActive
+                                  ? "text-neutral-700 dark:text-neutral-300"
+                                  : "text-neutral-600 dark:text-neutral-400"
+                              }`}
+                            >
+                              {episode.title}
+                            </p>
+                            {episode.duration && (
+                              <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-500">
+                                {formatDuration(episode.duration)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-500">
           HLS adaptive streaming · Use the control bar for play/pause, volume,

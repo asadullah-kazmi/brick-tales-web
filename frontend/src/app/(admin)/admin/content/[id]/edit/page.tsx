@@ -18,6 +18,7 @@ import type { AdminCategoryDto, ContentType } from "@/types/api";
 
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/mkv"];
 const MAX_VIDEO_BYTES = 20 * 1024 * 1024 * 1024;
+const THUMBNAIL_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 function isValidDuration(value: string): boolean {
   return /^\d{1,2}:\d{2}(?::\d{2})?$/.test(value.trim());
@@ -61,7 +62,16 @@ export default function AdminEditVideoPage() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [seasons, setSeasons] = useState<
-    { id: string; seasonNumber: number; title: string }[]
+    { id: string; seasonNumber: number; title: string; episodeCount: number }[]
+  >([]);
+  const [episodes, setEpisodes] = useState<
+    {
+      id: string;
+      seasonId?: string;
+      episodeNumber: number;
+      title: string;
+      duration: string;
+    }[]
   >([]);
 
   const [title, setTitle] = useState("");
@@ -80,6 +90,12 @@ export default function AdminEditVideoPage() {
   const [episodeTitle, setEpisodeTitle] = useState("");
   const [episodeDuration, setEpisodeDuration] = useState("");
   const [episodeFile, setEpisodeFile] = useState<File | null>(null);
+  const [episodeThumbnailFile, setEpisodeThumbnailFile] = useState<File | null>(
+    null,
+  );
+  const [episodeThumbnailPreview, setEpisodeThumbnailPreview] = useState<
+    string | null
+  >(null);
   const [episodeSubmitting, setEpisodeSubmitting] = useState(false);
   const [episodeError, setEpisodeError] = useState<string | null>(null);
   const [episodeSuccess, setEpisodeSuccess] = useState<string | null>(null);
@@ -110,8 +126,10 @@ export default function AdminEditVideoPage() {
             id: season.id,
             seasonNumber: season.seasonNumber,
             title: season.title,
+            episodeCount: season.episodeCount ?? 0,
           })) ?? [],
         );
+        setEpisodes(item.episodes ?? []);
         if (item.seasons && item.seasons.length > 0) {
           setSeasonSelection(item.seasons[0].id);
           setSeasonNumber(String(item.seasons[0].seasonNumber));
@@ -132,6 +150,16 @@ export default function AdminEditVideoPage() {
       active = false;
     };
   }, [videoId]);
+
+  useEffect(() => {
+    if (episodeThumbnailFile) {
+      const url = URL.createObjectURL(episodeThumbnailFile);
+      setEpisodeThumbnailPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setEpisodeThumbnailPreview(null);
+    }
+  }, [episodeThumbnailFile]);
 
   useEffect(() => {
     let active = true;
@@ -252,7 +280,13 @@ export default function AdminEditVideoPage() {
       setEpisodeError(`Episode video exceeds ${formatBytes(MAX_VIDEO_BYTES)}.`);
       return;
     }
-
+    if (
+      episodeThumbnailFile &&
+      !THUMBNAIL_TYPES.includes(episodeThumbnailFile.type)
+    ) {
+      setEpisodeError("Episode thumbnail must be PNG, JPG, or WebP.");
+      return;
+    }
     setEpisodeSubmitting(true);
     try {
       const videoPresign = await adminService.presignUpload({
@@ -270,6 +304,27 @@ export default function AdminEditVideoPage() {
       if (!uploadRes.ok) {
         const message = await uploadRes.text();
         throw new Error(message || "Upload failed");
+      }
+
+      let thumbnailKey: string | undefined;
+      if (episodeThumbnailFile) {
+        const thumbnailPresign = await adminService.presignUpload({
+          kind: "thumbnail",
+          fileName: episodeThumbnailFile.name,
+          contentType: episodeThumbnailFile.type,
+          sizeBytes: episodeThumbnailFile.size,
+        });
+
+        const thumbnailUploadRes = await fetch(thumbnailPresign.url, {
+          method: "PUT",
+          headers: { "Content-Type": episodeThumbnailFile.type },
+          body: episodeThumbnailFile,
+        });
+        if (!thumbnailUploadRes.ok) {
+          const message = await thumbnailUploadRes.text();
+          throw new Error(message || "Thumbnail upload failed");
+        }
+        thumbnailKey = thumbnailPresign.key;
       }
 
       let seasonId = seasonSelection;
@@ -290,23 +345,32 @@ export default function AdminEditVideoPage() {
         title: episodeTitle.trim(),
         duration: episodeDuration.trim(),
         videoKey: videoPresign.key,
+        thumbnailKey,
       });
 
       const refreshed = await adminService.getContentItem(videoId);
-      if (refreshed?.seasons) {
-        setSeasons(
-          refreshed.seasons.map((season) => ({
-            id: season.id,
-            seasonNumber: season.seasonNumber,
-            title: season.title,
-          })),
-        );
+      if (refreshed) {
+        if (refreshed.seasons) {
+          setSeasons(
+            refreshed.seasons.map((season) => ({
+              id: season.id,
+              seasonNumber: season.seasonNumber,
+              title: season.title,
+              episodeCount: season.episodeCount ?? 0,
+            })),
+          );
+        }
+        if (refreshed.episodes) {
+          setEpisodes(refreshed.episodes);
+        }
       }
       setEpisodeSuccess("Episode added successfully.");
       setEpisodeTitle("");
       setEpisodeNumber("1");
       setEpisodeDuration("");
       setEpisodeFile(null);
+      setEpisodeThumbnailFile(null);
+      setEpisodeThumbnailPreview(null);
     } catch (err) {
       setEpisodeError(
         err instanceof Error ? err.message : "Failed to add episode.",
@@ -646,6 +710,38 @@ export default function AdminEditVideoPage() {
                     MP4, WebM, or MKV. Max {formatBytes(MAX_VIDEO_BYTES)}.
                   </p>
                 </div>
+                <div>
+                  <label
+                    htmlFor="episode-thumbnail-file"
+                    className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                  >
+                    Episode thumbnail (optional)
+                  </label>
+                  <input
+                    id="episode-thumbnail-file"
+                    type="file"
+                    accept={THUMBNAIL_TYPES.join(",")}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      setEpisodeThumbnailFile(file);
+                      setEpisodeError(null);
+                    }}
+                    className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
+                    disabled={isReadOnly || episodeSubmitting}
+                  />
+                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    PNG, JPG, or WebP. Recommended: 16:9 aspect ratio.
+                  </p>
+                  {episodeThumbnailPreview && (
+                    <div className="mt-3">
+                      <img
+                        src={episodeThumbnailPreview}
+                        alt="Episode thumbnail preview"
+                        className="max-h-32 rounded-lg border border-neutral-300 dark:border-neutral-700"
+                      />
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <Button
                     type="submit"
@@ -662,6 +758,8 @@ export default function AdminEditVideoPage() {
                       setEpisodeDuration("");
                       setEpisodeNumber("1");
                       setEpisodeFile(null);
+                      setEpisodeThumbnailFile(null);
+                      setEpisodeThumbnailPreview(null);
                       setEpisodeError(null);
                       setEpisodeSuccess(null);
                     }}
@@ -673,6 +771,105 @@ export default function AdminEditVideoPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Existing Episodes & Seasons */}
+        {(contentType === "SERIES" || contentType === "ANIMATION") &&
+        (seasons.length > 0 || episodes.length > 0) ? (
+          <Card className="max-w-lg">
+            <CardHeader>
+              <CardTitle>Episodes & Seasons</CardTitle>
+              <p className="mt-1 text-sm text-neutral-400">
+                {seasons.length > 0
+                  ? `${seasons.length} season${seasons.length === 1 ? "" : "s"}`
+                  : ""}
+                {seasons.length > 0 && episodes.length > 0 ? " • " : ""}
+                {episodes.length > 0
+                  ? `${episodes.length} episode${episodes.length === 1 ? "" : "s"}`
+                  : ""}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {seasons.length > 0 ? (
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.1em] text-neutral-500">
+                    Seasons
+                  </h3>
+                  <div className="space-y-2">
+                    {seasons
+                      .sort((a, b) => a.seasonNumber - b.seasonNumber)
+                      .map((season) => {
+                        const seasonEpisodes = episodes.filter(
+                          (e) => e.seasonId === season.id,
+                        );
+                        return (
+                          <div
+                            key={season.id}
+                            className="rounded-lg border border-neutral-700/60 bg-neutral-900/60 px-4 py-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-white">
+                                  Season {season.seasonNumber}: {season.title}
+                                </p>
+                                <p className="mt-1 text-xs text-neutral-400">
+                                  {seasonEpisodes.length} episode
+                                  {seasonEpisodes.length === 1 ? "" : "s"}
+                                </p>
+                              </div>
+                            </div>
+                            {seasonEpisodes.length > 0 && (
+                              <div className="mt-3 space-y-1.5 border-t border-neutral-700/60 pt-3">
+                                {seasonEpisodes
+                                  .sort((a, b) => a.episodeNumber - b.episodeNumber)
+                                  .map((ep) => (
+                                    <div
+                                      key={ep.id}
+                                      className="flex items-center justify-between rounded px-2 py-1.5 text-sm text-neutral-300"
+                                    >
+                                      <span>
+                                        E{ep.episodeNumber}: {ep.title}
+                                      </span>
+                                      <span className="text-xs text-neutral-500">
+                                        {ep.duration}
+                                      </span>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              ) : null}
+              {episodes.filter((e) => !e.seasonId).length > 0 ? (
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.1em] text-neutral-500">
+                    Episodes (No Season)
+                  </h3>
+                  <div className="space-y-1.5">
+                    {episodes
+                      .filter((e) => !e.seasonId)
+                      .sort((a, b) => a.episodeNumber - b.episodeNumber)
+                      .map((ep) => (
+                        <div
+                          key={ep.id}
+                          className="flex items-center justify-between rounded-lg border border-neutral-700/60 bg-neutral-900/60 px-4 py-2.5 text-sm"
+                        >
+                          <span className="text-neutral-200">
+                            Episode {ep.episodeNumber}: {ep.title}
+                          </span>
+                          <span className="text-xs text-neutral-400">
+                            {ep.duration}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </>
   );

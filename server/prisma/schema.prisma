@@ -270,6 +270,7 @@ model Episode {
   duration      Int
   videoUrl      String
   hlsUrl        String?
+  thumbnailUrl  String?
   createdAt     DateTime @default(now())
 
   content     Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)

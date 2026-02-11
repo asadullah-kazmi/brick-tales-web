@@ -19,13 +19,13 @@ export function getAppUrl(): string {
   return `https://${trimmed}`;
 }
 
-/** Base URL for backend API (no trailing slash). Used by api-client. */
+/** Base URL for backend API (no trailing slash). Used by api-client. Nest backend has no global /api prefix. */
 export function getApiBaseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_API_BASE_URL ??
     (typeof window !== "undefined"
       ? `${window.location.origin}/api`
-      : "http://localhost:5000/api")
+      : "http://localhost:5000")
   );
 }
 

@@ -84,11 +84,16 @@ export const contentService = {
 
   /**
    * Get all content for browse (for client-side filter/search). Real API: GET /content with high limit.
+   * Pass { cache: 'no-store' } when calling from the server (e.g. browse page) so new content shows immediately.
    */
-  async getContentForBrowse(type?: ContentType): Promise<ContentSummaryDto[]> {
+  async getContentForBrowse(
+    type?: ContentType,
+    options?: { cache?: RequestCache },
+  ): Promise<ContentSummaryDto[]> {
     if (!USE_MOCK_API) {
       const res = await get<ContentListResponseDto>("content", {
         params: { limit: "500", ...(type ? { type } : {}) },
+        ...(options?.cache ? { cache: options.cache } : {}),
       });
       return res.items;
     }

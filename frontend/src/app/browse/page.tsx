@@ -112,7 +112,9 @@ async function getBrowseData(
   newestItems: BrowseItem[];
 }> {
   try {
-    const items = await contentService.getContentForBrowse();
+    const items = await contentService.getContentForBrowse(undefined, {
+      cache: "no-store",
+    });
     const chips = getCategoryChips(items);
     const newestItems = items.slice(0, 3).map(toBrowseItem);
     
@@ -210,6 +212,10 @@ function BrowseRowSection({ row }: { row: BrowseRow }) {
 type BrowsePageProps = {
   searchParams: Promise<{ category?: string; q?: string }>;
 };
+
+/** Always fetch fresh content so newly published items show without manual refresh. */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const { category: categoryParam, q: searchQueryParam } = await searchParams;

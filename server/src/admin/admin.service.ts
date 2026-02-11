@@ -868,6 +868,7 @@ export class AdminService {
         duration: seconds,
         videoUrl: dto.videoKey.trim(),
         hlsUrl: dto.hlsKey?.trim() || null,
+        thumbnailUrl: dto.thumbnailKey?.trim() || null,
       },
     });
   }

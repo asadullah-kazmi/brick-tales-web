@@ -61,6 +61,7 @@ export interface EpisodeResponseDto {
   title: string;
   description?: string;
   duration: string;
+  thumbnailUrl?: string;
 }
 
 export interface ContentTrailerDto {
@@ -139,6 +140,7 @@ export interface CreateAdminEpisodeRequestDto {
   description?: string;
   duration: string;
   videoKey: string;
+  thumbnailKey?: string;
 }
 
 export interface CreateAdminTrailerRequestDto {

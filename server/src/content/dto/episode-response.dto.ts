@@ -5,4 +5,5 @@ export class EpisodeResponseDto {
   title: string;
   description?: string;
   duration: string;
+  thumbnailUrl?: string;
 }
