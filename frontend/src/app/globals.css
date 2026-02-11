@@ -66,3 +66,22 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Custom select dropdown styling to match site color scheme */
+select option {
+  background-color: #0b0b0e !important;
+  color: #f5f7fb !important;
+}
+
+/* Selected option - dark text on light background for readability */
+select option:checked,
+select option[selected] {
+  background-color: #e5e7eb !important;
+  color: #0b0b0e !important;
+  font-weight: 600 !important;
+}
+
+select option:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #f5f7fb !important;
+}

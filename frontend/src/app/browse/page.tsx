@@ -2,6 +2,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { contentService } from "@/lib/services/content.service";
 import type { ContentSummaryDto } from "@/types/api";
+import type { ContentType } from "@/types/api";
+import { BrowsePosterCard, NewlyUploadedBannerCarousel, SearchAndFilter } from "@/components/content";
 
 type BrowseItem = {
   id: string;
@@ -20,19 +22,26 @@ type BrowseRow = {
   accent?: "amber" | "violet" | "cyan" | "rose";
 };
 
-const GRADIENTS = [
-  "from-slate-950 via-slate-900 to-slate-500/40",
-  "from-indigo-950 via-indigo-900 to-slate-400/40",
-  "from-neutral-950 via-neutral-900 to-slate-500/40",
-  "from-zinc-950 via-zinc-900 to-slate-400/40",
-  "from-slate-950 via-slate-900 to-slate-500/40",
+/** Display order and labels for content types (movies, series, documentaries, etc.) */
+const CONTENT_TYPE_ORDER: ContentType[] = [
+  "MOVIE",
+  "SERIES",
+  "DOCUMENTARY",
+  "ANIMATION",
+  "TRAILER",
+  "SHORT",
 ];
 
-const ACCENTS: BrowseRow["accent"][] = ["amber", "violet", "cyan", "rose"];
+const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  MOVIE: "Movies",
+  SERIES: "Series",
+  DOCUMENTARY: "Documentaries",
+  ANIMATION: "Animation",
+  TRAILER: "Trailers",
+  SHORT: "Shorts",
+};
 
-function getGradient(index: number) {
-  return GRADIENTS[index % GRADIENTS.length];
-}
+const ACCENTS: BrowseRow["accent"][] = ["amber", "violet", "cyan", "rose"];
 
 function formatSubtitle(item: ContentSummaryDto): string | undefined {
   const parts: string[] = [];
@@ -59,57 +68,81 @@ function slugifyRowId(value: string): string {
   return slug.length > 0 ? slug : "featured";
 }
 
-function buildRows(
-  items: ContentSummaryDto[],
-  categories: string[],
-): BrowseRow[] {
-  const grouped = new Map<string, ContentSummaryDto[]>();
+/** Group content by type (MOVIE, SERIES, DOCUMENTARY, etc.) and build rows with display labels. */
+function buildRowsByType(items: ContentSummaryDto[]): BrowseRow[] {
+  const grouped = new Map<ContentType, ContentSummaryDto[]>();
   for (const item of items) {
-    const key = item.category?.trim() || "Featured";
-    const existing = grouped.get(key);
+    const type = (item.type?.trim().toUpperCase() || "MOVIE") as ContentType;
+    const existing = grouped.get(type);
     if (existing) existing.push(item);
-    else grouped.set(key, [item]);
+    else grouped.set(type, [item]);
   }
 
-  const orderedCategories = categories.filter(
-    (category) => category.toLowerCase() !== "all",
-  );
-  const rowKeys = [
-    ...orderedCategories.filter((category) => grouped.has(category)),
-    ...Array.from(grouped.keys()).filter(
-      (category) => !orderedCategories.includes(category),
-    ),
-  ];
+  const rowKeys = CONTENT_TYPE_ORDER.filter((type) => grouped.has(type));
 
   return rowKeys
-    .map((category, index) => ({
-      id: slugifyRowId(category),
-      title: category,
-      subtitle:
-        category === "Featured"
-          ? "Fresh picks for you"
-          : `Top picks in ${category}`,
+    .map((type, index) => ({
+      id: slugifyRowId(CONTENT_TYPE_LABELS[type]),
+      title: CONTENT_TYPE_LABELS[type],
+      subtitle: `Top picks in ${CONTENT_TYPE_LABELS[type]}`,
       accent: ACCENTS[index % ACCENTS.length],
-      items: (grouped.get(category) ?? []).map(toBrowseItem),
+      items: (grouped.get(type) ?? []).map(toBrowseItem),
     }))
     .filter((row) => row.items.length > 0);
 }
 
-async function getBrowseData(): Promise<{
+/** Get category chips for filter: All plus categories that have content. */
+function getCategoryChips(items: ContentSummaryDto[]): string[] {
+  const categoriesPresent = new Set<string>();
+  for (const item of items) {
+    if (item.category?.trim()) {
+      categoriesPresent.add(item.category.trim());
+    }
+  }
+  const sortedCategories = Array.from(categoriesPresent).sort();
+  return sortedCategories.length > 0 ? ["All", ...sortedCategories] : ["All"];
+}
+
+async function getBrowseData(
+  selectedCategory?: string | null,
+  searchQuery?: string | null,
+): Promise<{
   rows: BrowseRow[];
   chips: string[];
+  newestItems: BrowseItem[];
 }> {
   try {
-    const [items, categories] = await Promise.all([
-      contentService.getContentForBrowse(),
-      contentService.getCategories(),
-    ]);
+    const items = await contentService.getContentForBrowse();
+    const chips = getCategoryChips(items);
+    const newestItems = items.slice(0, 3).map(toBrowseItem);
+    
+    // Filter items by category if a category is selected
+    let filteredItems = items;
+    if (selectedCategory && selectedCategory.trim().toLowerCase() !== "all") {
+      const categoryFilter = selectedCategory.trim();
+      filteredItems = filteredItems.filter(
+        (item) => item.category?.trim().toLowerCase() === categoryFilter.toLowerCase()
+      );
+    }
+    
+    // Filter items by search query if provided
+    if (searchQuery && searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      filteredItems = filteredItems.filter(
+        (item) => item.title.toLowerCase().includes(query)
+      );
+    }
+    
+    // Build rows grouped by type (Movies, Series, etc.) from filtered items
+    const rows = buildRowsByType(filteredItems);
+    
     return {
-      rows: buildRows(items, categories),
-      chips: categories.length > 0 ? categories : ["All"],
+      rows,
+      chips,
+      newestItems,
     };
   } catch {
-    return { rows: [], chips: ["All"] };
+    return { rows: [], chips: ["All"], newestItems: [] };
   }
 }
 
@@ -135,56 +168,6 @@ function AccentTag({
     >
       {text}
     </span>
-  );
-}
-
-function PosterCard({ item, index }: { item: BrowseItem; index: number }) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "group relative flex h-48 w-32 shrink-0 flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/60 p-3 text-left shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(0,0,0,0.45)]",
-        "sm:h-52 sm:w-36",
-      )}
-      aria-label={item.title}
-    >
-      {item.thumbnailUrl ? (
-        <img
-          src={item.thumbnailUrl}
-          alt=""
-          className="absolute inset-0 -z-10 h-full w-full object-cover object-center"
-          loading="lazy"
-        />
-      ) : null}
-      <div
-        className={cn(
-          "absolute inset-0 -z-10 bg-gradient-to-br opacity-90",
-          getGradient(index),
-        )}
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_55%)]"
-        aria-hidden
-      />
-      {item.badge ? (
-        <span className="mb-2 inline-flex w-fit rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-white">
-          {item.badge}
-        </span>
-      ) : null}
-      <p className="text-sm font-semibold text-white line-clamp-2">
-        {item.title}
-      </p>
-      {item.subtitle ? (
-        <p className="mt-1 text-xs text-white/70 line-clamp-1">
-          {item.subtitle}
-        </p>
-      ) : null}
-      <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-white/80">
-        Watch now
-        <span aria-hidden>→</span>
-      </span>
-    </button>
   );
 }
 
@@ -217,15 +200,23 @@ function BrowseRowSection({ row }: { row: BrowseRow }) {
       </div>
       <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
         {row.items.map((item, index) => (
-          <PosterCard key={item.id} item={item} index={index} />
+          <BrowsePosterCard key={item.id} item={item} index={index} />
         ))}
       </div>
     </section>
   );
 }
 
-export default async function BrowsePage() {
-  const { rows, chips } = await getBrowseData();
+type BrowsePageProps = {
+  searchParams: Promise<{ category?: string; q?: string }>;
+};
+
+export default async function BrowsePage({ searchParams }: BrowsePageProps) {
+  const { category: categoryParam, q: searchQueryParam } = await searchParams;
+  const selectedCategory =
+    categoryParam && categoryParam.trim() ? categoryParam.trim() : null;
+  const searchQuery = searchQueryParam && searchQueryParam.trim() ? searchQueryParam.trim() : null;
+  const { rows, chips, newestItems } = await getBrowseData(selectedCategory, searchQuery);
   return (
     <main className="relative flex flex-1 flex-col overflow-hidden bg-[#0b0b0e] text-white">
       <div className="pointer-events-none absolute -top-28 right-0 h-64 w-64 rounded-full bg-white/10 blur-[120px]" />
@@ -248,33 +239,31 @@ export default async function BrowsePage() {
         </div>
 
         <div className="reveal">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
-                Browse
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Find your next obsession
-              </h1>
-              <p className="mt-2 max-w-xl text-sm text-white/60">
-                Curated drops, bingeable series, and midnight movie runs. Pick a
-                row and hit play.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {chips.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white/70 transition hover:border-white/30 hover:text-white"
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+              Browse
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Find your next obsession
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-white/60">
+              Curated drops, bingeable series, and midnight movie runs. Pick a
+              row and hit play.
+            </p>
           </div>
+          <SearchAndFilter
+            categories={chips}
+            selectedCategory={selectedCategory}
+          />
         </div>
       </section>
+
+      {/* Banner carousel: one of the 3 newest videos at a time, auto-slides */}
+      {newestItems.length > 0 ? (
+        <div className="mt-10">
+          <NewlyUploadedBannerCarousel items={newestItems} />
+        </div>
+      ) : null}
 
       <section className="mt-10 space-y-10 px-4 pb-12 sm:px-6 lg:px-10">
         {rows.length > 0 ? (

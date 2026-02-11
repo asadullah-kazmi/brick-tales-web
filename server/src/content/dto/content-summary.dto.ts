@@ -5,4 +5,5 @@ export class ContentSummaryDto {
   thumbnailUrl: string | null;
   releaseYear: number;
   ageRating: string;
+  category?: string;
 }

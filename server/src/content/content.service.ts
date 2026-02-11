@@ -42,6 +42,7 @@ export class ContentService {
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
+        include: { category: { select: { name: true } } },
       }),
       (this.prisma as any).content.count({ where }),
     ]);
@@ -204,6 +205,7 @@ export class ContentService {
     thumbnailUrl: string;
     releaseYear: number;
     ageRating: string;
+    category?: { name: string } | null;
   }): Promise<ContentSummaryDto> {
     const thumbnailUrl = await this.resolveThumbnailUrl(content.thumbnailUrl);
     return {
@@ -213,6 +215,7 @@ export class ContentService {
       thumbnailUrl,
       releaseYear: content.releaseYear,
       ageRating: content.ageRating,
+      category: content.category?.name ?? undefined,
     };
   }
 
