@@ -201,6 +201,18 @@ export class AdminController {
   }
 
   /**
+   * Revoke a user's admin access (set role to "user"). Caller cannot revoke themselves.
+   */
+  @Delete('users/:id/access')
+  async revokeAdminAccess(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+  ): Promise<AdminUserDto> {
+    ensureAdmin(user);
+    return this.adminService.revokeAdminAccess(id, user.id);
+  }
+
+  /**
    * List subscriptions and revenue summary.
    */
   @Get('subscriptions')

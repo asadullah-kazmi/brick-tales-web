@@ -3,6 +3,7 @@ import { siteService } from "@/lib/services";
 export type BrandingSettings = {
   logoUrl?: string;
   bannerUrl?: string;
+  bannerVideoUrl?: string;
 };
 
 export function parseBranding(content?: string | null): BrandingSettings {
@@ -13,6 +14,10 @@ export function parseBranding(content?: string | null): BrandingSettings {
       logoUrl: typeof data.logoUrl === "string" ? data.logoUrl : undefined,
       bannerUrl:
         typeof data.bannerUrl === "string" ? data.bannerUrl : undefined,
+      bannerVideoUrl:
+        typeof data.bannerVideoUrl === "string"
+          ? data.bannerVideoUrl
+          : undefined,
     };
   } catch {
     return {};

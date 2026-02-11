@@ -16,14 +16,21 @@ import {
   Loader,
 } from "@/components/ui";
 
+const BANNER_VIDEO_ACCEPT = "video/mp4,video/webm";
+
 export default function AdminBrandingPage() {
   const router = useRouter();
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
+  const [bannerVideoUrl, setBannerVideoUrl] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerVideoFile, setBannerVideoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [bannerVideoPreview, setBannerVideoPreview] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,16 +46,20 @@ export default function AdminBrandingPage() {
         const branding = parseBranding(page?.content ?? "");
         setLogoUrl(branding.logoUrl ?? "");
         setBannerUrl(branding.bannerUrl ?? "");
+        setBannerVideoUrl(branding.bannerVideoUrl ?? "");
         setLogoPreview(branding.logoUrl ?? null);
         setBannerPreview(branding.bannerUrl ?? null);
+        setBannerVideoPreview(branding.bannerVideoUrl ?? null);
       })
       .catch((err) => {
         if (!active) return;
         if (err instanceof ApiError && err.status === 404) {
           setLogoUrl("");
           setBannerUrl("");
+          setBannerVideoUrl("");
           setLogoPreview(null);
           setBannerPreview(null);
+          setBannerVideoPreview(null);
           setError(null);
           return;
         }
@@ -73,6 +84,12 @@ export default function AdminBrandingPage() {
     () => (bannerPreview ?? bannerUrl).trim().length > 0,
     [bannerPreview, bannerUrl],
   );
+  const canPreviewBannerVideo = useMemo(
+    () =>
+      (bannerVideoPreview ?? bannerVideoUrl).trim().length > 0 ||
+      bannerVideoFile !== null,
+    [bannerVideoPreview, bannerVideoUrl, bannerVideoFile],
+  );
 
   useEffect(() => {
     if (!logoFile) return;
@@ -88,9 +105,19 @@ export default function AdminBrandingPage() {
     return () => URL.revokeObjectURL(url);
   }, [bannerFile]);
 
-  async function uploadAsset(file: File): Promise<string> {
+  useEffect(() => {
+    if (!bannerVideoFile) return;
+    const url = URL.createObjectURL(bannerVideoFile);
+    setBannerVideoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [bannerVideoFile]);
+
+  async function uploadAsset(
+    file: File,
+    kind: "video" | "thumbnail",
+  ): Promise<string> {
     const presign = await adminService.presignUpload({
-      kind: "thumbnail",
+      kind,
       fileName: file.name,
       contentType: file.type,
       sizeBytes: file.size,
@@ -116,17 +143,22 @@ export default function AdminBrandingPage() {
     try {
       let nextLogoUrl = logoUrl.trim();
       let nextBannerUrl = bannerUrl.trim();
+      let nextBannerVideoUrl = bannerVideoUrl.trim();
 
       if (logoFile) {
-        nextLogoUrl = await uploadAsset(logoFile);
+        nextLogoUrl = await uploadAsset(logoFile, "thumbnail");
       }
       if (bannerFile) {
-        nextBannerUrl = await uploadAsset(bannerFile);
+        nextBannerUrl = await uploadAsset(bannerFile, "thumbnail");
+      }
+      if (bannerVideoFile) {
+        nextBannerVideoUrl = await uploadAsset(bannerVideoFile, "video");
       }
 
       const content = JSON.stringify({
         logoUrl: nextLogoUrl || undefined,
         bannerUrl: nextBannerUrl || undefined,
+        bannerVideoUrl: nextBannerVideoUrl || undefined,
       });
       await adminService.updateSitePage("branding", {
         title: "Branding",
@@ -134,8 +166,11 @@ export default function AdminBrandingPage() {
       });
       setLogoUrl(nextLogoUrl);
       setBannerUrl(nextBannerUrl);
+      setBannerVideoUrl(nextBannerVideoUrl);
       setLogoFile(null);
       setBannerFile(null);
+      setBannerVideoFile(null);
+      setBannerVideoPreview(nextBannerVideoUrl || null);
       setSuccess("Branding updated.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save branding.");
@@ -160,7 +195,7 @@ export default function AdminBrandingPage() {
             Branding
           </h1>
           <p className="mt-1 text-sm text-neutral-400">
-            Set the logo and hero banner image for the site.
+            Set the logo and hero banner (image or video) for the landing page.
           </p>
         </div>
         <Button
@@ -222,7 +257,7 @@ export default function AdminBrandingPage() {
             ) : null}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Landing page banner file
+                Landing page banner image
               </label>
               <input
                 type="file"
@@ -230,11 +265,14 @@ export default function AdminBrandingPage() {
                 onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)}
                 className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
               />
+              <p className="mt-1 text-xs text-neutral-500">
+                Optional. Used as fallback or background when no banner video is set.
+              </p>
             </div>
             {canPreviewBanner ? (
               <div className="rounded-lg border border-neutral-700/60 bg-neutral-900/60 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
-                  Banner preview
+                  Banner image preview
                 </p>
                 <Image
                   src={bannerPreview ?? bannerUrl}
@@ -246,9 +284,40 @@ export default function AdminBrandingPage() {
                 />
               </div>
             ) : null}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                Landing page banner video
+              </label>
+              <input
+                type="file"
+                accept={BANNER_VIDEO_ACCEPT}
+                onChange={(e) =>
+                  setBannerVideoFile(e.target.files?.[0] ?? null)
+                }
+                className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-1.5 file:text-sm file:text-neutral-900 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:file:bg-neutral-700 dark:file:text-neutral-100"
+              />
+              <p className="mt-1 text-xs text-neutral-500">
+                Optional. MP4 or WebM. When set, this video is shown as the hero banner on the landing page (autoplay, muted, loop).
+              </p>
+            </div>
+            {canPreviewBannerVideo ? (
+              <div className="rounded-lg border border-neutral-700/60 bg-neutral-900/60 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                  Banner video preview
+                </p>
+                <video
+                  src={bannerVideoPreview ?? bannerVideoUrl}
+                  controls
+                  muted
+                  loop
+                  playsInline
+                  className="mt-3 h-40 w-full rounded-md object-cover"
+                />
+              </div>
+            ) : null}
             <p className="text-xs text-neutral-500">
-              Tip: PNG, JPG, WebP (and SVG for logo). These images are used
-              across the site.
+              Logo: PNG, JPG, WebP, SVG. Banner: image (PNG, JPG, WebP) or video
+              (MP4, WebM). Used on the landing page and across the site.
             </p>
           </CardContent>
           <CardFooter>

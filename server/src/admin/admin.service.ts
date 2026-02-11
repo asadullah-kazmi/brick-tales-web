@@ -392,6 +392,27 @@ export class AdminService {
     };
   }
 
+  /**
+   * Revoke admin access: set user role to "user" so they lose admin portal access.
+   * Caller cannot revoke their own access.
+   */
+  async revokeAdminAccess(userId: string, currentUserId: string): Promise<AdminUserDto> {
+    if (userId === currentUserId) {
+      throw new BadRequestException('You cannot remove your own admin access');
+    }
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { role: 'user' },
+    });
+    return {
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      role: updated.role,
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
   async getContentList(): Promise<AdminContentItemDto[]> {
     const contentItems = await (this.prisma as any).content.findMany({
       include: {

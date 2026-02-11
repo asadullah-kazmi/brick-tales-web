@@ -23,13 +23,14 @@ const ROLE_OPTIONS = [
 type RoleValue = (typeof ROLE_OPTIONS)[number]["value"];
 
 export default function AdminUserSettingsPage() {
-  const { user } = useAuth();
-  const isReadOnly = user?.role === "CUSTOMER_SUPPORT";
+  const { user: currentUser } = useAuth();
+  const isReadOnly = currentUser?.role === "CUSTOMER_SUPPORT";
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
@@ -111,6 +112,32 @@ export default function AdminUserSettingsPage() {
       setNotice(`Role updated for ${user.name ?? user.email}.`);
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function handleRemoveAccess(targetUser: AdminUserDto) {
+    if (isReadOnly) return;
+    if (currentUser?.id === targetUser.id) {
+      setInviteError("You cannot remove your own admin access.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Remove admin access for ${targetUser.name ?? targetUser.email}? They will no longer be able to sign in to the admin portal.`,
+    );
+    if (!confirmed) return;
+    setNotice(null);
+    setInviteError(null);
+    setDeletingId(targetUser.id);
+    try {
+      await adminService.revokeAdminAccess(targetUser.id);
+      setUsers((prev) => prev.filter((u) => u.id !== targetUser.id));
+      setNotice(`Admin access removed for ${targetUser.name ?? targetUser.email}.`);
+    } catch (err) {
+      setInviteError(
+        err instanceof Error ? err.message : "Failed to remove admin access.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -243,28 +270,31 @@ export default function AdminUserSettingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((user) => (
-                    <tr key={user.id} className="border-t border-neutral-800">
+                  {filtered.map((rowUser) => (
+                    <tr
+                      key={rowUser.id}
+                      className="border-t border-neutral-800"
+                    >
                       <td className="px-4 py-3 text-neutral-100">
-                        {user.name ?? "—"}
+                        {rowUser.name ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-neutral-400">
-                        {user.email}
+                        {rowUser.email}
                       </td>
                       <td className="px-4 py-3">
                         <select
                           className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
                           value={
                             ROLE_OPTIONS.some(
-                              (role) => role.value === user.role,
+                              (role) => role.value === rowUser.role,
                             )
-                              ? (user.role as RoleValue)
+                              ? (rowUser.role as RoleValue)
                               : "CONTENT_MANAGER"
                           }
                           onChange={(e) =>
                             setUsers((prev) =>
                               prev.map((u) =>
-                                u.id === user.id
+                                u.id === rowUser.id
                                   ? { ...u, role: e.target.value }
                                   : u,
                               ),
@@ -280,16 +310,40 @@ export default function AdminUserSettingsPage() {
                         </select>
                       </td>
                       <td className="px-4 py-3">
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={savingId === user.id || isReadOnly}
-                          onClick={() =>
-                            void handleSave(user, user.role as RoleValue)
-                          }
-                        >
-                          {savingId === user.id ? "Saving…" : "Save"}
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={
+                              savingId === rowUser.id || isReadOnly
+                            }
+                            onClick={() =>
+                              void handleSave(
+                                rowUser,
+                                rowUser.role as RoleValue,
+                              )
+                            }
+                          >
+                            {savingId === rowUser.id ? "Saving…" : "Save"}
+                          </Button>
+                          {rowUser.id !== currentUser?.id ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="danger"
+                              disabled={
+                                deletingId === rowUser.id || isReadOnly
+                              }
+                              onClick={() =>
+                                void handleRemoveAccess(rowUser)
+                              }
+                            >
+                              {deletingId === rowUser.id
+                                ? "Removing…"
+                                : "Delete"}
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}

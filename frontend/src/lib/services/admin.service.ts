@@ -155,6 +155,15 @@ export const adminService = {
     );
   },
 
+  /**
+   * Revoke a user's admin access (sets role to "user"). Cannot revoke yourself.
+   */
+  async revokeAdminAccess(id: string): Promise<AdminUserDto> {
+    return withAuthRetry((headers) =>
+      del<AdminUserDto>(`admin/users/${id}/access`, { headers }),
+    );
+  },
+
   async getSupportRequests(
     page = 1,
     limit = 20,
