@@ -93,6 +93,13 @@ function ensureSuperAdmin(user: User): void {
   }
 }
 
+/** Allow SUPER_ADMIN or legacy "admin" role (e.g. production admin users). */
+function ensureCanDeleteContent(user: User): void {
+  if (user.role !== 'SUPER_ADMIN' && user.role !== 'admin') {
+    throw new ForbiddenException('Super admin access required');
+  }
+}
+
 @Controller('admin')
 export class AdminController {
   constructor(
@@ -373,14 +380,14 @@ export class AdminController {
   }
 
   /**
-   * Delete content. Super admin only. Cascades to seasons and episodes.
+   * Delete content. Super admin or admin role. Cascades to seasons and episodes.
    */
   @Delete('content/:id')
   async deleteContent(
     @CurrentUser() user: User,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
-    ensureSuperAdmin(user);
+    ensureCanDeleteContent(user);
     await this.adminService.deleteContent(id);
     return { success: true };
   }
