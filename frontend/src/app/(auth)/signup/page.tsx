@@ -181,11 +181,21 @@ function SignupFormInner() {
         return;
       }
 
+      const sortedPlans = [...plans].sort((a, b) => a.price - b.price);
+      const planIndex = sortedPlans.findIndex((p) => p.id === plan.id);
+      const trialDays =
+        trialSelected && planIndex >= 0
+          ? planIndex === 0
+            ? 7
+            : 14
+          : undefined;
+
       const intent = await authService.createSignupSubscriptionIntent({
         name,
         email,
         planId: plan.id,
         paymentMethodId: paymentMethodResult.paymentMethod.id,
+        ...(trialDays != null ? { trialPeriodDays: trialDays } : {}),
       });
 
       if (intent.clientSecret) {

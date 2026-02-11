@@ -44,6 +44,7 @@ export class AuthController {
       dto.name,
       dto.planId,
       dto.paymentMethodId,
+      dto.trialPeriodDays,
     );
   }
 

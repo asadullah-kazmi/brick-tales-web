@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts";
 import { Loader, Button } from "@/components/ui";
+import { subscriptionService } from "@/lib/services";
 
 function SubscriptionSuccessContent() {
   const router = useRouter();
@@ -14,6 +15,7 @@ function SubscriptionSuccessContent() {
 
   useEffect(() => {
     let cancelled = false;
+    subscriptionService.clearSubscriptionCache();
     refreshUser()
       .then(() => {
         if (!cancelled) setRefreshing(false);

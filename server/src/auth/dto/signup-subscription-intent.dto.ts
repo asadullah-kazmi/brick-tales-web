@@ -1,4 +1,5 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class SignupSubscriptionIntentDto {
   @IsEmail()
@@ -15,4 +16,12 @@ export class SignupSubscriptionIntentDto {
   @IsString()
   @MinLength(1, { message: 'paymentMethodId is required' })
   paymentMethodId: string;
+
+  /** Optional free trial length in days (e.g. 7 or 14). When set, Stripe creates subscription in trialing state. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  trialPeriodDays?: number;
 }

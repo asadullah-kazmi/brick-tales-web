@@ -109,6 +109,7 @@ export class AuthService {
     name: string,
     planId: string,
     paymentMethodId: string,
+    trialPeriodDays?: number,
   ) {
     const normalizedEmail = email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -121,6 +122,7 @@ export class AuthService {
       customerEmail: normalizedEmail,
       customerName: name,
       paymentMethodId,
+      trialPeriodDays,
     });
   }
 

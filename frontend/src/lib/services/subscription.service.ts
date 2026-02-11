@@ -14,8 +14,24 @@ import { USE_MOCK_API } from "./config";
 import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
 import { authService } from "./auth.service";
 
+const SUBSCRIPTION_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/** In-memory cache for GET /subscriptions/me so we don't check on every action. */
+let subscriptionCache: {
+  at: number;
+  data: GetSubscriptionResponseDto;
+} | null = null;
+
+/**
+ * Clear subscription cache (e.g. on logout so next user doesn't see stale data).
+ */
+function clearSubscriptionCache(): void {
+  subscriptionCache = null;
+}
+
 /**
  * Subscription service. Uses real API (GET /subscriptions/me) when USE_MOCK_API is false.
+ * When using the real API, subscription status is cached for 24 hours.
  */
 export const subscriptionService = {
   async getPlans(): Promise<PublicPlanDto[]> {
@@ -78,13 +94,23 @@ export const subscriptionService = {
     }
     const auth = getStoredAuth();
     if (!auth?.accessToken) {
+      clearSubscriptionCache();
       return { isSubscribed: false };
+    }
+    const now = Date.now();
+    if (
+      subscriptionCache &&
+      now - subscriptionCache.at < SUBSCRIPTION_CACHE_TTL_MS
+    ) {
+      return subscriptionCache.data;
     }
     try {
       const res = await get<GetSubscriptionResponseDto>("subscriptions/me", {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       });
-      return res ?? { isSubscribed: false };
+      const data = res ?? { isSubscribed: false };
+      subscriptionCache = { at: now, data };
+      return data;
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         await authService.getSession().catch(() => null);
@@ -95,7 +121,9 @@ export const subscriptionService = {
               "subscriptions/me",
               { headers: { Authorization: `Bearer ${refreshed.accessToken}` } },
             );
-            return res ?? { isSubscribed: false };
+            const data = res ?? { isSubscribed: false };
+            subscriptionCache = { at: Date.now(), data };
+            return data;
           } catch {
             return { isSubscribed: false };
           }
@@ -104,6 +132,9 @@ export const subscriptionService = {
       return { isSubscribed: false };
     }
   },
+
+  /** Clear the 24h subscription cache (call on logout). */
+  clearSubscriptionCache,
 
   async subscribe(body: SubscribeRequestDto): Promise<SubscribeResponseDto> {
     void body; // reserved for real API (plan selection, etc.)

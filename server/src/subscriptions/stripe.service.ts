@@ -186,18 +186,20 @@ export class StripeService {
 
   /**
    * Create subscription in default_incomplete mode and return client secret for SCA/3DS.
+   * When trialPeriodDays is set, Stripe creates subscription in trialing state (no immediate charge).
    */
   async createSubscriptionIntentForSignup(params: {
     planId: string;
     customerEmail: string;
     customerName?: string | null;
     paymentMethodId: string;
+    trialPeriodDays?: number;
   }): Promise<{
     customerId: string;
     subscriptionId: string;
     clientSecret: string | null;
   }> {
-    const { planId, customerEmail, customerName, paymentMethodId } = params;
+    const { planId, customerEmail, customerName, paymentMethodId, trialPeriodDays } = params;
     const plan = await (this.prisma as any).plan.findUnique({ where: { id: planId } });
     if (!plan) throw new NotFoundException('Plan not found');
     if (!plan.stripePriceId) {
@@ -219,8 +221,7 @@ export class StripeService {
       invoice_settings: { default_payment_method: paymentMethodId },
     });
 
-    // Create subscription with default_incomplete to get a PaymentIntent requiring confirmation
-    const subscription = (await stripe.subscriptions.create({
+    const subscriptionCreateParams: Stripe.SubscriptionCreateParams = {
       customer: customer.id,
       items: [{ price: plan.stripePriceId, quantity: 1 }],
       collection_method: 'charge_automatically',
@@ -231,7 +232,15 @@ export class StripeService {
         save_default_payment_method: 'on_subscription',
       },
       expand: ['latest_invoice.payment_intent'],
-    })) as unknown as StripeSubscription & {
+      ...(trialPeriodDays != null && trialPeriodDays > 0
+        ? { trial_period_days: trialPeriodDays }
+        : {}),
+    };
+
+    // Create subscription with default_incomplete to get a PaymentIntent requiring confirmation
+    const subscription = (await stripe.subscriptions.create(
+      subscriptionCreateParams,
+    )) as unknown as StripeSubscription & {
       latest_invoice?: StripeInvoiceRef;
     };
 

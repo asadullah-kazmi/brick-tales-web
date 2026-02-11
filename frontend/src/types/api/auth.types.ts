@@ -53,6 +53,8 @@ export interface SignupSubscriptionIntentRequestDto {
   email: string;
   planId: string;
   paymentMethodId: string;
+  /** Optional free trial length in days (e.g. 7 or 14). When set, Stripe creates subscription in trialing state. */
+  trialPeriodDays?: number;
 }
 
 /** Response for POST /auth/signup-subscription-intent */

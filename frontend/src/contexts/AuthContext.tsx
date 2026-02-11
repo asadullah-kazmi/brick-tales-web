@@ -81,6 +81,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribedState] = useState(false);
 
+  /** True when user is a paying customer (not staff/admin). Logged-in customers must have paid at signup, so assume subscribed until API says otherwise. */
+  function isCustomer(session: { role?: string } | null): boolean {
+    if (!session?.role) return false;
+    const staff =
+      session.role === "admin" ||
+      session.role === "SUPER_ADMIN" ||
+      session.role === "CONTENT_MANAGER" ||
+      session.role === "CUSTOMER_SUPPORT";
+    return !staff;
+  }
+
   useEffect(() => {
     let cancelled = false;
     fetchSession()
@@ -91,6 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (USE_MOCK_API) {
             setIsSubscribedState(getStoredSubscription());
           } else if (session) {
+            // Assume customer is subscribed (paid at signup); only show "not subscribed" when API says so
+            if (isCustomer(session)) setIsSubscribedState(true);
             subscriptionService.getSubscription().then((res) => {
               if (!cancelled) setIsSubscribedState(res.isSubscribed);
             });
@@ -122,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (USE_MOCK_API) {
         setIsSubscribedState(getStoredSubscription());
       } else if (session) {
+        if (isCustomer(session)) setIsSubscribedState(true);
         const sub = await subscriptionService.getSubscription();
         setIsSubscribedState(sub.isSubscribed);
       } else {
@@ -150,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    subscriptionService.clearSubscriptionCache();
     authService.logout();
     setUser(null);
     setSessionError(null);
