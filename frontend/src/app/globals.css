@@ -40,10 +40,16 @@ body {
   animation: fadeUp 0.8s ease-out both;
 }
 
-/* Ensure Video.js control bar renders on top of the player. */
+/* Ensure Video.js player is responsive and doesn't overflow on mobile. */
 .video-js {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+}
+
+.vjs-fill {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .video-js .vjs-control-bar {

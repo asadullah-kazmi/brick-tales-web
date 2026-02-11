@@ -332,16 +332,16 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
   const showSubscribePrompt = !showPlayer && !isSubscribed;
 
   return (
-    <main className="min-h-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
+    <main className="min-h-0 min-w-0 flex-1 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <div className="mx-auto w-full min-w-0 max-w-5xl">
         {usingDevStream && (
-          <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+          <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 sm:px-4">
             Using a dev test stream because real playback is not configured yet.
           </div>
         )}
-        <section className="mb-6" aria-label="Video player">
+        <section className="mb-4 sm:mb-6" aria-label="Video player">
           {showPlayer ? (
-            <div className="aspect-video min-h-[220px] overflow-hidden rounded-xl border border-neutral-700/60 bg-neutral-950 shadow-lg">
+            <div className="aspect-video w-full min-w-0 overflow-hidden rounded-xl border border-neutral-700/60 bg-neutral-950 shadow-lg">
               {playbackType === "mp4" ? (
                 <video
                   controls
@@ -389,14 +389,14 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
         </section>
 
         {/* Title */}
-        <header className="mb-4">
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white sm:text-3xl">
+        <header className="mb-3 sm:mb-4">
+          <h1 className="break-words text-xl font-bold text-neutral-900 dark:text-white sm:text-2xl lg:text-3xl">
             {title}
           </h1>
         </header>
 
         {/* Metadata row: duration, category, date, long-form badge */}
-        <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-600 dark:text-neutral-400">
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 sm:mb-6 sm:gap-x-4 sm:gap-y-2">
           {(primaryEpisode?.duration ?? displayContent?.duration) && (
             <span
               title={`Duration: ${
@@ -427,11 +427,11 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
           <button
             type="button"
             onClick={() => setOfflineModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 dark:focus-visible:ring-neutral-100 dark:focus-visible:ring-offset-neutral-900"
+            className="inline-flex min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1.5 font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 dark:focus-visible:ring-neutral-100 dark:focus-visible:ring-offset-neutral-900 touch-manipulation"
             aria-label="Download for offline viewing — opens info"
           >
             <span aria-hidden>⬇</span>
-            Download for Offline
+            <span className="whitespace-nowrap">Download for Offline</span>
           </button>
         </div>
 
@@ -471,15 +471,15 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
 
         {/* Description — supports long-form content (1–3+ hours) */}
         <section
-          className="border-t border-neutral-200 pt-6 dark:border-neutral-800"
+          className="border-t border-neutral-200 pt-4 dark:border-neutral-800 sm:pt-6"
           aria-labelledby="description-heading"
         >
           <h2 id="description-heading" className="sr-only">
             Description
           </h2>
-          <div className="max-w-none">
+          <div className="min-w-0 max-w-none">
             {displayContent?.description ? (
-              <p className="whitespace-pre-wrap text-neutral-600 leading-relaxed dark:text-neutral-400">
+              <p className="break-words whitespace-pre-wrap text-neutral-600 leading-relaxed dark:text-neutral-400">
                 {displayContent.description}
               </p>
             ) : (
@@ -495,12 +495,12 @@ export default function WatchPageClient({ params }: WatchPageClientProps) {
         (content.type === "SERIES" || content.type === "ANIMATION") &&
         ((content.seasons?.length ?? 0) > 0 || (content.episodes?.length ?? 0) > 0) ? (
           <section
-            className="mt-8 border-t border-neutral-200 pt-6 dark:border-neutral-800"
+            className="mt-6 border-t border-neutral-200 pt-4 dark:border-neutral-800 sm:mt-8 sm:pt-6"
             aria-labelledby="episodes-heading"
           >
             <h2
               id="episodes-heading"
-              className="mb-4 text-xl font-semibold text-neutral-900 dark:text-white"
+              className="mb-3 text-lg font-semibold text-neutral-900 dark:text-white sm:mb-4 sm:text-xl"
             >
               Episodes & Seasons
             </h2>

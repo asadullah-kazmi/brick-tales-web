@@ -162,10 +162,10 @@ export function Header() {
           : "sticky top-0 z-50 border-b border-white/10 bg-transparent backdrop-blur-sm"
       }
     >
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between pl-0 pr-4 sm:pr-6 lg:pr-8">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2 text-white"
+          className="-ml-1 flex shrink-0 items-center gap-2 text-white sm:-ml-2"
           aria-label="BRIXLORE.TV home"
         >
           {logoUrl ? (
@@ -174,7 +174,7 @@ export function Header() {
               alt="BRIXLORE.TV"
               width={LOGO_WIDTH}
               height={LOGO_HEIGHT}
-              className="-ml-1 h-12 w-auto object-contain"
+              className="h-12 w-auto object-contain"
               unoptimized
             />
           ) : (
@@ -183,7 +183,7 @@ export function Header() {
               alt="BRIXLORE.TV"
               width={LOGO_WIDTH}
               height={LOGO_HEIGHT}
-              className="-ml-1 h-9 w-auto object-contain"
+              className="h-9 w-auto object-contain"
               priority
             />
           )}
