@@ -15,9 +15,7 @@ import type {
   DeviceDto,
   DevicePlatform,
   PublicPlanDto,
-  UpdateUserPreferencesRequestDto,
   UpdateUserProfileRequestDto,
-  UserPreferencesDto,
   UserProfileDto,
   GetSubscriptionResponseDto,
 } from "@/types/api";
@@ -34,12 +32,8 @@ export default function SettingsPage() {
   const [profileDraft, setProfileDraft] = useState<UpdateUserProfileRequestDto>(
     {},
   );
-  const [preferences, setPreferences] = useState<UserPreferencesDto | null>(
-    null,
-  );
   const [devices, setDevices] = useState<DeviceDto[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [prefLoading, setPrefLoading] = useState(true);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
   const [securitySaving, setSecuritySaving] = useState(false);
@@ -55,10 +49,9 @@ export default function SettingsPage() {
       subscriptionService.getPlans(),
       subscriptionService.getSubscription(),
       accountService.getProfile(),
-      accountService.getPreferences(),
       accountService.listDevices(),
     ])
-      .then(([planList, subscriptionRes, profileRes, prefsRes, devicesRes]) => {
+      .then(([planList, subscriptionRes, profileRes, devicesRes]) => {
         if (!active) return;
         setPlans(planList);
         setPlanId(subscriptionRes.planId ?? null);
@@ -69,7 +62,6 @@ export default function SettingsPage() {
           phone: profileRes.phone ?? "",
           bio: profileRes.bio ?? "",
         });
-        setPreferences(prefsRes);
         setDevices(devicesRes);
       })
       .catch(() => {
@@ -77,13 +69,11 @@ export default function SettingsPage() {
         setPlans([]);
         setPlanId(null);
         setProfile(null);
-        setPreferences(null);
         setDevices([]);
       })
       .finally(() => {
         if (!active) return;
         setProfileLoading(false);
-        setPrefLoading(false);
         setDeviceLoading(false);
       });
     return () => {
@@ -105,7 +95,7 @@ export default function SettingsPage() {
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : "--";
 
-  const isLoading = profileLoading || prefLoading || deviceLoading;
+  const isLoading = profileLoading || deviceLoading;
 
   if (isLoading) {
     return (
