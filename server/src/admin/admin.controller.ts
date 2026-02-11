@@ -225,10 +225,7 @@ export class AdminController {
    * Same shape as GET /users/export but for the specified user.
    */
   @Get('users/:id/export')
-  async exportUserAccountData(
-    @CurrentUser() user: User,
-    @Param('id') id: string,
-  ) {
+  async exportUserAccountData(@CurrentUser() user: User, @Param('id') id: string) {
     ensureAdmin(user);
     return this.usersService.exportAccountData(id);
   }

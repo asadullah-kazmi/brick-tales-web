@@ -82,6 +82,8 @@ export function NewlyUploadedBannerCarousel({ items }: { items: BannerItem[] }) 
                     alt=""
                     className="absolute inset-0 z-0 h-full w-full object-cover object-center"
                     loading={index === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                    fetchPriority={index === 0 ? "high" : "auto"}
                     onError={() => setImgError(index)}
                   />
                 ) : (

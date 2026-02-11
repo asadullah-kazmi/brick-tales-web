@@ -108,9 +108,13 @@ export const streamingService = {
     if (!auth?.accessToken) return;
 
     const url = `streaming/continue-watching/${encodeURIComponent(episodeId)}${durationSeconds != null ? `?duration=${durationSeconds}` : ""}`;
-    await patch<{ ok: boolean }>(url, { progress: Math.round(progressSeconds) }, {
-      headers: { Authorization: `Bearer ${auth.accessToken}` },
-    });
+    await patch<{ ok: boolean }>(
+      url,
+      { progress: Math.round(progressSeconds) },
+      {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      },
+    );
   },
 
   /**

@@ -94,25 +94,24 @@ export class ContentService {
 
     // Always include episodes if they exist, regardless of whether seasons exist.
     // Episodes can belong to seasons (via seasonId) or be standalone.
-    const episodes: EpisodeResponseDto[] | undefined =
-      content.episodes.length
-        ? await Promise.all(
-            content.episodes
-              .sort(
-                (a: { episodeNumber: number }, b: { episodeNumber: number }) =>
-                  a.episodeNumber - b.episodeNumber,
-              )
-              .map(async (episode: any) => ({
-                id: episode.id,
-                seasonId: episode.seasonId ?? undefined,
-                episodeNumber: episode.episodeNumber,
-                title: episode.title,
-                description: episode.description ?? undefined,
-                duration: formatDurationSeconds(episode.duration),
-                thumbnailUrl: await this.resolveThumbnailUrl(episode.thumbnailUrl),
-              })),
-          )
-        : undefined;
+    const episodes: EpisodeResponseDto[] | undefined = content.episodes.length
+      ? await Promise.all(
+          content.episodes
+            .sort(
+              (a: { episodeNumber: number }, b: { episodeNumber: number }) =>
+                a.episodeNumber - b.episodeNumber,
+            )
+            .map(async (episode: any) => ({
+              id: episode.id,
+              seasonId: episode.seasonId ?? undefined,
+              episodeNumber: episode.episodeNumber,
+              title: episode.title,
+              description: episode.description ?? undefined,
+              duration: formatDurationSeconds(episode.duration),
+              thumbnailUrl: await this.resolveThumbnailUrl(episode.thumbnailUrl),
+            })),
+        )
+      : undefined;
 
     return {
       content: {

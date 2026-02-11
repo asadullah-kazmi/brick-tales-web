@@ -56,6 +56,8 @@ export function BrowsePosterCard({
           alt=""
           className="absolute inset-0 z-0 h-full w-full object-cover object-center"
           loading="lazy"
+          decoding="async"
+          fetchPriority={index < 6 ? "high" : "auto"}
           onError={() => setImgError(true)}
         />
       ) : (

@@ -3,12 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { R2Service } from '../storage/r2.service';
 import type { ContinueWatchingItemDto } from './dto/continue-watching-item.dto';
 
-const ADMIN_ROLES = new Set([
-  'admin',
-  'SUPER_ADMIN',
-  'CONTENT_MANAGER',
-  'CUSTOMER_SUPPORT',
-]);
+const ADMIN_ROLES = new Set(['admin', 'SUPER_ADMIN', 'CONTENT_MANAGER', 'CUSTOMER_SUPPORT']);
 
 function inferPlaybackType(
   hlsUrl: string | null | undefined,
@@ -145,10 +140,7 @@ export class StreamingService {
   }
 
   /** Remove an episode from the user's continue-watching list. */
-  async removeFromContinueWatching(
-    userId: string,
-    episodeId: string,
-  ): Promise<void> {
+  async removeFromContinueWatching(userId: string, episodeId: string): Promise<void> {
     await (this.prisma as any).viewHistory.deleteMany({
       where: { userId, episodeId },
     });
