@@ -131,7 +131,15 @@ export class TranscodeService {
         path.join(outputDir, 'index.m3u8'),
       ];
 
-      const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
+      // Use FFMPEG_PATH if set and valid, otherwise default to 'ffmpeg'
+      // In production (Linux), ignore Windows paths from local .env files
+      let ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
+      
+      // If FFMPEG_PATH contains Windows path separators and we're on Linux, use default
+      if (process.platform !== 'win32' && (ffmpegBin.includes('\\') || ffmpegBin.includes('C:'))) {
+        ffmpegBin = 'ffmpeg';
+      }
+      
       const proc = spawn(ffmpegBin, args, { stdio: 'inherit' });
       proc.on('error', (err) => reject(err));
       proc.on('close', (code) => {
