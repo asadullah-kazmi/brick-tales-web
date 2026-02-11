@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { AddToMyListButton } from "./AddToMyListButton";
 
 export type BannerItem = {
   id: string;
@@ -60,13 +61,21 @@ export function NewlyUploadedBannerCarousel({ items }: { items: BannerItem[] }) 
             const showThumbnail =
               item.thumbnailUrl && !imgErrors[index];
             return (
-              <Link
+              <div
                 key={item.id}
-                href={`/watch/${item.id}`}
-                className="group relative flex min-w-full flex-shrink-0 flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-neutral-900/60 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="relative flex min-w-full flex-shrink-0 flex-col"
                 style={{ height: "clamp(18rem, 40vw, 28rem)" }}
-                aria-label={`Watch ${item.title}`}
               >
+                <AddToMyListButton
+                  contentId={item.id}
+                  className="absolute right-4 top-4 z-10"
+                  size="md"
+                />
+                <Link
+                  href={`/watch/${item.id}`}
+                  className="group relative flex flex-1 flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-neutral-900/60 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  aria-label={`Watch ${item.title}`}
+                >
                 {showThumbnail ? (
                   <img
                     src={item.thumbnailUrl!}
@@ -128,7 +137,8 @@ export function NewlyUploadedBannerCarousel({ items }: { items: BannerItem[] }) 
                     <span aria-hidden>→</span>
                   </span>
                 </div>
-              </Link>
+                </Link>
+              </div>
             );
           })}
         </div>

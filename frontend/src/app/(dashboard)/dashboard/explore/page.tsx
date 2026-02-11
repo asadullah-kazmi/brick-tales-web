@@ -6,6 +6,7 @@ import { Button, Input } from "@/components/ui";
 import { contentService } from "@/lib/services";
 import type { ContentSummaryDto } from "@/types/api";
 import { VideoCardSkeleton } from "@/components/content/VideoCardSkeleton";
+import { AddToMyListButton } from "@/components/content/AddToMyListButton";
 
 export default function ExplorePage() {
   const [contentItems, setContentItems] = useState<ContentSummaryDto[]>([]);
@@ -165,8 +166,13 @@ export default function ExplorePage() {
             trendingItems.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-4"
+                className="relative rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-4"
               >
+                <AddToMyListButton
+                  contentId={item.id}
+                  className="absolute right-3 top-3 z-10"
+                  size="sm"
+                />
                 <div className="relative h-24 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/80 via-neutral-900 to-neutral-800/60">
                   {item.thumbnailUrl ? (
                     <img
@@ -214,28 +220,34 @@ export default function ExplorePage() {
             ))
           ) : filteredItems.length > 0 ? (
             filteredItems.slice(0, 9).map((item) => (
-              <Link
+              <div
                 key={item.id}
-                href={`/watch/${item.id}`}
-                className="rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-4 transition hover:border-neutral-500"
+                className="relative rounded-xl border border-neutral-700/60 bg-neutral-900/60 p-4 transition hover:border-neutral-500"
               >
-                <div className="relative h-32 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/80 via-neutral-900 to-neutral-800/60">
-                  {item.thumbnailUrl ? (
-                    <img
-                      src={item.thumbnailUrl}
-                      alt={item.title}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : null}
-                </div>
-                <p className="mt-4 text-sm font-semibold text-white">
-                  {item.title}
-                </p>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {item.category ?? item.type}
-                </p>
-              </Link>
+                <AddToMyListButton
+                  contentId={item.id}
+                  className="absolute right-3 top-3 z-10"
+                  size="sm"
+                />
+                <Link href={`/watch/${item.id}`} className="block">
+                  <div className="relative h-32 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/80 via-neutral-900 to-neutral-800/60">
+                    {item.thumbnailUrl ? (
+                      <img
+                        src={item.thumbnailUrl}
+                        alt={item.title}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : null}
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-white">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    {item.category ?? item.type}
+                  </p>
+                </Link>
+              </div>
             ))
           ) : (
             <div className="rounded-xl border border-dashed border-neutral-700/60 bg-neutral-900/40 p-6 text-sm text-neutral-400 sm:col-span-2 lg:col-span-3">

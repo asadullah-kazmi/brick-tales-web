@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { ApiErrorProvider, AuthProvider } from "@/contexts";
+import { ApiErrorProvider, AuthProvider, MyListProvider } from "@/contexts";
 import { SessionErrorBanner } from "@/components/auth";
 import { ApiErrorBanner } from "@/components/layout";
 
@@ -13,9 +13,11 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ApiErrorProvider>
       <AuthProvider>
-        <SessionErrorBanner />
-        <ApiErrorBanner />
-        {children}
+        <MyListProvider>
+          <SessionErrorBanner />
+          <ApiErrorBanner />
+          {children}
+        </MyListProvider>
       </AuthProvider>
     </ApiErrorProvider>
   );

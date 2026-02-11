@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { AddToMyListButton } from "./AddToMyListButton";
 
 type BrowseItem = {
   id: string;
@@ -35,14 +36,19 @@ export function BrowsePosterCard({
   const showThumbnail = item.thumbnailUrl && !imgError;
 
   return (
-    <Link
-      href={`/watch/${item.id}`}
-      className={cn(
-        "group relative flex h-40 w-72 shrink-0 flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-neutral-900/60 p-3 text-left shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.45)]",
-        "sm:h-44 sm:w-80",
-      )}
-      aria-label={`Watch ${item.title}`}
-    >
+    <div className="relative h-40 w-72 shrink-0 sm:h-44 sm:w-80">
+      <AddToMyListButton
+        contentId={item.id}
+        className="absolute right-2 top-2 z-10"
+        size="sm"
+      />
+      <Link
+        href={`/watch/${item.id}`}
+        className={cn(
+          "group relative flex h-full w-full flex-col justify-end overflow-hidden rounded-xl border border-white/10 bg-neutral-900/60 p-3 text-left shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.45)]",
+        )}
+        aria-label={`Watch ${item.title}`}
+      >
       {/* Thumbnail or placeholder: use z-0 so it sits above the default stack and is always visible */}
       {showThumbnail ? (
         <img
@@ -106,6 +112,7 @@ export function BrowsePosterCard({
           <span aria-hidden>→</span>
         </span>
       </div>
-    </Link>
+      </Link>
+    </div>
   );
 }

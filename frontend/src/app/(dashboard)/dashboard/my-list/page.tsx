@@ -3,17 +3,34 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button, Loader } from "@/components/ui";
+import { contentService } from "@/lib/services";
+import { useMyList } from "@/contexts";
 import type { ContentSummaryDto } from "@/types/api";
 
 export default function MyListPage() {
+  const { listIds, remove } = useMyList();
   const [savedItems, setSavedItems] = useState<ContentSummaryDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (listIds.length === 0) {
+      setSavedItems([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
-    setSavedItems([]);
-    setIsLoading(false);
-  }, []);
+    contentService
+      .getContentForBrowse()
+      .then((all) => {
+        const byId = new Map(all.map((c) => [c.id, c]));
+        const items = listIds
+          .map((id) => byId.get(id))
+          .filter((c): c is ContentSummaryDto => c != null);
+        setSavedItems(items);
+      })
+      .catch(() => setSavedItems([]))
+      .finally(() => setIsLoading(false));
+  }, [listIds]);
 
   const hasSaved = savedItems.length > 0;
   if (isLoading) {
@@ -57,16 +74,18 @@ export default function MyListPage() {
                 key={item.id}
                 className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 p-4"
               >
-                <div className="relative h-24 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/70 via-neutral-900 to-neutral-800/50">
-                  {item.thumbnailUrl ? (
-                    <img
-                      src={item.thumbnailUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : null}
-                </div>
+                <Link href={`/watch/${item.id}`} className="block">
+                  <div className="relative h-24 overflow-hidden rounded-lg bg-gradient-to-br from-neutral-800/70 via-neutral-900 to-neutral-800/50">
+                    {item.thumbnailUrl ? (
+                      <img
+                        src={item.thumbnailUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : null}
+                  </div>
+                </Link>
                 <p className="mt-4 text-sm font-semibold text-white">
                   {item.title}
                 </p>
@@ -74,10 +93,17 @@ export default function MyListPage() {
                   {item.category ?? item.type}
                 </p>
                 <div className="mt-4 flex items-center gap-2">
-                  <Button type="button" size="sm">
-                    Play
-                  </Button>
-                  <Button type="button" variant="outline" size="sm">
+                  <Link href={`/watch/${item.id}`}>
+                    <Button type="button" size="sm">
+                      Play
+                    </Button>
+                  </Link>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => remove(item.id)}
+                  >
                     Remove
                   </Button>
                 </div>
@@ -94,7 +120,8 @@ export default function MyListPage() {
             Keep saving favorites
           </p>
           <p className="mt-1 text-xs text-neutral-500">
-            Discover new titles in Search / Explore.
+            Discover new titles in Search / Explore, or use the + icon on any
+            video to add it here.
           </p>
           <Link href="/dashboard/explore" className="mt-4 inline-flex">
             <Button type="button" variant="outline" size="sm">
